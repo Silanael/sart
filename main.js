@@ -52,6 +52,7 @@ const Flags =
 
 
 // Variables
+var ManualDest   = false;
 var ArweaveHost  = "arweave.net";
 var ArweavePort  = 443;
 var ArweaveProto = "https";
@@ -67,6 +68,7 @@ var Quiet        = false;
 function Main (argv)
 {
 
+    process.on ("uncaughtException", ErrorHandler);    
     const argc = argv.length;
 
 
@@ -156,7 +158,7 @@ function FetchFlagArg (argc, argv, pos, flag)
 
 function InitArweave ()
 {
-    VERBOSE ("Initializing Arweave: Connecting to " + GetHostString () + "...")
+    INFO ("Connecting to " + GetHostString () + "...")
 
     try
     {
@@ -184,12 +186,12 @@ function GetHostString ()
 }
 
 
-function SetVerbose ()      { Verbose      = true;         }
-function SetQuiet   ()      { Quiet        = true;         }
-function SetHost    (host)  { ArweaveHost  = host;         }
-function SetPort    (port)  { ArweavePort  = port;         }
-function SetProto   (proto) { ArweaveProto = proto;        }
-function IsFlag     (arg)   { return arg.startsWith ('-'); }
+function SetVerbose ()      { Verbose      = true;  if (Quiet)   ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
+function SetQuiet   ()      { Quiet        = true;  if (Verbose) ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
+function SetHost    (host)  { ArweaveHost  = host;  ManualDest = true;                                                              }
+function SetPort    (port)  { ArweavePort  = port;  ManualDest = true;                                                              }
+function SetProto   (proto) { ArweaveProto = proto; ManualDest = true;                                                              }
+function IsFlag     (arg)   { return arg.startsWith ('-');                                                                          }
 
 
 function DisplayHelp ()
@@ -228,7 +230,8 @@ function OUT (str)
 // Informative output - will be silenceable.
 function INFO (str)
 {
-    console.log (str);
+    if (!Quiet)
+        console.log (str);
 }
 
 
@@ -236,7 +239,8 @@ function INFO (str)
 // Informative output - needs to be enabled.
 function VERBOSE (str)
 {
-    console.log (str);
+    if (Verbose && !Quiet)
+        console.log (str);
 }
 
 
@@ -244,7 +248,16 @@ function VERBOSE (str)
 // Error message output.
 function ERR (str)
 {
-    console.error (str);
+    if (!Quiet)
+        console.error (str);
+}
+
+
+
+function ERR_CONFLICT (msg)
+{
+    console.error (msg + ". Stop fucking around.");
+    EXIT (-1);
 }
 
 
@@ -256,11 +269,33 @@ function ERR_FATAL (str)
     EXIT (-1);
 }
 
+
+
 function EXIT (code)
 {
     process.exit (code);
 }
 
+
+
+function ErrorHandler (error)
+{    
+    if (error != undefined)
+    {
+        VERBOSE (error);
+
+        let msg = error.code;
+        switch (error.code)
+        {
+            case "ENOTFOUND": msg = "Host not found!"; break;
+        }
+        ERR_FATAL ("ERROR: " + msg);
+    }
+
+    else
+        ERR_FATAL ("It appears that an error of an unknown nature has occurred.. How curious..");
+
+}
 
 
 
