@@ -1,0 +1,21 @@
+{
+  "name": "sart",
+  "version": "1.0.0",
+  "description": "Silanael ARweave Tool",
+  "main": "main.js",
+  "scripts": {
+    "test": "node ./main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": ".git"
+  },
+  "keywords": [
+    "Arweave",
+    "ArDrive",
+    "tool",
+    "utility"
+  ],
+  "author": "Silanael",
+  "license": "GPL-1.0-only"
+}
