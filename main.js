@@ -6,7 +6,7 @@
 
 
 // Imports
-const Arweave = require ("arweave");
+const Arweave = require ('arweave');
 const Package = require ("./package.json");
 
 
@@ -16,6 +16,11 @@ const FILENAME_PATH_ARG = 1;
 const FIRST_ARG         = 2;
 
 
+
+// Variables
+var ArweaveHost  = "arweave.net";
+var ArweavePort  = 443;
+var ArweaveProto = "https";
 
 
 
@@ -30,7 +35,7 @@ function Main (argv)
 
     // Parse arguments.
     else
-    {
+    {    
         for (let C = FIRST_ARG; C < argc; ++C)
         {
             let arg = argv[C].toLowerCase ();
@@ -46,14 +51,40 @@ function Main (argv)
                     DisplayVersion (argv);
                     break;
 
+                case "-i":
+                case "--info":
+                    DisplayArweaveInfo ();
+                    break;
 
                 default:
                     ERR (`Unknown argument: "${arg}".`);
-                    OUT ("Use --help to get usage information.");
+                    INFO ("Use --help to get usage information.");
                     break;
             }
         }
     }
+}
+
+
+
+async function InitArweave ()
+{
+    VERBOSE ("Initializing Arweave: Connecting to " + GetHostString () + "...")
+    return Arweave.init
+    (
+        {
+            host:     ArweaveHost,
+            port:     ArweavePort,
+            protocol: ArweaveProto
+        }
+    );
+}
+
+
+
+function GetHostString ()
+{
+    return ArweaveProto + "://" + ArweaveHost + ":" + ArweavePort;
 }
 
 
@@ -72,7 +103,17 @@ function DisplayVersion (argv)
 
 
 
-// A wrapper for the future.
+async function DisplayArweaveInfo ()
+{
+    const arweave = await InitArweave ();
+
+    VERBOSE ("Fetching network information..");
+    OUT (await arweave.network.getInfo () );
+}
+
+
+
+// Data output. Non-silencable.
 function OUT (str)
 {
     console.log (str);
@@ -80,7 +121,23 @@ function OUT (str)
 
 
 
-// A wrapper for the future, for errors.
+// Informative output - will be silenceable.
+function INFO (str)
+{
+    console.log (str);
+}
+
+
+
+// Informative output - needs to be enabled.
+function VERBOSE (str)
+{
+    console.log (str);
+}
+
+
+
+// Error message output.
 function ERR (str)
 {
     console.error (str);
