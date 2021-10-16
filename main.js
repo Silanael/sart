@@ -10,7 +10,11 @@
 //
 
 
-// Imports
+// Local imports
+const Sys     = require ('./sys.js');
+
+
+// External imports
 const Arweave = require ('arweave');
 const Package = require ("./package.json");
 
@@ -38,15 +42,15 @@ const Commands =
 // Arg-Command mapping table
 const Flags =
 {
-    "-V"          : { "F": SetVerbose, "A":false },
-    "--verbose"   : { "F": SetVerbose, "A":false },
-    "-q"          : { "F": SetQuiet,   "A":false },
-    "--quiet"     : { "F": SetQuiet,   "A":false },
-    "--help"      : { "F": DisplayHelp,"A":false },
-    "-h"          : { "F": SetHost,    "A":true  },
-    "--host"      : { "F": SetHost,    "A":true  },
-    "--port"      : { "F": SetPort,    "A":true  },
-    "--proto"     : { "F": SetProto,   "A":true  },
+    "-V"          : { "F": SetVerbose,  "A":false },
+    "--verbose"   : { "F": SetVerbose,  "A":false },
+    "-q"          : { "F": SetQuiet,    "A":false },
+    "--quiet"     : { "F": SetQuiet,    "A":false },
+    "--help"      : { "F": DisplayHelp, "A":false },
+    "-h"          : { "F": SetHost,     "A":true  },
+    "--host"      : { "F": SetHost,     "A":true  },
+    "--port"      : { "F": SetPort,     "A":true  },
+    "--proto"     : { "F": SetProto,    "A":true  },
 }
 
 
@@ -56,8 +60,7 @@ var ManualDest   = false;
 var ArweaveHost  = "arweave.net";
 var ArweavePort  = 443;
 var ArweaveProto = "https";
-var Verbose      = false;
-var Quiet        = false;
+
 
 
 
@@ -67,9 +70,10 @@ var Quiet        = false;
 
 function Main (argv)
 {
-
-    process.on ("uncaughtException", ErrorHandler);    
+    
+    process.on ("uncaughtException", Sys.ErrorHandler);
     const argc = argv.length;
+
 
 
     // No arguments given.
@@ -100,7 +104,7 @@ function Main (argv)
                 cmd ();
            
             else
-                ERR_FATAL (`Unknown command: "${arg}".`);                    
+                Sys.ERR_FATAL (`Unknown command: "${arg}".`);                    
 
             // Process only one command.
             break;
@@ -138,7 +142,7 @@ function ParseFlags (argc, argv)
             }
 
             else
-                ERR_FATAL ("Unknown argument: " + arg_raw);
+                Sys.ERR_FATAL ("Unknown argument: " + arg_raw);
 
         }
     }    
@@ -148,7 +152,7 @@ function FetchFlagArg (argc, argv, pos, flag)
 {
     ++pos;
     if (pos >= argc)
-        ERR_FATAL ("Missing argument for " + flag + "!");
+        Sys.ERR_FATAL ("Missing argument for " + flag + "!");
     else 
         return argv[pos];
 }
@@ -158,7 +162,7 @@ function FetchFlagArg (argc, argv, pos, flag)
 
 function InitArweave ()
 {
-    INFO ("Connecting to " + GetHostString () + "...")
+    Sys.INFO ("Connecting to " + GetHostString () + "...")
 
     try
     {
@@ -174,7 +178,7 @@ function InitArweave ()
     }
     catch (err)
     {
-        ERR_FATAL ("foo");
+        Sys.ERR_FATAL ("foo");
     }
 }
 
@@ -186,12 +190,12 @@ function GetHostString ()
 }
 
 
-function SetVerbose ()      { Verbose      = true;  if (Quiet)   ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
-function SetQuiet   ()      { Quiet        = true;  if (Verbose) ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
-function SetHost    (host)  { ArweaveHost  = host;  ManualDest = true;                                                              }
-function SetPort    (port)  { ArweavePort  = port;  ManualDest = true;                                                              }
-function SetProto   (proto) { ArweaveProto = proto; ManualDest = true;                                                              }
-function IsFlag     (arg)   { return arg.startsWith ('-');                                                                          }
+function SetVerbose ()      { Sys.Verbose  = true;  if (Sys.Quiet)   Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
+function SetQuiet   ()      { Sys.Quiet    = true;  if (Sys.Verbose) Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
+function SetHost    (host)  { ArweaveHost  = host;  ManualDest = true;                                                                      }
+function SetPort    (port)  { ArweavePort  = port;  ManualDest = true;                                                                      }
+function SetProto   (proto) { ArweaveProto = proto; ManualDest = true;                                                                      }
+function IsFlag     (arg)   { return arg.startsWith ('-');                                                                                  }
 
 
 function DisplayHelp ()
@@ -213,90 +217,9 @@ async function DisplayArweaveInfo ()
 {
     const arweave = await InitArweave ();
 
-    VERBOSE ("Fetching network information..");
-    OUT (await arweave.network.getInfo () );
+    Sys.VERBOSE ("Fetching network information..");
+    Sys.OUT (await arweave.network.getInfo () );
 }
-
-
-
-// Data output. Non-silencable.
-function OUT (str)
-{
-    console.log (str);
-}
-
-
-
-// Informative output - will be silenceable.
-function INFO (str)
-{
-    if (!Quiet)
-        console.log (str);
-}
-
-
-
-// Informative output - needs to be enabled.
-function VERBOSE (str)
-{
-    if (Verbose && !Quiet)
-        console.log (str);
-}
-
-
-
-// Error message output.
-function ERR (str)
-{
-    if (!Quiet)
-        console.error (str);
-}
-
-
-
-function ERR_CONFLICT (msg)
-{
-    console.error (msg + ". Stop fucking around.");
-    EXIT (-1);
-}
-
-
-
-// Error message output + exit.
-function ERR_FATAL (str)
-{
-    ERR (str);
-    EXIT (-1);
-}
-
-
-
-function EXIT (code)
-{
-    process.exit (code);
-}
-
-
-
-function ErrorHandler (error)
-{    
-    if (error != undefined)
-    {
-        VERBOSE (error);
-
-        let msg = error.code;
-        switch (error.code)
-        {
-            case "ENOTFOUND": msg = "Host not found!"; break;
-        }
-        ERR_FATAL ("ERROR: " + msg);
-    }
-
-    else
-        ERR_FATAL ("It appears that an error of an unknown nature has occurred.. How curious..");
-
-}
-
 
 
 // Entrypoint
