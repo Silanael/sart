@@ -6,7 +6,16 @@
 
 
 // Imports
-Arweave = require ("arweave");
+const Arweave = require ("arweave");
+const Package = require ("./package.json");
+
+
+
+// Constants
+const FILENAME_PATH_ARG = 1;
+const FIRST_ARG         = 2;
+
+
 
 
 
@@ -15,24 +24,31 @@ function Main (argv)
     const argc = argv.length;
 
     // No arguments given.
-    if (argc <= 2)
+    if (argc <= FIRST_ARG)
         DisplayHelp ();
+
 
     // Parse arguments.
     else
     {
-        for (let C = 2; C < argc; ++C)
+        for (let C = FIRST_ARG; C < argc; ++C)
         {
             let arg = argv[C].toLowerCase ();
             switch (arg)
-            {
-                case "--help":
+            {                
                 case "-h":
+                case "--help":
                     DisplayHelp ();
                     break;
 
+                case "-v":
+                case "--version":
+                    DisplayVersion (argv);
+                    break;
+
+
                 default:
-                    ERR (`Unknown argument ${arg}`);
+                    ERR (`Unknown argument: "${arg}".`);
                     OUT ("Use --help to get usage information.");
                     break;
             }
@@ -45,6 +61,13 @@ function Main (argv)
 function DisplayHelp ()
 {
     OUT ("Usage: foo");
+}
+
+
+
+function DisplayVersion (argv)
+{    
+    OUT (Package.version);
 }
 
 
