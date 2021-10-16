@@ -5,6 +5,11 @@
 //
 
 
+// Imports
+Arweave = require (arweave-js);
+
+
+// Main
 function Main ()
 {
     console.log ("Testing");
