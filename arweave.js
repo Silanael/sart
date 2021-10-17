@@ -11,11 +11,12 @@
 const Arweave  = require ('arweave');
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
+const Util     = require ('./util.js');
 
 
 
 
-function InitArweave ()
+function Init ()
 {
     Sys.VERBOSE ("Connecting to " + Settings.GetHostString () + "...")
     
@@ -34,14 +35,33 @@ function InitArweave ()
 
 
 
-async function DisplayArweaveInfo ()
+async function DisplayArweaveInfo (args)
 {
-    const arweave = await InitArweave ();
+    const arweave = await Init ();
 
     Sys.VERBOSE ("Fetching network information..");
     Sys.OUT (await arweave.network.getInfo () );
+
+}
+
+
+async function GetTxData (args)
+{
+    // No transaction ID given
+    if (args.length <= 0)
+        Sys.ERR_MISSING_ARG ();
+
+    else
+    {
+        const tx_id   = args[0];
+        const arweave = await Init ();
+
+        arweave.transactions.getData (tx_id, {decode: true} )                
+                .then ( data => { process.stdout.write (data) } );
+
+    }
 }
 
 
 
-module.exports = { DisplayArweaveInfo };
+module.exports = { Init, DisplayArweaveInfo, GetTxData };

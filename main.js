@@ -11,10 +11,13 @@
 
 
 // Imports
-const Arweave  = require ('./arweave.js');
+const Package  = require ("./package.json");
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
-const Package  = require ("./package.json");
+const Arweave  = require ('./arweave.js');
+const ArFS     = require ('./ArFS.js');
+const Util     = require ('./util.js');
+
 
 
 
@@ -34,7 +37,9 @@ const Commands =
     "/?"          : DisplayHelp,         // For the Windows-scrubs.
     "/h"          : DisplayHelp,         //
     "version"     : DisplayVersion,    
-    "info"        : Arweave.DisplayArweaveInfo
+    "info"        : Arweave.DisplayArweaveInfo,
+    "getfile"     : ArFS.DownloadFile,
+    "getdata"     : Arweave.GetTxData
 }
 
 
@@ -89,13 +94,13 @@ function Main (argv)
                 
             
             // Ignore flags and flag parameters
-            if (IsFlag (arg_raw) || (C > FIRST_ARG && IsFlag (argv[C-1])) )
+            if (Util.IsFlag (arg_raw) || (C > FIRST_ARG && Util.IsFlag (argv[C-1])) )
                 continue;
                         
             let cmd = Commands[arg_raw.toLowerCase ()];
             
             if (cmd != undefined)            
-                cmd ();
+                cmd (Util.GetCmdArgs (argv, C) );
            
             else
                 Sys.ERR_FATAL (`Unknown command: "${arg}".`);                    
@@ -121,7 +126,7 @@ function ParseFlags (argc, argv)
         let arg_raw  = argv[C];    
 
         // Only process flags.
-        if (IsFlag (arg_raw) )
+        if (Util.IsFlag (arg_raw) )
         {
             let arg = arg_raw.startsWith ("--") ? arg_raw.toLowerCase () 
                                                 : arg_raw;
@@ -156,7 +161,7 @@ function FetchFlagArg (argc, argv, pos, flag)
         return argv[pos];
 }
 
-function IsFlag     (arg)   { return arg.startsWith ('-');                                                                                  }
+
 
 
 

@@ -15,7 +15,7 @@ const Settings = require ('./settings.js');
 // Data output. Non-silencable.
 function DATA_OUT (str)
 {
-    console.log (str);
+    process.stdout.write (str);    
 }
 
 
@@ -42,6 +42,9 @@ function ERR (str)
     if (!Settings.IsQuiet () )
         console.error (str);
 }
+
+
+function ERR_MISSING_ARG () { ERR_FATAL ("Missing argument."); }
 
 
 
@@ -111,6 +114,7 @@ module.exports =
     VERBOSE,
     ERR,
     ERR_CONFLICT,
+    ERR_MISSING_ARG,
     ERR_FATAL,
     EXIT,
     ErrorHandler,
