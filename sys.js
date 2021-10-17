@@ -8,10 +8,8 @@
 // Mostly output-related things.
 //
 
-
-// Variables
-var Verbose      = false;
-var Quiet        = false;
+// Local imports
+const Settings = require ('./settings.js').Settings;
 
 
 
@@ -26,7 +24,7 @@ function OUT (str)
 // Informative output - will be silenceable.
 function INFO (str)
 {
-    if (!Quiet)
+    if (!Settings.Quiet)
         console.log (str);
 }
 
@@ -34,9 +32,8 @@ function INFO (str)
 
 // Informative output - needs to be enabled.
 function VERBOSE (str)
-{
-    console.log (Verbose);
-    if (Verbose && !Quiet)
+{        
+    if (Settings.Verbose && !Settings.Quiet)
         console.log (str);
 }
 
@@ -45,7 +42,7 @@ function VERBOSE (str)
 // Error message output.
 function ERR (str)
 {
-    if (!Quiet)
+    if (!Settings.Quiet)
         console.error (str);
 }
 
@@ -81,7 +78,7 @@ function ErrorHandler (error)
     if (error != undefined)
     {
         VERBOSE (error);
-
+        
         let msg = error.code;
         
         // The Error is a string or so.
@@ -120,6 +117,4 @@ module.exports =
     ERR_FATAL,
     EXIT,
     ErrorHandler,
-    Verbose,
-    Quiet
 };

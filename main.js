@@ -10,17 +10,21 @@
 //
 
 
-// Local imports
-const Sys     = require ('./sys.js');
-
-
 // External imports
 const Arweave = require ('arweave');
 const Package = require ("./package.json");
 
 
+// Local imports
+const Sys      = require ('./sys.js');
+const Settings = require ('./settings.js').Settings;
+
+
+
+
 
 // Constants
+const PRG_ARG           = 0;
 const FILENAME_PATH_ARG = 1;
 const FIRST_ARG         = 2;
 
@@ -55,7 +59,6 @@ const Flags =
 
 
 
-// Variables
 var ManualDest   = false;
 var ArweaveHost  = "arweave.net";
 var ArweavePort  = 443;
@@ -70,19 +73,18 @@ var ArweaveProto = "https";
 
 function Main (argv)
 {
-    
+
+    // Set an exception handler
     process.on ("uncaughtException", Sys.ErrorHandler);
-    const argc = argv.length;
-
-
-
-    // No arguments given.
-    if (argc <= FIRST_ARG)
-        DisplayHelp ();
-
-
     
-    else
+
+    const argc           = argv.length;
+    let   command_found  = false;
+    
+
+
+    // We have some command-line parameters
+    if (argc >= FIRST_ARG)
     {    
         // Parse flags first
         ParseFlags (argc, argv);
@@ -107,9 +109,14 @@ function Main (argv)
                 Sys.ERR_FATAL (`Unknown command: "${arg}".`);                    
 
             // Process only one command.
+            command_found = true;
             break;
         }
     }
+
+    if (!command_found)
+        DisplayHelp ();
+
 }
 
 
@@ -190,8 +197,8 @@ function GetHostString ()
 }
 
 
-function SetVerbose ()      { Sys.Verbose  = true;  if (Sys.Quiet)   Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
-function SetQuiet   ()      { Sys.Quiet    = true;  if (Sys.Verbose) Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
+function SetVerbose ()      { Settings.Verbose  = true;  if (Settings.Quiet)   Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
+function SetQuiet   ()      { Settings.Quiet    = true;  if (Settings.Verbose) Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
 function SetHost    (host)  { ArweaveHost  = host;  ManualDest = true;                                                                      }
 function SetPort    (port)  { ArweavePort  = port;  ManualDest = true;                                                                      }
 function SetProto   (proto) { ArweaveProto = proto; ManualDest = true;                                                                      }
@@ -200,15 +207,15 @@ function IsFlag     (arg)   { return arg.startsWith ('-');                      
 
 function DisplayHelp ()
 {
-    OUT ("Usage: foo");
-    EXIT (0);
+    Sys.OUT ("Usage: foo");
+    Sys.EXIT (0);
 }
 
 
 
 function DisplayVersion (argv)
 {    
-    OUT (Package.version);
+    Sys.OUT (Package.version);
 }
 
 
@@ -220,6 +227,10 @@ async function DisplayArweaveInfo ()
     Sys.VERBOSE ("Fetching network information..");
     Sys.OUT (await arweave.network.getInfo () );
 }
+
+
+// Exports
+module.exports = { Settings };
 
 
 // Entrypoint
