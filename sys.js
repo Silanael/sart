@@ -9,7 +9,7 @@
 //
 
 // Local imports
-const Settings = require ('./settings.js').Settings;
+const Settings = require ('./settings.js');
 
 
 
@@ -24,7 +24,7 @@ function OUT (str)
 // Informative output - will be silenceable.
 function INFO (str)
 {
-    if (!Settings.Quiet)
+    if (!Settings.Config.Quiet)
         console.log (str);
 }
 
@@ -33,7 +33,7 @@ function INFO (str)
 // Informative output - needs to be enabled.
 function VERBOSE (str)
 {        
-    if (Settings.Verbose && !Settings.Quiet)
+    if (Settings.Config.Verbose && !Settings.Config.Quiet)
         console.log (str);
 }
 
@@ -42,7 +42,7 @@ function VERBOSE (str)
 // Error message output.
 function ERR (str)
 {
-    if (!Settings.Quiet)
+    if (!Settings.Config.Verbose)
         console.error (str);
 }
 

@@ -17,7 +17,7 @@ const Package = require ("./package.json");
 
 // Local imports
 const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js').Settings;
+const Settings = require ('./settings.js');
 
 
 
@@ -46,23 +46,19 @@ const Commands =
 // Arg-Command mapping table
 const Flags =
 {
-    "-V"          : { "F": SetVerbose,  "A":false },
-    "--verbose"   : { "F": SetVerbose,  "A":false },
-    "-q"          : { "F": SetQuiet,    "A":false },
-    "--quiet"     : { "F": SetQuiet,    "A":false },
-    "--help"      : { "F": DisplayHelp, "A":false },
-    "-h"          : { "F": SetHost,     "A":true  },
-    "--host"      : { "F": SetHost,     "A":true  },
-    "--port"      : { "F": SetPort,     "A":true  },
-    "--proto"     : { "F": SetProto,    "A":true  },
+    "-V"          : { "F": Settings.SetVerbose,  "A":false },
+    "--verbose"   : { "F": Settings.SetVerbose,  "A":false },
+    "-q"          : { "F": Settings.SetQuiet,    "A":false },
+    "--quiet"     : { "F": Settings.SetQuiet,    "A":false },
+    "--help"      : { "F": DisplayHelp,          "A":false },
+    "-h"          : { "F": Settings.SetHost,     "A":true  },
+    "--host"      : { "F": Settings.SetHost,     "A":true  },
+    "--port"      : { "F": Settings.SetPort,     "A":true  },
+    "--proto"     : { "F": Settings.SetProto,    "A":true  },
 }
 
 
 
-var ManualDest   = false;
-var ArweaveHost  = "arweave.net";
-var ArweavePort  = 443;
-var ArweaveProto = "https";
 
 
 
@@ -170,22 +166,24 @@ function FetchFlagArg (argc, argv, pos, flag)
 function InitArweave ()
 {
     Sys.INFO ("Connecting to " + GetHostString () + "...")
+    
+    const Config = Settings.Config;
 
     try
     {
         let arweave = Arweave.init
         (
             {
-                host:     ArweaveHost,
-                port:     ArweavePort,
-                protocol: ArweaveProto
+                host:     Config.ArweaveHost,
+                port:     Config.ArweavePort,
+                protocol: Config.ArweaveProto
             }
         );
         return arweave;
     }
     catch (err)
     {
-        Sys.ERR_FATAL ("foo");
+        Sys.ERR_FATAL (err);
     }
 }
 
@@ -193,15 +191,12 @@ function InitArweave ()
 
 function GetHostString ()
 {
-    return ArweaveProto + "://" + ArweaveHost + ":" + ArweavePort;
+    const cfg = Settings.Config;
+    return cfg.ArweaveProto + "://" + cfg.ArweaveHost + ":" + cfg.ArweavePort;
 }
 
 
-function SetVerbose ()      { Settings.Verbose  = true;  if (Settings.Quiet)   Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
-function SetQuiet   ()      { Settings.Quiet    = true;  if (Settings.Verbose) Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); }
-function SetHost    (host)  { ArweaveHost  = host;  ManualDest = true;                                                                      }
-function SetPort    (port)  { ArweavePort  = port;  ManualDest = true;                                                                      }
-function SetProto   (proto) { ArweaveProto = proto; ManualDest = true;                                                                      }
+
 function IsFlag     (arg)   { return arg.startsWith ('-');                                                                                  }
 
 
