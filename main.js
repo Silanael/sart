@@ -10,15 +10,11 @@
 //
 
 
-// External imports
-const Arweave = require ('arweave');
-const Package = require ("./package.json");
-
-
-// Local imports
+// Imports
+const Arweave  = require ('./arweave.js');
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
-
+const Package  = require ("./package.json");
 
 
 
@@ -38,7 +34,7 @@ const Commands =
     "/?"          : DisplayHelp,         // For the Windows-scrubs.
     "/h"          : DisplayHelp,         //
     "version"     : DisplayVersion,    
-    "info"        : DisplayArweaveInfo
+    "info"        : Arweave.DisplayArweaveInfo
 }
 
 
@@ -47,9 +43,9 @@ const Commands =
 const Flags =
 {
     "-V"          : { "F": Settings.SetVerbose,  "A":false },
-    "--verbose"   : { "F": Settings.SetVerbose,  "A":false },
-    "-q"          : { "F": Settings.SetQuiet,    "A":false },
+    "--verbose"   : { "F": Settings.SetVerbose,  "A":false },    
     "--quiet"     : { "F": Settings.SetQuiet,    "A":false },
+    "--debug"     : { "F": Settings.SetDebug,    "A":false },
     "--help"      : { "F": DisplayHelp,          "A":false },
     "-h"          : { "F": Settings.SetHost,     "A":true  },
     "--host"      : { "F": Settings.SetHost,     "A":true  },
@@ -160,44 +156,11 @@ function FetchFlagArg (argc, argv, pos, flag)
         return argv[pos];
 }
 
-
-
-
-function InitArweave ()
-{
-    Sys.INFO ("Connecting to " + GetHostString () + "...")
-    
-    const Config = Settings.Config;
-
-    try
-    {
-        let arweave = Arweave.init
-        (
-            {
-                host:     Config.ArweaveHost,
-                port:     Config.ArweavePort,
-                protocol: Config.ArweaveProto
-            }
-        );
-        return arweave;
-    }
-    catch (err)
-    {
-        Sys.ERR_FATAL (err);
-    }
-}
-
-
-
-function GetHostString ()
-{
-    const cfg = Settings.Config;
-    return cfg.ArweaveProto + "://" + cfg.ArweaveHost + ":" + cfg.ArweavePort;
-}
-
-
-
 function IsFlag     (arg)   { return arg.startsWith ('-');                                                                                  }
+
+
+
+
 
 
 function DisplayHelp ()
@@ -214,14 +177,6 @@ function DisplayVersion (argv)
 }
 
 
-
-async function DisplayArweaveInfo ()
-{
-    const arweave = await InitArweave ();
-
-    Sys.VERBOSE ("Fetching network information..");
-    Sys.OUT (await arweave.network.getInfo () );
-}
 
 
 // Exports

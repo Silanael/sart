@@ -1,18 +1,38 @@
+//
+// *****************************
+// *** Silanael ARweave Tool ***
+// *****************************
+//
+// settings.js - 2021-10-17_01
+//
+
+const LogLevels =
+{
+    QUIET   : 0,
+    NORMAL  : 1,
+    VERBOSE : 2,
+    DEBUG   : 3
+};
+
+
 const Config =
 {
-    Quiet        : false,
-    Verbose      : false,
+    LogLevel     : LogLevels.NORMAL,
     
     ArweaveHost  : "arweave.net",
     ArweavePort  : 443,
     ArweaveProto : "https",    
     ManualDest   : false,
+};
 
-}
 
-
-function SetPort    (port)  { Config.ArweavePort  = port;  ManualDest = true; }
-function SetProto   (proto) { Config.ArweaveProto = proto; ManualDest = true;  }
+function GetHostString      ()      { return Config.ArweaveProto + "://" + Config.ArweaveHost + ":" + Config.ArweavePort; }
+function IsQuiet            ()      { return Config.LogLevel <= LogLevels.QUIET;      }
+function IsMSGOutputAllowed ()      { return Config.LogLevel >  LogLevels.QUIET;      }
+function IsVerbose          ()      { return Config.LogLevel >= LogLevels.VERBOSE;    }
+function IsDebug            ()      { return Config.LogLevel >= LogLevels.DEBUG;      }
+function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true; }
+function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true; }
 
 
 
@@ -57,8 +77,8 @@ function SetHost (host)
 
 function SetVerbose ()
 { 
-    if (!Config.Quiet)
-        Config.Verbose  = true;
+    if (Config.LogLevel > LogLevels.QUIET)
+        Config.LogLevel = LogLevels.VERBOSE;
 
     else
         Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); 
@@ -67,21 +87,33 @@ function SetVerbose ()
 
 function SetQuiet ()
 { 
-    if (!Config.Verbose)
-        Config.Quiet  = true;
+    if (Config.LogLevel < LogLevels.VERBOSE)
+        Config.LogLevel = LogLevels.QUIET;
 
     else
         Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); 
 }
 
+function SetDebug () { Config.LogLevel = LogLevels.DEBUG; }
 
 
+
+
+// I can think of a better way of doing this. But CBA at the moment.
 module.exports =
 { 
     Config,
+    LogLevels,
+    GetHostString,
+    IsQuiet,
+    IsMSGOutputAllowed,
+    IsVerbose,
+    IsDebug,
     SetHost,
     SetPort,
     SetProto,
     SetVerbose,
-    SetQuiet
+    SetQuiet,
+    SetDebug
 };
+

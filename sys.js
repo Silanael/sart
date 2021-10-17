@@ -1,4 +1,3 @@
-#!/usr/bin/env node 
 //
 // *****************************
 // *** Silanael ARweave Tool ***
@@ -14,18 +13,9 @@ const Settings = require ('./settings.js');
 
 
 // Data output. Non-silencable.
-function OUT (str)
+function DATA_OUT (str)
 {
     console.log (str);
-}
-
-
-
-// Informative output - will be silenceable.
-function INFO (str)
-{
-    if (!Settings.Config.Quiet)
-        console.log (str);
 }
 
 
@@ -33,16 +23,23 @@ function INFO (str)
 // Informative output - needs to be enabled.
 function VERBOSE (str)
 {        
-    if (Settings.Config.Verbose && !Settings.Config.Quiet)
+    if (Settings.IsVerbose () )
         console.log (str);
 }
 
+
+// Very extensive output - needs to be enabled.
+function DEBUG (str)
+{        
+    if (Settings.IsDebug () )
+        console.log (str);
+}
 
 
 // Error message output.
 function ERR (str)
 {
-    if (!Settings.Config.Verbose)
+    if (!Settings.IsQuiet () )
         console.error (str);
 }
 
@@ -77,7 +74,7 @@ function ErrorHandler (error)
 {        
     if (error != undefined)
     {
-        VERBOSE (error);
+        DEBUG (error);
         
         let msg = error.code;
         
@@ -93,7 +90,8 @@ function ErrorHandler (error)
         {
             switch (error.code)
             {
-                case "ENOTFOUND": msg = "Host not found."; break;
+                case "ENOTFOUND":    msg = "Host not found.";      break;
+                case "ECONNREFUSED": msg = "Connection refused.";  break;
             }
         }
 
@@ -109,8 +107,7 @@ function ErrorHandler (error)
 
 module.exports = 
 {
-    OUT,
-    INFO,
+    OUT: DATA_OUT,    
     VERBOSE,
     ERR,
     ERR_CONFLICT,
