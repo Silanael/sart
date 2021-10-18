@@ -8,7 +8,8 @@
 //
 
 
-function IsFlag (arg)   { return arg.startsWith ('-'); }
+//function IsFlag (arg)        { return arg.startsWith ('-'); }
+function IsFlag (arg, flags)   { return flags[arg] != undefined; }
 
 
 function GetCmdArgs (argv, cmd_pos)

@@ -46,7 +46,7 @@ async function DownloadFile (args)
         else
         {
             await arweave.transactions.getData (files[0], {decode: true, string: true} )
-                .then ( data => { Sys.OUT (data) } );
+                .then ( data => { Sys.OUT_BIN (data) } );
                             
         }
 

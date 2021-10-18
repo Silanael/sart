@@ -12,64 +12,7 @@ const Settings = require ('./settings.js');
 
 
 
-// Data output. Non-silencable.
-function DATA_OUT (str)
-{
-    process.stdout.write (str);    
-}
-
-
-
-// Informative output - needs to be enabled.
-function VERBOSE (str)
-{        
-    if (Settings.IsVerbose () )
-        console.log (str);
-}
-
-
-// Very extensive output - needs to be enabled.
-function DEBUG (str)
-{        
-    if (Settings.IsDebug () )
-        console.log (str);
-}
-
-
-// Error message output.
-function ERR (str)
-{
-    if (!Settings.IsQuiet () )
-        console.error (str);
-}
-
-
 function ERR_MISSING_ARG () { ERR_FATAL ("Missing argument."); }
-
-
-
-function ERR_CONFLICT (msg)
-{
-    console.error (msg + ". Stop fucking around.");
-    EXIT (-1);
-}
-
-
-
-// Error message output + exit.
-function ERR_FATAL (str)
-{
-    ERR (str);
-    EXIT (-1);
-}
-
-
-
-
-function EXIT (code)
-{
-    process.exit (code);
-}
 
 
 
@@ -108,9 +51,87 @@ function ErrorHandler (error)
 
 
 
+// Data output. Non-silencable.
+function OUT_BIN (str)
+{
+    process.stdout.write (str);    
+}
+
+
+
+// Data output. Non-silencable.
+function OUT_TXT (str)
+{            
+    console.log (str);
+}
+
+
+
+// Informative output, ie. for 'help'.
+function INFO (str)
+{            
+    if (!Settings.IsQuiet () )
+        console.log (str);
+}
+
+
+
+// Detailed informative output - needs to be enabled.
+function VERBOSE (str)
+{        
+    if (Settings.IsVerbose () )
+        console.log (str);
+}
+
+
+
+// Very extensive output - needs to be enabled.
+function DEBUG (str)
+{        
+    if (Settings.IsDebug () )
+        console.log (str);
+}
+
+
+
+// Error message output.
+function ERR (str)
+{
+    if (!Settings.IsQuiet () )
+        console.error (str);
+}
+
+
+
+function ERR_CONFLICT (msg)
+{
+    console.error (msg + ". Stop fucking around.");
+    EXIT (-1);
+}
+
+
+
+// Error message output + exit.
+function ERR_FATAL (str)
+{
+    ERR (str);
+    EXIT (-1);
+}
+
+
+
+function EXIT (code)
+{
+    process.exit (code);
+}
+
+
+
 module.exports = 
 {
-    OUT: DATA_OUT,    
+    OUT_TXT,
+    OUT_BIN,
+    INFO,
     VERBOSE,
     ERR,
     ERR_CONFLICT,

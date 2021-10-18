@@ -40,7 +40,7 @@ async function DisplayArweaveInfo (args)
     const arweave = await Init ();
 
     Sys.VERBOSE ("Fetching network information..");
-    Sys.OUT (await arweave.network.getInfo () );
+    Sys.OUT_TXT (await arweave.network.getInfo () );
 
 }
 

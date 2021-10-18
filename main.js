@@ -17,6 +17,8 @@ const Settings = require ('./settings.js');
 const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
 const Util     = require ('./util.js');
+const List     = require ('./cmd_list.js');
+const Search   = require ('./cmd_search.js');
 
 
 
@@ -34,10 +36,15 @@ const FIRST_ARG         = 2;
 const Commands =
 {    
     "help"        : DisplayHelp,
+    "--help"      : DisplayHelp,
     "/?"          : DisplayHelp,         // For the Windows-scrubs.
     "/h"          : DisplayHelp,         //
-    "version"     : DisplayVersion,    
+    "version"     : DisplayVersion,        
+    "-v"          : DisplayVersion,    
+    "--version"   : DisplayVersion,
     "info"        : Arweave.DisplayArweaveInfo,
+    "list"        : List.HandleCommand,
+    "search"      : Search.HandleCommand,
     "getfile"     : ArFS.DownloadFile,
     "getdata"     : Arweave.GetTxData
 }
@@ -51,17 +58,12 @@ const Flags =
     "--verbose"   : { "F": Settings.SetVerbose,  "A":false },    
     "--quiet"     : { "F": Settings.SetQuiet,    "A":false },
     "--debug"     : { "F": Settings.SetDebug,    "A":false },
-    "--help"      : { "F": DisplayHelp,          "A":false },
-    "-h"          : { "F": Settings.SetHost,     "A":true  },
-    "--host"      : { "F": Settings.SetHost,     "A":true  },
+    
+    "-h"          : { "F": Settings.SetHost,     "A":true  },        
+    "--host"      : { "F": Settings.SetHost,     "A":true  },    
     "--port"      : { "F": Settings.SetPort,     "A":true  },
-    "--proto"     : { "F": Settings.SetProto,    "A":true  },
+    "--proto"     : { "F": Settings.SetProto,    "A":true  }, 
 }
-
-
-
-
-
 
 
 
@@ -94,13 +96,13 @@ function Main (argv)
                 
             
             // Ignore flags and flag parameters
-            if (Util.IsFlag (arg_raw) || (C > FIRST_ARG && Util.IsFlag (argv[C-1])) )
+            if (Util.IsFlag (arg_raw, Flags) || (C > FIRST_ARG && Util.IsFlag (argv[C-1], Flags)) )
                 continue;
                         
             let cmd = Commands[arg_raw.toLowerCase ()];
             
             if (cmd != undefined)            
-                cmd (Util.GetCmdArgs (argv, C) );
+                cmd (Util.GetCmdArgs (argv, C, Flags) );
            
             else
                 Sys.ERR_FATAL (`Unknown command: "${arg}".`);                    
@@ -126,7 +128,7 @@ function ParseFlags (argc, argv)
         let arg_raw  = argv[C];    
 
         // Only process flags.
-        if (Util.IsFlag (arg_raw) )
+        if (Util.IsFlag (arg_raw, Flags) )
         {
             let arg = arg_raw.startsWith ("--") ? arg_raw.toLowerCase () 
                                                 : arg_raw;
@@ -165,12 +167,9 @@ function FetchFlagArg (argc, argv, pos, flag)
 
 
 
-
-
-
 function DisplayHelp ()
 {
-    Sys.OUT ("Usage: foo");
+    Sys.INFO ("Usage: foo");
     Sys.EXIT (0);
 }
 
@@ -178,7 +177,7 @@ function DisplayHelp ()
 
 function DisplayVersion (argv)
 {    
-    Sys.OUT (Package.version);
+    Sys.OUT_TXT (Package.version);
 }
 
 
