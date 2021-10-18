@@ -7,11 +7,16 @@
 // Utility-functions
 //
 
+// Imports
 const { ERR_FATAL } = require("./sys");
 
 
-//function IsFlag (arg)        { return arg.startsWith ('-'); }
-function IsFlag (arg, flags)   { return flags[arg] != undefined; }
+
+
+//function IsFlag (arg)               { return arg.startsWith ('-'); }
+function IsFlag        (arg, flags)   { return flags[arg] != undefined; }
+function IsArweaveHash (str)          { return str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
+function IsArFSID      (str)          { return str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 
 
 
@@ -42,4 +47,4 @@ function RequireArgs (args, amount)
 
 
 
-module.exports = { IsFlag, GetCmdArgs, RequireArgs };
+module.exports = { IsFlag, GetCmdArgs, RequireArgs, IsArweaveHash, IsArFSID };

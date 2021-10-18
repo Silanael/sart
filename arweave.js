@@ -53,6 +53,7 @@ async function Testing ()
             protocol: Settings.Config.ArweaveProto
         }
     );     
+    
 }
 
 
@@ -97,7 +98,7 @@ async function RunGQLTransactionQuery (owner = undefined, tags = [], sort = 'HEI
     {
         Sys.DEBUG ("Pass #" + pass_num + " begin:");
         
-        query_str = CreateGQLTransactionQuery ( { "cursor": cursor, "first": GQL_MAX_RESULTS, "owner":owner, "tags":[], sort:'HEIGHT_DESC'} );
+        query_str = CreateGQLTransactionQuery ( { "cursor": cursor, "first": GQL_MAX_RESULTS, "owner":owner, "tags":tags, "sort":sort } );
         
         Sys.DEBUG ("Query:")
         Sys.DEBUG (query_str);
@@ -140,6 +141,7 @@ function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MA
     const cursor_str = config.cursor != undefined ? `after:  "${config.cursor}" ,` : "";                                                      
     const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
         
+    
     let tag_str = "";
     if (config.tags.length > 0)
     {
@@ -197,31 +199,40 @@ async function GetTx (txid)
 
 
 
-async function GetTxData (args)
+async function OutputTxData (txid)
 {
-    // No transaction ID given
-    if (args.length <= 0)
-        Sys.ERR_MISSING_ARG ();
+    
+     const arweave = await Init ();
+     arweave.transactions.getData (txid, {decode: true} )                
+             .then ( data => { process.stdout.write (data) } );
 
-    else
-    {
-        const tx_id   = args[0];
-        const arweave = await Init ();
+}
 
-        arweave.transactions.getData (tx_id, {decode: true} )                
-                .then ( data => { process.stdout.write (data) } );
+async function GetTxData (txid)
+{
+    
+     const arweave = await Init ();     
+     const data = await arweave.transactions.getData (txid, {decode: true} );
+     return data;
+}
 
-    }
+async function GetTxStrData (txid)
+{
+    
+     const arweave = await Init ();
+     const data = await arweave.transactions.getData (txid, {decode: true, string: true} );
+     return data;
 }
 
 
-async function GetTXsForAddress (address)
+async function GetTXsForAddress (address, tags = [] )
 {
     const arweave = Init ();
-    results = await RunGQLTransactionQuery (address)     
+    results = await RunGQLTransactionQuery (address, tags)     
     return results;
 }
 
 
 
-module.exports = { Init, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTXsForAddress, Testing };  // TODO: Remove testing!
+module.exports = { Init, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, 
+                   OutputTxData, GetTXsForAddress, Testing };  // TODO: Remove testing!

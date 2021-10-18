@@ -19,6 +19,14 @@ const TAG_FILEID = "File-Id";
 
 
 
+async function GetDriveARFSMetadataEntries (drive_id)
+{
+    const tags = [ {"name":"Drive-Id", "values":drive_id} ];
+
+    txs = await Arweave.GetTXsForAddress (undefined, tags);
+    return txs;    
+}
+
 
 async function DownloadFile (args)
 {
@@ -54,6 +62,18 @@ async function DownloadFile (args)
 }
 
 
+async function ListDriveFiles (drive_id)
+{
+    const txs = await GetDriveARFSMetadataEntries (drive_id);
+
+    const len = txs.length;
+    for (let C = 0; C < len; ++C)
+    {        
+        let data = await Arweave.GetTxStrData (txs[C].node.id );
+        Sys.OUT_TXT (data); 
+    }
+    
+}
 
 
-module.exports = { DownloadFile };
+module.exports = { ListDriveFiles, DownloadFile };
