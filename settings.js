@@ -27,6 +27,7 @@ const Config =
 
 
 function GetHostString      ()      { return Config.ArweaveProto + "://" + Config.ArweaveHost + ":" + Config.ArweavePort; }
+function GetGQLHostString   ()      { return GetHostString () + "/graphql";           }
 function IsQuiet            ()      { return Config.LogLevel <= LogLevels.QUIET;      }
 function IsMSGOutputAllowed ()      { return Config.LogLevel >  LogLevels.QUIET;      }
 function IsVerbose          ()      { return Config.LogLevel >= LogLevels.VERBOSE;    }
@@ -105,6 +106,7 @@ module.exports =
     Config,
     LogLevels,
     GetHostString,
+    GetGQLHostString,
     IsQuiet,
     IsMSGOutputAllowed,
     IsVerbose,

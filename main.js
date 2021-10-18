@@ -151,7 +151,9 @@ function ParseFlags (argc, argv)
                 Sys.ERR_FATAL ("Unknown argument: " + arg_raw);
 
         }
-    }    
+    }
+    
+    Sys.DEBUG ("Flags parsed.");
 }
 
 function FetchFlagArg (argc, argv, pos, flag)

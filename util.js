@@ -7,20 +7,22 @@
 // Utility-functions
 //
 
+const { ERR_FATAL } = require("./sys");
+
 
 //function IsFlag (arg)        { return arg.startsWith ('-'); }
 function IsFlag (arg, flags)   { return flags[arg] != undefined; }
 
 
-function GetCmdArgs (argv, cmd_pos)
+
+function GetCmdArgs (argv, cmd_pos, flags)
 {
     const len    = argv.length;
     let   params = 0;
-
     
     for (let C = cmd_pos + 1; C < len; ++C)
     {
-        if (IsFlag (argv[C]))            
+        if (IsFlag (argv[C], flags) )
             break;
         else
             params++;
@@ -30,13 +32,14 @@ function GetCmdArgs (argv, cmd_pos)
 }
 
 
-
-// Converts an Uint8Array to a string that can be sent to stdout.
-function DataToStr (data)
+function RequireArgs (args, amount)
 {
-    return new TextDecoder("utf-8").decode (data);
+    const len = args.length;
+    if (len < amount)
+        ERR_FATAL ("Missing arguments: " + len + " / " + amount + " supplied.");
 }
 
 
 
-module.exports = { IsFlag, GetCmdArgs, DataToStr };
+
+module.exports = { IsFlag, GetCmdArgs, RequireArgs };

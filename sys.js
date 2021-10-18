@@ -133,6 +133,7 @@ module.exports =
     OUT_BIN,
     INFO,
     VERBOSE,
+    DEBUG,
     ERR,
     ERR_CONFLICT,
     ERR_MISSING_ARG,
