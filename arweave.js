@@ -78,7 +78,7 @@ async function RunGQLQuery (query_str)
 
 
 // Does a transaction () query, returns edges.
-async function RunGQLTransactionQuery (tags = [], sort = 'HEIGHT_DESC')
+async function RunGQLTransactionQuery (owner = undefined, tags = [], sort = 'HEIGHT_DESC')
 {    
     const arweave   = Init ();
     
@@ -97,7 +97,7 @@ async function RunGQLTransactionQuery (tags = [], sort = 'HEIGHT_DESC')
     {
         Sys.DEBUG ("Pass #" + pass_num + " begin:");
         
-        query_str = CreateGQLTransactionQuery ( { "cursor": cursor, "first": GQL_MAX_RESULTS, "tags":[], sort:'HEIGHT_DESC'} );
+        query_str = CreateGQLTransactionQuery ( { "cursor": cursor, "first": GQL_MAX_RESULTS, "owner":owner, "tags":[], sort:'HEIGHT_DESC'} );
         
         Sys.DEBUG ("Query:")
         Sys.DEBUG (query_str);
@@ -129,25 +129,35 @@ async function RunGQLTransactionQuery (tags = [], sort = 'HEIGHT_DESC')
 
 
 
-function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, tags: [], sort: 'HEIGHT_DESC'} )
+function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, owner: undefined, tags: [], sort: 'HEIGHT_DESC'} )
 {
-    const cursor_str = config.cursor != undefined ? `after: "${config.cursor}",` 
-                                                  : "";
     
+    // No proper query arguments given
+    if ( !Settings.IsForceful () && config.cursor == undefined && config.owner == undefined && config.tags.length <= 0)    
+        Sys.ERR_FATAL ("No proper query terms given, would fetch the entire blockchain. Aborting.");
+    
+
+    const cursor_str = config.cursor != undefined ? `after:  "${config.cursor}" ,` : "";                                                      
+    const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
+        
+    let tag_str = "";
+    if (config.tags.length > 0)
+    {
+        tag_str = "tags:[";
+        config.tags.forEach ( tag => {tag_str += `{ name:"${tag.name}", values:"${tag.values}"},` } ); 
+        tag_str += "],";
+    }
+
     const query = 
     `
     query 
     {
         transactions
-        ( 
+        (             
           first:${config.first},
           ${cursor_str}
-          tags:
-          [
-            { name:"Drive-Id", values:"a44482fd-592e-45fa-a08a-e526c31b87f1"},
-            { name:"Entity-Type", values:"file"},            
-          ]
-          
+          ${owner_str}
+          ${tag_str}                    
         )
         {
           edges
@@ -208,7 +218,7 @@ async function GetTxData (args)
 async function GetTXsForAddress (address)
 {
     const arweave = Init ();
-    results = await RunGQLTransactionQuery ()     
+    results = await RunGQLTransactionQuery (address)     
     return results;
 }
 

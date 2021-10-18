@@ -63,6 +63,7 @@ const Flags =
     "--host"      : { "F": Settings.SetHost,     "A":true  },    
     "--port"      : { "F": Settings.SetPort,     "A":true  },
     "--proto"     : { "F": Settings.SetProto,    "A":true  }, 
+    "--force"     : { "F": Settings.SetForce,    "A":false }, 
 }
 
 

@@ -23,6 +23,8 @@ const Config =
     ArweavePort  : 443,
     ArweaveProto : "https",    
     ManualDest   : false,
+
+    Force        : false
 };
 
 
@@ -32,6 +34,8 @@ function IsQuiet            ()      { return Config.LogLevel <= LogLevels.QUIET;
 function IsMSGOutputAllowed ()      { return Config.LogLevel >  LogLevels.QUIET;      }
 function IsVerbose          ()      { return Config.LogLevel >= LogLevels.VERBOSE;    }
 function IsDebug            ()      { return Config.LogLevel >= LogLevels.DEBUG;      }
+function IsForceful         ()      { return Config.Force;                            }
+function SetForce           ()      { Config.Force = true;                            }
 function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true; }
 function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true; }
 
@@ -111,11 +115,13 @@ module.exports =
     IsMSGOutputAllowed,
     IsVerbose,
     IsDebug,
+    IsForceful,
     SetHost,
     SetPort,
     SetProto,
     SetVerbose,
     SetQuiet,
-    SetDebug
+    SetDebug,
+    SetForce
 };
 

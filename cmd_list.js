@@ -17,7 +17,7 @@ const Arweave  = require ('./arweave.js');
 async function HandleCommand (args)
 {
     Util.RequireArgs (args, 1);
-    txs = await Arweave.GetTXsForAddress ("zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4")
+    txs = await Arweave.GetTXsForAddress (args[0])
  
     txs.forEach ( tx => { Sys.OUT_TXT (tx.node.id) } );
 }
