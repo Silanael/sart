@@ -77,28 +77,49 @@ function INFO (str)
 
 
 // Detailed informative output - needs to be enabled.
-function VERBOSE (str)
+function VERBOSE (str, src)
 {        
     if (Settings.IsVerbose () )
-        console.log (str);
+        console.log (src != null ? src + ": " + str : str);
 }
 
 
 
 // Very extensive output - needs to be enabled.
-function DEBUG (str)
+function DEBUG (str, src)
 {        
     if (Settings.IsDebug () )
-        console.log (str);
+        console.log (src != null ? src + ": " + str : str);
+}
+
+
+
+// Warning
+function WARN (str, src)
+{
+    if (!Settings.IsQuiet () )
+        console.warn (src != null ? src + ": " + str : str);    
+
 }
 
 
 
 // Error message output.
-function ERR (str)
+function ERR (str, src)
 {
     if (!Settings.IsQuiet () )
-        console.error (str);
+        console.error (src != null ? src + ": " + str : str);
+}
+
+
+
+// An error that can be overridden with --force
+function ERR_OVERRIDABLE (str)
+{
+    ERR (str);
+
+    if (!Settings.IsForceful () )
+        EXIT (-1);
 }
 
 
@@ -134,7 +155,9 @@ module.exports =
     INFO,
     VERBOSE,
     DEBUG,
+    WARN,
     ERR,
+    ERR_OVERRIDABLE,
     ERR_CONFLICT,
     ERR_MISSING_ARG,
     ERR_FATAL,

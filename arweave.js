@@ -53,7 +53,7 @@ async function Testing ()
             protocol: Settings.Config.ArweaveProto
         }
     );     
-    
+
 }
 
 
@@ -134,9 +134,9 @@ function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MA
 {
     
     // No proper query arguments given
-    if ( !Settings.IsForceful () && config.cursor == undefined && config.owner == undefined && config.tags.length <= 0)    
-        Sys.ERR_FATAL ("No proper query terms given, would fetch the entire blockchain. Aborting.");
-    
+    if (config.cursor == undefined && config.owner == undefined && config.tags.length <= 0)
+        Sys.ERR_OVERRIDABLE ("No proper query terms given, would fetch the entire blockchain.");
+            
 
     const cursor_str = config.cursor != undefined ? `after:  "${config.cursor}" ,` : "";                                                      
     const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
@@ -168,7 +168,8 @@ function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MA
             node
             {
               id,
-              block {id}            
+              block {id},
+              tags  {name, value}            
             }
           }
         }
@@ -215,6 +216,7 @@ async function GetTxData (txid)
      const data = await arweave.transactions.getData (txid, {decode: true} );
      return data;
 }
+
 
 async function GetTxStrData (txid)
 {

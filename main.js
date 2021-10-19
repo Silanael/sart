@@ -19,6 +19,7 @@ const ArFS     = require ('./ArFS.js');
 const Util     = require ('./util.js');
 const List     = require ('./cmd_list.js');
 const Search   = require ('./cmd_search.js');
+const Console  = require ('./cmd_console.js');
 
 
 
@@ -45,6 +46,7 @@ const Commands =
     "info"        : Arweave.DisplayArweaveInfo,
     "list"        : List.HandleCommand,
     "search"      : Search.HandleCommand,
+    "console"     : Console.HandleCommand,
     "getfile"     : ArFS.DownloadFile,
     "getdata"     : Arweave.GetTxData
 }

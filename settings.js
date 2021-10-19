@@ -17,14 +17,15 @@ const LogLevels =
 
 const Config =
 {
-    LogLevel     : LogLevels.NORMAL,
-    
-    ArweaveHost  : "arweave.net",
-    ArweavePort  : 443,
-    ArweaveProto : "https",    
-    ManualDest   : false,
+    LogLevel         : LogLevels.NORMAL,
+        
+    ArweaveHost      : "arweave.net",
+    ArweavePort      : 443,
+    ArweaveProto     : "https",    
+    ManualDest       : false,
 
-    Force        : false
+    MetaDataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
+    Force            : false,
 };
 
 
