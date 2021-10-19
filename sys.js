@@ -68,10 +68,10 @@ function OUT_TXT (str)
 
 
 // Informative output, ie. for 'help'.
-function INFO (str)
+function INFO (str, src)
 {            
     if (!Settings.IsQuiet () )
-        console.log (str);
+        console.log (src != null ? src + ": " + str : str);
 }
 
 

@@ -12,15 +12,20 @@ const Arweave  = require ('./arweave.js');
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
+const GQL      = require ('./GQL.js');
+
 
 
 // Constants
-const TAG_FILEID        = "File-Id";
-const TAG_ENTITYTYPE    = "Entity-Type";
-const TAG_CONTENTTYPE   = "Content-Type";
-const ENTITYTYPE_FILE   = "file";
-const ENTITYTYPE_FOLDER = "folder";
-const ENTITYTYPE_DRIVE  = "drive";
+const TAG_FILEID          = "File-Id";
+const TAG_DRIVEID         = "Drive-Id";
+const TAG_FOLDERID        = "Folder-Id";
+const TAG_PARENTFOLDERID  = "Parent-Folder-Id";
+const TAG_ENTITYTYPE      = "Entity-Type";
+const TAG_CONTENTTYPE     = "Content-Type";
+const ENTITYTYPE_FILE     = "file";
+const ENTITYTYPE_FOLDER   = "folder";
+const ENTITYTYPE_DRIVE    = "drive";
 
 const METADATA_CONTENT_TYPES = ["application/json"];
 
@@ -37,16 +42,20 @@ const TXTAG_VAR_MAP =
     "content-type"      : "ContentType_TX",
     "app-name"          : "ArFSAppName",
     "app-version"       : "ArFSAppVersion",
-    "unix-time"         : "Date_TX",
+    "unix-time"         : "UNIXTime_TX",
     "arfs"              : "ArFSVersion",
-    "entity-type"       : "ArFSEntityType"
+    "entity-type"       : "ArFSEntityType",
+    "user-agent"        : "UserAgent",
+    "page:url"          : "PageURL",
+    "page:title"        : "PageTitle",
+    "page:timestamp"    : "PageUNIXTime",
 }
 
 const ARFSMETA_VAR_MAP =
 {
     "name"              : "Filename",
     "size"              : "Size_ArFS",
-    "lastmodifieddate"  : "Date_ArFS",
+    "lastmodifieddate"  : "UNIXTime_ArFS",
     "datatxid"          : "DataTXID",
     "datacontenttype"   : "ContentType_ArFS"
 }
@@ -54,14 +63,82 @@ const ARFSMETA_VAR_MAP =
 
 
 
+
+
+
+async function FindDriveOwner (drive_id)
+{
+    
+    const query = GQL.CreateGQLTransactionQuery ( { "cursor" : undefined, 
+                                                    "first"  : 1, 
+                                                    "owner"  : undefined, 
+                                                    "sort"   : GQL.SORT_OLDEST_FIRST ,
+                                                    "tags"   :[ { name: TAG_DRIVEID,    values:drive_id },
+                                                                { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
+                                                } );
+    Sys.DEBUG (query, "FindDriveOwner");
+
+
+    const q = new GQL.SimpleTXQuery (query);    
+    await q.Execute (Arweave);
+
+    let entry = null;
+
+    // Drive entry missing
+    if (q.EntriesAmount <= 0)
+        Sys.ERR ("Could not find a drive entity for drive " + drive_id);
+
+
+    // Too many entries
+    else if (q.EntriesAmount > 1)
+    {
+        Sys.ERR ("Multiple drive entities returned by GQL-query! Trying to sort manually.");
+        Sys.DEBUG (q.Edges);
+
+        let edges = q.Edges;
+        let earliest_block = -1
+	    let earliest_entry = null;
+
+        for (let c = 0; c < amount; c++)
+	    {		
+		    if (earliest_block < 0 || edges[c].node.block.height < earliest_block)
+            {
+			    earliest_entry = edges[c];
+			    earliest_block = earliest_entry.node.block.height;			
+		   }
+	   }
+	   entry = earliest_entry;
+    }
+
+    // All good
+    else
+        entry = q.Edges[0];
+
+
+    return entry != null ? entry.node.owner.address : undefined;
+}
+
+
+
+
+
 async function GetDriveARFSMetadataEntries (drive_id, entity_type)
 {    
-    const tags = [ {"name":"Drive-Id", "values":drive_id} ];
+    const owner_address = await FindDriveOwner (drive_id);
 
-    if (entity_type != null)
-        tags.push ( {"name":"Entity-Type", "values":entity_type} );
+    if (owner_address == undefined)
+        Sys.ERR_OVERRIDABLE ("Drive owner address not known, might display malicious file entries. Use --force to proceed anyway.", "ArFS");  
+    else
+        Sys.VERBOSE ("Drive " + drive_id + " considered to belong to " + owner_address, "ArFS");
 
-    txs = await Arweave.GetTXsForAddress (undefined, tags);
+
+
+    const tags =                       [ {"name":"Drive-Id",    "values":drive_id}    ];
+    if (entity_type != null) tags.push ( {"name":"Entity-Type", "values":entity_type} );
+
+    txs = await Arweave.GetTXsForAddress (owner_address, tags);
+
+
 
     return txs;    
 }
@@ -123,15 +200,16 @@ async function ListDriveFiles (drive_id)
     const tx_amount = txs.length;
     if (tx_amount > 0)
     {
-        Sys.INFO (tx_amount + (tx_amount == 0 ? " ArFS-entry" : " ArFS-entries") + " found from drive " + drive_id + "." );
-        Sys.INFO ("Getting metadata for the files..");
+        Sys.INFO (tx_amount + (tx_amount == 0 ? " entry" : " entries") + " found from drive " + drive_id + ".", "ArFS" );
+        Sys.INFO ("Getting metadata for the files..", "ArFS");
 
         for (let C = 0; C < tx_amount; ++C)
         {       
             let tx = txs[C];
             let txid = tx.node.id;
+            let prefix = "ArFS: " + txid;
 
-            Sys.DEBUG ("--- Metadata transaction " + txid + " ---")
+            Sys.DEBUG ("--- Metadata transaction " + txid + " ---", "ArFS")
             
             let file =
             {                   
@@ -140,14 +218,6 @@ async function ListDriveFiles (drive_id)
                 "ParentFolderId"   : null,
                 "Filename"         : null,
                                 
-                "Size_ArFS"        : 0,
-                "Size_DTX"         : 0,
-                "Date_ArFS"        : 0,
-                "Date_Tag"         : 0,
-   
-                "ContentType_TX"   : null,
-                "ContentType_ArFS" : null,
-
                 "MetaTXID"         : txid,
                 "DataTXID"         : null,
                    
@@ -166,7 +236,7 @@ async function ListDriveFiles (drive_id)
             {
                 let name  = tag.name;
                 let value = tag.value;            
-                Sys.DEBUG ("Tag: " + name + "=" + value); 
+                Sys.DEBUG ("Tag: " + name + "=" + value, prefix); 
 
                 file[name] = value;
                 
@@ -177,7 +247,7 @@ async function ListDriveFiles (drive_id)
                     file[varname] = value;
 
                 else
-                    Sys.WARN ("Unknown Arweave-tag: " + name, txid);
+                    Sys.WARN ("Unknown Arweave-tag: " + name, prefix);
                 
             }    
             );
@@ -186,20 +256,27 @@ async function ListDriveFiles (drive_id)
             // Check that the metadata is the expected format
             if (! METADATA_CONTENT_TYPES.includes (file.ContentType_TX.toLowerCase ()) )
             {
+                // I had to disable this safety check because there was a bug in ArDrive's software
+                // that made caused it to set Content-Type of the metadata TX to the MIME type
+                // of the actual data instead of 'application/json'.
+                /*
                 Sys.ERR ("Unknown " + TAG_CONTENTTYPE + ": " + file.ContentType_TX, txid);
                 if (!Settings.IsForceful () )
                     Sys.WARN ("Skipping this metadata.", txid);
                     continue;
+                */                    
+                Sys.WARN ("Transaction Content-Type is not 'application/json'", prefix);
             }
+
 
 
             // Check that the data-field of the metadata tx is of reasonable size.
             if (file.Metadata_Size > Settings.Config.MetaDataMaxSize)
             {
-                Sys.ERR ("Unusually large data field: " + file.Metadata_Size + "B", txid);
+                Sys.ERR ("Unusually large data field: " + file.Metadata_Size + "B", prefix);
                 if (!Settings.IsForceful () )
                 {
-                    Sys.WARN ("Skipping this metadata.", txid);
+                    Sys.WARN ("Skipping this metadata.", prefix);
                     continue;
                 }
 
@@ -210,7 +287,7 @@ async function ListDriveFiles (drive_id)
 
 
             if (Settings.IsDebug () )
-                Sys.DEBUG ("TX-data:" + metadata, txid);
+                Sys.DEBUG ("TX-data:" + metadata, prefix);
                 
 
             let metadata_obj = JSON.parse (metadata);
@@ -226,22 +303,22 @@ async function ListDriveFiles (drive_id)
 
                 if (ARFSMETA_VAR_MAP[name_lower] != null)
                 {
-                    Sys.DEBUG ("ArFS: Key:" + name + " Value:" + value, txid)
+                    Sys.DEBUG ("ArFS: Key:" + name + " Value:" + value, prefix)
                     file[ARFSMETA_VAR_MAP[name_lower]] = value;
                 }
                 else
-                    Sys.WARN ("Unknown ArFS metadata field: " + name_lower, txid)
+                    Sys.WARN ("Unknown ArFS metadata field: " + name_lower, prefix)
 
             }
                         
             
             if (Settings.IsDebug () )
             {
-                Sys.DEBUG ("Metadata-TX processed:", txid);
+                Sys.DEBUG ("Metadata-TX processed:", prefix);
                 Sys.DEBUG (file);                                    
             }
             else if (Settings.IsVerbose () )
-                Sys.VERBOSE (file.Filename + "(" + file.Size_ArFS + "B_ArFS, UT_T:" + file.Date_Tag + ")", txid);
+                Sys.VERBOSE (file.Filename, prefix);
 
 
             // Add the metadata to the virtual filesystem
@@ -249,7 +326,7 @@ async function ListDriveFiles (drive_id)
                 ardrive_fs.Files[file.FileId] = file;            
 
             else
-                Sys.ERR ("Could not retrieve File-Id!", txid);
+                Sys.ERR ("Could not retrieve File-Id!", prefix);
 
         }
     }

@@ -1,0 +1,202 @@
+//
+// *****************************
+// *** Silanael ARweave Tool ***
+// *****************************
+//
+// GQL.js - 2021-10-19_01
+// Code to create and run GraphQL-queries
+//
+
+// Imports
+const Settings = require ('./settings.js');
+const Sys      = require ('./sys.js');
+
+
+// Constants
+const GQL_MAX_RESULTS        = 100;
+
+const SORT_HEIGHT_DESCENDING = 'HEIGHT_DESC';
+const SORT_HEIGHT_ASCENDING  = 'HEIGHT_ASC';
+const SORT_OLDEST_FIRST      = SORT_HEIGHT_ASCENDING;
+const SORT_NEWEST_FIRST      = SORT_HEIGHT_DESCENDING;
+const SORT_DEFAULT           = SORT_HEIGHT_ASCENDING;
+
+const __TAG                  = "GQL";
+
+
+
+
+// My first class written in JavaScript. Yay.
+// I've been holding back with them a bit,
+// enjoying the oldschool C-type programming
+// while it lasted.
+class Query
+{
+    // How does one make these things protected?
+    constructor (query)
+    {
+        this.Query         = query;
+        this.Results       = null;
+        this.Edges         = null;
+        this.EntriesAmount = 0;
+    }    
+}
+
+
+
+class SimpleTXQuery extends Query
+{
+    constructor (query)
+    {
+        super (query);        
+    }
+
+    async Execute (Arweave, query = null)
+    {
+        if (query != null)
+            this.Query = query;
+
+        Sys.DEBUG (Query);
+
+        const arweave = Arweave.Init ();                
+        this.Results = await RunGQLQuery (Arweave, this.Query)
+        
+        this.Edges = this.Results.data.data.transactions.edges;
+        this.EntriesAmount = this.Edges.length;
+    }
+    
+}
+
+
+
+
+
+
+
+function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, owner: undefined, tags: [], sort: SORT_DEFAULT} )
+{
+    
+    // No proper query arguments given
+    if (config.cursor == undefined && config.owner == undefined && config.tags.length <= 0)
+        Sys.ERR_OVERRIDABLE ("No proper query terms given, would fetch the entire blockchain.", __TAG);
+            
+
+    const cursor_str = config.cursor != undefined ? `after:  "${config.cursor}" ,` : "";                                                      
+    const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
+        
+    
+    let tag_str = "";
+    if (config.tags.length > 0)
+    {
+        tag_str = "tags:[";
+        config.tags.forEach ( tag => {tag_str += `{ name:"${tag.name}", values:"${tag.values}"},` } ); 
+        tag_str += "],";
+    }
+
+    const query = 
+    `
+    query 
+    {
+        transactions
+        (             
+          first:${config.first},
+          sort:${config.sort},
+          ${cursor_str}
+          ${owner_str}
+          ${tag_str}                    
+        )
+        {
+          edges
+          {
+            cursor
+            node
+            {              
+              id,
+              owner {address},
+              block {id},
+              tags  {name, value}            
+            }
+          }
+        }
+      }
+   `;
+
+   return query;
+}
+
+
+
+
+
+// Returns raw results.
+async function RunGQLQuery (Arweave, query_str)
+{            
+    const arweave = Arweave.Init ();
+    const results = await arweave.api.post (Settings.GetGQLHostString (), { query: query_str } );
+
+    return results;
+}
+
+
+
+
+
+// Does a transaction () query, returns edges.
+async function RunGQLTransactionQuery (Arweave, owner = undefined, tags = [], sort = SORT_DEFAULT)
+{    
+    let cursor = undefined;
+    let results;
+    let query_str;
+    let pass_edges;
+    let pass_entries = 0;
+    let pass_num     = 1;
+    let edges        = [];
+
+    Sys.VERBOSE ("Starting to fetch transactions..", __TAG);
+
+    do
+    {        
+        Sys.DEBUG ("Pass #" + pass_num + " begin:", __TAG);
+        
+        query_str = CreateGQLTransactionQuery ( { "cursor": cursor, "first": GQL_MAX_RESULTS, "owner":owner, "tags":tags, "sort":sort } );
+        
+        Sys.DEBUG ("Query:")
+        Sys.DEBUG (query_str);
+                
+        results        = await RunGQLQuery (Arweave, query_str);
+    
+        pass_edges     = results.data.data.transactions.edges;
+        pass_entries   = pass_edges.length;
+
+        if (pass_entries > 0)
+        {
+            cursor = pass_edges.at(-1).cursor;
+            edges  = edges.concat (pass_edges)
+
+            Sys.VERBOSE ("Pass #" + pass_num + ": " + pass_entries + " entries.", __TAG);
+
+            ++pass_num;
+        }
+
+        else
+        {
+            Sys.DEBUG ("Got no entries on pass #" + pass_num);
+            break;
+        }
+                
+    } while (pass_entries >= GQL_MAX_RESULTS)
+    
+
+    Sys.VERBOSE ("Total entries: " + edges.length, __TAG)
+
+    return edges;
+}
+
+
+
+
+
+
+module.exports = { RunGQLQuery, RunGQLTransactionQuery, CreateGQLTransactionQuery,
+                   Query, SimpleTXQuery,
+                   SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }
