@@ -11,6 +11,10 @@
 const Settings = require ('./settings.js');
 
 
+// Variables
+const IsPiped = !process.stdout.isTTY;
+
+
 
 function ERR_MISSING_ARG () { ERR_FATAL ("Missing argument."); }
 

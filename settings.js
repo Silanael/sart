@@ -6,6 +6,9 @@
 // settings.js - 2021-10-17_01
 //
 
+//const Util             = require("./util.js");
+
+
 const LogLevels =
 {
     QUIET   : 0,
@@ -14,6 +17,13 @@ const LogLevels =
     DEBUG   : 3
 };
 
+const OutputFormats =
+{
+    TXT     : "txt",
+    LIST    : "list",
+    CSV     : "csv",
+    HTML    : "html",
+}
 
 const Config =
 {
@@ -26,19 +36,24 @@ const Config =
 
     MetaDataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
     Force            : false,
+
+    OutputFormat     : OutputFormats.TXT,
 };
 
 
 function GetHostString      ()      { return Config.ArweaveProto + "://" + Config.ArweaveHost + ":" + Config.ArweavePort; }
-function GetGQLHostString   ()      { return GetHostString () + "/graphql";           }
-function IsQuiet            ()      { return Config.LogLevel <= LogLevels.QUIET;      }
-function IsMSGOutputAllowed ()      { return Config.LogLevel >  LogLevels.QUIET;      }
-function IsVerbose          ()      { return Config.LogLevel >= LogLevels.VERBOSE;    }
-function IsDebug            ()      { return Config.LogLevel >= LogLevels.DEBUG;      }
-function IsForceful         ()      { return Config.Force;                            }
-function SetForce           ()      { Config.Force = true;                            }
-function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true; }
-function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true; }
+function GetGQLHostString   ()      { return GetHostString () + "/graphql";             }
+function IsQuiet            ()      { return Config.LogLevel <= LogLevels.QUIET;        }
+function IsMSGOutputAllowed ()      { return Config.LogLevel >  LogLevels.QUIET;        }
+function IsVerbose          ()      { return Config.LogLevel >= LogLevels.VERBOSE;      }
+function IsDebug            ()      { return Config.LogLevel >= LogLevels.DEBUG;        }
+function IsForceful         ()      { return Config.Force;                              }
+function IsHTMLOut          ()      { return Config.OutputFormat == OutputFormats.HTML; }
+function IsCSVOut           ()      { return Config.OutputFormat == OutputFormats.CSV;  }
+function IsTXTOut           ()      { return Config.OutputFormat == OutputFormats.TXT;  }
+function SetForce           ()      { Config.Force = true;                              }
+function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true;   }
+function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true;   }
 
 
 
@@ -80,14 +95,27 @@ function SetHost (host)
 }
 
 
+function SetFormat (format)
+{    
+    //Util.RequireParam (format, "format", "SetFormat");
+    const format_upper = format.toUpperCase ();
+    
+    if (OutputFormats[format_upper] != null)
+        Config.OutputFormat = OutputFormats[format_upper];
+    
+    //else
+    //    ERR_FATAL ("Invalid output format: " + format);
+}
+
+
 
 function SetVerbose ()
 { 
     if (Config.LogLevel > LogLevels.QUIET)
         Config.LogLevel = LogLevels.VERBOSE;
 
-    else
-        Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); 
+   // else
+    //    ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); 
 }
 
 
@@ -96,8 +124,8 @@ function SetQuiet ()
     if (Config.LogLevel < LogLevels.VERBOSE)
         Config.LogLevel = LogLevels.QUIET;
 
-    else
-        Sys.ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); 
+   // else
+     //   ERR_CONFLICT ("Can't be both verbose and quiet at the same time"); 
 }
 
 function SetDebug () { Config.LogLevel = LogLevels.DEBUG; }
@@ -110,6 +138,7 @@ module.exports =
 { 
     Config,
     LogLevels,
+    OutputFormats,
     GetHostString,
     GetGQLHostString,
     IsQuiet,
@@ -117,9 +146,13 @@ module.exports =
     IsVerbose,
     IsDebug,
     IsForceful,
+    IsHTMLOut,
+    IsCSVOut,
+    IsTXTOut,
     SetHost,
     SetPort,
     SetProto,
+    SetFormat,
     SetVerbose,
     SetQuiet,
     SetDebug,

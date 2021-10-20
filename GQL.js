@@ -43,7 +43,13 @@ class Query
         this.Results       = null;
         this.Edges         = null;
         this.EntriesAmount = 0;
-    }    
+    }
+    
+    GetTXID    (index)      { return this.Edges[index]?.node?.id;                                           }
+    GetAddress (index)      { return this.Edges[index]?.node?.owner?.address;                               }
+    GetTags    (index)      { return this.Edges[index]?.node?.tags;                                         }
+    GetTag     (index, tag) { return this.Edges[index]?.node?.tags?.find (e => e.name == tag);              }
+    HasTag     (index, tag) { return this.GetTag (index, tag) != undefined;                                 }
 }
 
 
@@ -106,6 +112,8 @@ class SimpleTXQuery extends Query
           }
         `;
    }
+
+   
 
 
    async ExecuteOnce (query = null)

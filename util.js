@@ -8,7 +8,8 @@
 //
 
 // Imports
-const { ERR_FATAL } = require("./sys");
+const Sys      = require ("./sys");
+const Package  = require ("./package.json");
 
 
 
@@ -18,6 +19,8 @@ function IsFlag        (arg, flags)   { return flags[arg] != undefined; }
 function IsArweaveHash (str)          { return str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID      (str)          { return str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 function GetUNIXTime   ()             { return new Date ().getTime (); }
+function GetVersion    ()             { return Package.version; }
+
 
 function GetDate ()
 { 
@@ -50,10 +53,17 @@ function RequireArgs (args, amount, src)
         
     const len = args.length;
     if (len < amount)
-        ERR_FATAL (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
+        Sys.ERR_FATAL (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
+}
+
+function RequireParam (param, name, src)
+{
+    const srcstr = src != null ? src + ": " : "";
+
+    if (param == undefined)
+        Sys.ERR_FATAL (srcstr + "Missing parameter: " + name);
+
 }
 
 
-
-
-module.exports = { IsFlag, GetCmdArgs, RequireArgs, IsArweaveHash, IsArFSID, GetDate, GetUNIXTime };
+module.exports = { IsFlag, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, GetDate, GetUNIXTime, GetVersion };

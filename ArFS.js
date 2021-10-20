@@ -16,6 +16,7 @@ const GQL      = require ('./GQL.js');
 
 
 
+
 // Constants
 const TAG_FILEID          = "File-Id";
 const TAG_DRIVEID         = "Drive-Id";
@@ -28,6 +29,7 @@ const ENTITYTYPE_FOLDER   = "folder";
 const ENTITYTYPE_DRIVE    = "drive";
 
 const METADATA_CONTENT_TYPES = ["application/json"];
+
 
 
 // This maps the lowercase-versions of the TX metadata-tags
@@ -192,8 +194,48 @@ async function ListDrives (address)
         "tags"   :[ { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
     } );
     
-    Sys.INFO ("Entries: " + query.EntriesAmount);
-    
+    if (Settings.IsHTMLOut () )
+    {
+        Sys.OUT_TXT ("<html>");
+        Sys.OUT_TXT ("<head><title>List of ArDrive-drives</title></head>");
+        Sys.OUT_TXT ("<body bgcolor='#000000' text='#A00000' link='B50000' vlink='B00000'>");
+    }
+
+    const len = query.EntriesAmount;
+    for (let c = 0; c < len; ++c)
+    {        
+        if (query.HasTag (c, "ArFS") )
+        {
+            const tags          = query.GetTags (c);     
+            const drive_id      = tags.find (e => e.name == "Drive-Id")?.value;
+            const drive_privacy = tags.find (e => e.name == "Drive-Privacy")?.value;
+
+            if (Settings.IsHTMLOut () )
+            {
+                if (drive_privacy.toLowerCase () == "public")
+                {
+                    const link = `https://app.ardrive.io/#/drives/${drive_id}`;
+                    Sys.OUT_TXT (`<br><a href="${link}">${drive_id}</a>`);
+                }
+                else
+                    Sys.OUT_TXT (`<!-- Private drive: ${drive_id} -->`);
+            }
+
+            else            
+                Sys.OUT_TXT (drive_id + " " + query.GetTXID (c) + " " + drive_privacy);
+        }
+        else
+            Sys.WARN ("TX " + query.GetTXID (c) + " - No ArFS-tag present.");
+    }
+     
+    if (Settings.IsHTMLOut () )
+    {
+        Sys.OUT_TXT ("</body>");
+        Sys.OUT_TXT ("</html>");
+        Sys.OUT_TXT ("<!-- Page created on " + Util.GetDate () + " with SART v" + Util.GetVersion () + " -->" );
+        Sys.OUT_TXT ("<!-- (C) Silanael 2021 - www.silanael.com / zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4-->");        
+    }
+
 }
 
 
