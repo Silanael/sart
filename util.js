@@ -44,11 +44,13 @@ function GetCmdArgs (argv, cmd_pos, flags)
 }
 
 
-function RequireArgs (args, amount)
+function RequireArgs (args, amount, src)
 {
+    const srcstr = src != null ? src + ": " : "";
+        
     const len = args.length;
     if (len < amount)
-        ERR_FATAL ("Missing arguments: " + len + " / " + amount + " supplied.");
+        ERR_FATAL (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
 }
 
 

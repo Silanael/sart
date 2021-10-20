@@ -13,6 +13,17 @@ const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
 const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
+const GQL      = require ('./GQL.js');
+
+
+const Targets =
+{    
+    "tx"          : ListTXs,
+    "drive"       : ListDrive,
+    "drives"      : ListDrives,
+}
+
+
 
 
 async function HandleCommand (args)
@@ -20,24 +31,55 @@ async function HandleCommand (args)
     Util.RequireArgs (args, 1);
 
     const target = args[0];
-    
-    Sys.DEBUG ("Attempting to determine what " + target + " is..");
-    if (Util.IsArFSID (target) )
-    {
-        ArFS.ListDriveFiles (target);
-        //const tags = [ {"name":"Drive-Id", "values":target} ];
-        //txs = await Arweave.GetTXsForAddress (undefined, tags);
-        //txs.forEach ( tx => { Sys.OUT_TXT (tx.node.id) } );
-    }
-    else if (Util.IsArweaveHash (target) )
-    {
-        Sys.VERBOSE ("Assuming " + target + " is an Arweave-address - getting transactions:");
+    target_lower = target.toLowerCase ();
 
-        txs = await Arweave.GetTXsForAddress (args[0]) 
-        txs.forEach ( tx => { Sys.OUT_TXT (tx.node.id) } );
-    }
+
+    // Target not in the list, try to guess what it is
+    if (Targets[target_lower] == null)
+    {
+        Sys.DEBUG ("Attempting to determine what " + target + " is..");
     
-        
+        if      (Util.IsArFSID      (target) ) target_lower = "drive";
+        else if (Util.IsArweaveHash (target) ) target_lower = "tx";
+        else                                   Sys.ERR_FATAL ("Unknown target: " + target, "LIST")
+    }
+    else
+        args.shift ();
+
+
+    // Call the sub-handler
+    Targets[target_lower] (args);
+
+}
+
+
+async function ListTXs (args)
+{
+    const fn_tag = "LIST TX";
+    Util.RequireArgs (args, 1, fn_tag);
+
+    txs = await Arweave.GetTXsForAddress (args[0]) 
+    txs.forEach ( tx => { Sys.OUT_TXT (tx.node.id) } );
+}
+
+
+async function ListDrive (args)
+{
+    const fn_tag = "LIST DRIVE";    
+    Util.RequireArgs (args, 1, fn_tag);
+
+    const drive_id = args[0];
+
+    ArFS.ListDriveFiles (drive_id);
+}
+
+
+async function ListDrives (args)
+{
+    const fn_tag = "LIST DRIVES";
+    
+    ArFS.ListDrives (args[0]);
+
 }
 
 

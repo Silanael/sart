@@ -178,6 +178,26 @@ async function DownloadFile (args)
 }
 
 
+async function ListDrives (address)
+{
+    
+    const query = new GQL.SimpleTXQuery (Arweave);
+
+    await query.Execute
+    ( {         
+        "cursor" : undefined,         
+        "first"  : undefined,
+        "owner"  : address, 
+        "sort"   : GQL.SORT_NEWEST_FIRST ,
+        "tags"   :[ { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
+    } );
+    
+    Sys.INFO ("Entries: " + query.EntriesAmount);
+    
+}
+
+
+
 async function ListDriveFiles (drive_id)
 {
 
@@ -333,4 +353,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ListDriveFiles, DownloadFile };
+module.exports = { ListDrives, ListDriveFiles, DownloadFile };
