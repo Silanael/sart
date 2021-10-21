@@ -28,8 +28,9 @@ const ENTITYTYPE_FILE     = "file";
 const ENTITYTYPE_FOLDER   = "folder";
 const ENTITYTYPE_DRIVE    = "drive";
 
-const METADATA_CONTENT_TYPES = ["application/json"];
+const METADATA_CONTENT_TYPES = ["application/json"]; Object.freeze (METADATA_CONTENT_TYPES);
 
+const __TAG = "arfs";
 
 
 // This maps the lowercase-versions of the TX metadata-tags
@@ -51,7 +52,9 @@ const TXTAG_VAR_MAP =
     "page:url"          : "PageURL",
     "page:title"        : "PageTitle",
     "page:timestamp"    : "PageUNIXTime",
-}
+}; Object.freeze (TXTAG_VAR_MAP);
+
+
 
 const ARFSMETA_VAR_MAP =
 {
@@ -60,9 +63,108 @@ const ARFSMETA_VAR_MAP =
     "lastmodifieddate"  : "UNIXTime_ArFS",
     "datatxid"          : "DataTXID",
     "datacontenttype"   : "ContentType_ArFS"
+}; Object.freeze (ARFSMETA_VAR_MAP);
+
+
+
+const URLMODES =
+{
+    "id"   : "id",
+    "tx"   : "tx",
+    "path" : "path",
+}; Object.freeze (URLMODES);
+
+
+
+class ArFSURL
+{
+        
+    DriveID  = null;
+    Mode     = null;
+    Target   = null;
+
+    Valid    = false;
+
+
+    constructor (url = null)
+    {
+        if (url != null)
+            this.Parse (url);
+    }
+    
+
+
+    Parse (url)
+    {   
+        let url_no_proto;
+
+        const proto_rest = url.split ("://", 2);            
+        if (proto_rest.length == 2)
+        {
+            url_no_proto = proto_rest [1];            
+            if (proto_rest[0].toLowerCase () != "arfs")
+                return this.#Err ("Not an arfs:// URL: " + url);            
+        }                
+        else
+            url_no_proto = proto_rest[0];
+
+
+        // Split the string into segments separated by a '/'
+        const segments = url_no_proto.split ("/");        
+        
+        // We want at least drive-id, mode and target.
+        if (segments.length < 3)
+            return this.#Err ("Invalid URL: " + url);
+
+            
+        const drive_id     = segments[0].toLowerCase ();
+        const mode         = segments[1].toLowerCase ();
+        
+
+        // Verify Drive ID
+        if (Util.IsArFSID (drive_id) )
+            this.DriveID = drive_id;
+        else
+            return this.#Err ("Not a valid Drive ID: " + drive_id)                    
+
+
+        // Verify mode
+        if (URLMODES[mode] != null)
+            this.Mode = mode;
+        else
+            return this.#Err ("Unknown mode in URL: " + mode);            
+
+        
+
+        // Grab target path from the original url after the "drive-id/mode/"-part.
+        const target = url_no_proto.replace (/.+\/.+\//, "");        
+        if (target == null || target.length <= 0)
+            return this.#Err ("No target provided in URL.");
+
+
+        // Finalize
+        this.Path  = target;
+        this.Valid = true;
+        
+        Sys.INFO (this);
+
+        return this.Valid;
+    }
+
+
+    #Err (error)
+    {
+        Sys.ERR (error, __TAG);
+        this.Valid = false;
+        return false;       
+    }
+
+        
+    static get MODE_ID   () { return URLMODES["id"];   }
+    static get MODE_TX   () { return URLMODES["tx"];   }
+    static get MODE_PATH () { return URLMODES["name"]; }
+
 }
-
-
 
 
 
@@ -517,4 +619,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ListDrives, ListDriveFiles, DownloadFile };
+module.exports = { ArFSURL, ListDrives, ListDriveFiles, DownloadFile };

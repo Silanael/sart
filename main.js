@@ -48,7 +48,8 @@ const Commands =
     "search"      : Search.HandleCommand,
     "console"     : Console.HandleCommand,
     "getfile"     : ArFS.DownloadFile,
-    "getdata"     : Arweave.GetTxData
+    "getdata"     : Arweave.GetTxData,
+    "test"        : Testing
 }
 
 
@@ -216,13 +217,17 @@ function DisplayHelp ()
 
 
 
-
-
 function DisplayVersion (argv)
 {    
     Sys.OUT_TXT (Package.version);
 }
 
+
+function Testing (argv)
+{
+    Util.RequireArgs (argv, 1);
+    new ArFS.ArFSURL (argv[0]);
+}
 
 
 
