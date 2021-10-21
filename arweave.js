@@ -105,8 +105,7 @@ async function OutputTxData (txid)
 }
 
 async function GetTxData (txid)
-{
-    
+{ 
      const arweave = await Init ();     
      const data = await arweave.transactions.getData (txid, {decode: true} );
      return data;
@@ -124,6 +123,7 @@ async function GetTxStrData (txid)
 
 async function GetTXsForAddress (address, tags = [] )
 {
+    const query = GQL.Query ()
     const arweave = Init ();
     results = await GQL.RunGQLTransactionQuery (this, address, tags)     
     return results;

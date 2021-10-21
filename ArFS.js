@@ -28,6 +28,9 @@ const ENTITYTYPE_FILE     = "file";
 const ENTITYTYPE_FOLDER   = "folder";
 const ENTITYTYPE_DRIVE    = "drive";
 
+const ARFSENTITYMETA_NAME         = "name";
+const ARFSENTITYMETA_ROOTFOLDERID = "rootFolderId";
+
 const METADATA_CONTENT_TYPES = ["application/json"]; Object.freeze (METADATA_CONTENT_TYPES);
 
 const __TAG = "arfs";
@@ -69,16 +72,16 @@ const ARFSMETA_VAR_MAP =
 
 const URLMODES =
 {
-    "id"   : "id",
-    "tx"   : "tx",
-    "path" : "path",
+    "id"    : "id",
+    "tx"    : "tx",
+    "path"  : "path",
+    "drive" : "drive",
 }; Object.freeze (URLMODES);
 
 
 
 class ArFSURL
-{
-        
+{     
     DriveID  = null;
     Mode     = null;
     Target   = null;
@@ -93,9 +96,13 @@ class ArFSURL
     }
     
 
+    IsValid () { return this.Valid; } 
+
 
     Parse (url)
     {   
+        this.Valid = false;
+
         let url_with_proto;
         let url_no_proto;
         
@@ -118,23 +125,45 @@ class ArFSURL
         // Split the string into segments separated by a '/'
         const segments = url_no_proto.split ("/");        
         
+
         // We want at least drive-id, mode and target.
-        if (segments.length < 3)
+        if (segments.length < 1)
             return this.#Err ("Invalid URL: " + url);
 
 
-        const drive_id     = segments[0].toLowerCase ();
-        const mode         = segments[1].toLowerCase ();
-        
 
         // Verify Drive ID
+        const drive_id  = segments[0].toLowerCase ();        
         if (Util.IsArFSID (drive_id) )
             this.DriveID = drive_id;
         else
             return this.#Err ("Not a valid Drive ID: " + drive_id)                    
+        
 
+        // Only Drive ID is present in the URL.
+        // Assume users wants entire drive content.
+        if (segments.length == 1)
+        {
+            this.Mode   = ArFSURL.MODE_DRIVE;
+            this.Target = "";
+            this.Valid  = true;
+            return true;
+        }
+        
+        // We got a trailing slash but nothing after.
+        // Assume user wants the content of the root directory.
+        else if (segments.length == 2 && segments[1] == "")
+        {
+            this.Mode   = ArFSURL.MODE_PATH;
+            this.Target = "/";
+            this.Valid  = true;
+            return true;
+        }
+        
+        
 
         // Verify mode
+        const mode = segments[1].toLowerCase ();
         if (URLMODES[mode] != null)
             this.Mode = mode;
         else
@@ -152,8 +181,8 @@ class ArFSURL
 
 
         // Finalize
-        this.Target  = target[1];
-        this.Valid = true;
+        this.Target = target[1];
+        this.Valid  = true;
         
         
         return this.Valid;
@@ -168,13 +197,170 @@ class ArFSURL
     }
 
         
-    static get MODE_ID   () { return URLMODES["id"];   }
-    static get MODE_TX   () { return URLMODES["tx"];   }
-    static get MODE_PATH () { return URLMODES["name"]; }
+    static get MODE_ID    () { return URLMODES["id"];    }
+    static get MODE_TX    () { return URLMODES["tx"];    }
+    static get MODE_PATH  () { return URLMODES["path"];  }
+    static get MODE_DRIVE () { return URLMODES["drive"]; }
 
 }
 
 
+
+class ArFSDrive
+{
+    DriveID         = null;
+    OwnerAddress    = null;    
+    DriveName       = null;
+    RootFolderID    = null;
+    Files           = [];
+
+    MetaTXID_Latest = null;
+    Metadata_Latest = null;
+
+
+    Valid           = false;
+
+
+    constructor (drive_id)
+    {
+        if (Util.IsArFSID (drive_id) )
+        {
+            this.DriveID = drive_id;
+        }
+
+        else
+            Sys.ERR ("Invalid Drive ID: " + drive_id, ArFSDrive.name);
+    }
+
+    async Init ()
+    {
+        await this.FetchOwner ();
+        await this.UpdateDriveInfo ();
+    }
+
+    
+    async UpdateDriveInfo ()
+    {
+        // Make sure we have owner.                
+        this.FetchOwner ();
+
+        // Seek for the newest metadata TX for the drive
+        const query = new GQL.TXQuery (Arweave);
+        await query.Execute
+        ({
+            first: 1, 
+            sort:  GQL.SORT_NEWEST_FIRST,
+            owner: this.OwnerAddress,
+            tags: 
+            [ 
+                { name:"Drive-Id",    values:this.DriveID },
+                { name:"Entity-Type", values:"drive"      },                
+            ]
+        });
+        
+        if (this.#SetOrFail ("MetaTXID_Latest", query.GetTXID (0), "Unable to fetch latest metadata for drive " + this.DriveID) )        
+            Sys.VERBOSE ("Fetched newest metadata for drive " + this.DriveID + " TXID:" + this.MetaTXID_Latest);
+    
+    
+
+        // Get ArFS entity metadata from the transaction data
+        const metadata = await GetMetaTXJSON (this.MetaTXID_Latest);
+
+
+        // Parse ArFS entity metadata
+        if (metadata != null)
+        {
+            this.DriveName    = metadata[ARFSENTITYMETA_NAME];
+            this.RootFolderID = metadata[ARFSENTITYMETA_ROOTFOLDERID];
+
+            this.Metadata_Latest = metadata;        
+            this.Valid           = true; 
+
+            Sys.DEBUG (this.Metadata_Latest);
+        }
+        else        
+            this.Valid = false;                    
+
+
+        return this.Valid;
+    }
+
+
+
+    
+    // Finds the earliest metadata entry of the Drive ID and stores its owner.
+    async FetchOwner ()
+    {
+        if (this.OwnerAddress == null)
+        {
+            const query = new GQL.TXQuery (Arweave);
+
+            await query.Execute
+            ({
+                first: 1, 
+                sort: GQL.SORT_OLDEST_FIRST,
+                tags: 
+                [ 
+                    { name:"Drive-Id",    values:this.DriveID },
+                    { name:"Entity-Type", values:"drive"      } 
+                ]
+            } );
+
+            if (this.#SetOrFail ("OwnerAddress", query.GetAddress (0), "Failed to establish owner for drive " + this.DriveID) )
+                Sys.VERBOSE ("Owner of drive " + this.DriveID + " established to be " + this.OwnerAddress, ArFSDrive.name);
+            
+        }
+  
+        return this.Valid;
+    }
+
+
+    // A convenience setter function.
+    #SetOrFail (variable, value, err_on_fail)
+    {
+        if (value != null)
+        {
+            this[variable] = value;
+            return true;
+        }
+
+        else
+        {
+            Sys.ERR (err_on_fail, ArFSDrive.name);
+            this.Valid = false;
+            return false;
+        }
+    }
+
+}
+
+
+// Gets and parses the ArFS metadata from the metadata TX data.
+// Should be in JSON-format. A bug in the old ArDrive software
+// caused these to be the wrong Content-Type so not checking for that.
+async function GetMetaTXJSON (txid)
+{
+
+    const data = await Arweave.GetTxStrData (txid);
+
+    if (data != null)
+    {
+        try
+        {
+            const  parsed = JSON.parse (data);
+            return parsed;
+        }
+        catch (exception)
+        {
+            Sys.ERR ("Metadata for TXID " + txid + " failed to parse into JSON.", __TAG);
+            Sys.DEBUG (exception);
+        }
+    }
+    else
+        Sys.ERR ("Failed to download metadata for TXID " + txid + " failed to parse into JSON.", __TAG);
+
+    return null;
+}
 
 
 
@@ -627,4 +813,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ArFSURL, ListDrives, ListDriveFiles, DownloadFile };
+module.exports = { ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile };

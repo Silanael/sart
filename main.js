@@ -223,10 +223,17 @@ function DisplayVersion (argv)
 }
 
 
-function Testing (argv)
+async function Testing (argv)
 {
     Util.RequireArgs (argv, 1);
-    new ArFS.ArFSURL (argv[0]);
+    const arfs_url = new ArFS.ArFSURL (argv[0]);
+    
+    if (arfs_url.IsValid () )
+    {        
+        const drive = new ArFS.ArFSDrive  (arfs_url.DriveID);
+        await drive.Init ();
+        Sys.INFO (drive); 
+    }
 }
 
 

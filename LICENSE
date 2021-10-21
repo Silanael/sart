@@ -1,14 +1,29 @@
-SART Licence
-2021-10-21
+Silanael ARweave Tool / SART
+LICENSE
 
 
 This software and its source code is licenced under a modified "GNU General Public Licence, Version 2"
-(GPLv2) with the only modification to the aforementioned licence being that modified versions (forks)
+(GPLv2) with the only modification to the aforementioned license being that modified versions (forks)
 of the software CANNOT contain the word "Silanael" in their name, yet must somewhere mention "Silanael"
 as the original author. The usage of the original short project name "SART" is acceptable.
 
-As such, code that currently displays "Silanael ARweave Tool" must be altered.
+Modifications to the code that do not change its core nature and functionality are allowed to retain
+the name "Silanael ARweave Tool". An example of such modification is one that aims to make the software
+run on a different platform. In this case, the ported version has to have the original name.
 
+As an example of a required change, if one was to fork this project and develop it towards their own direction,
+would be the removal or modification of the "Silanael ARweave Tool"-message(s) displayed by the software.
+
+The intent of this statement is to prevent versions/forks of the software that significantly modify
+the operation and feel of the software (including but not limited to adding or removing features,
+changing text/message formatting/content, and making the program operate differently) from using my name.
+
+
+- Silanael
+2021-10-21
+
+
+***
 
 
                     GNU GENERAL PUBLIC LICENSE
