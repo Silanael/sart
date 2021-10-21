@@ -145,16 +145,17 @@ class ArFSURL
         // Grab target path from the original url after the "drive-id/mode/"-part.
         const target = url_with_proto.split (/arfs:\/\/[^\/]+\/[^\/]+\//);
 
+
+        // Verify grab
         if (target == null || target.length < 2)
             return this.#Err ("No target provided in URL.");
 
 
         // Finalize
-        this.Path  = target[1];
+        this.Target  = target[1];
         this.Valid = true;
         
-        Sys.INFO (this);
-
+        
         return this.Valid;
     }
 
