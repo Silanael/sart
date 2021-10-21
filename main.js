@@ -177,9 +177,44 @@ function FetchFlagArg (argc, argv, pos, flag)
 
 function DisplayHelp ()
 {
-    Sys.INFO ("Usage: foo");
+    const headerstr     = "Silanael ARweave Tool";
+    const versionstring = Util.GetVersionStr ();
+
+    const longestlen = headerstr.length > versionstring.length ? headerstr.length 
+                                                               : versionstring.length;
+    const linelen = longestlen + 4;
+
+    Sys.INFO ("".padStart (linelen,   "#"));
+    Sys.INFO ("# " + headerstr    .padEnd (longestlen, " ") + " #");
+    Sys.INFO ("# " + versionstring.padEnd (longestlen, " ") + " #");    
+    Sys.INFO ("".padStart (linelen,   "#"));    
+    Sys.INFO ("");
+    Sys.INFO ("Usage: sart [OPTION] [COMMAND] [PARAM]");
+    Sys.INFO ("");
+    
+    Sys.INFO ("COMMANDS:");
+    Sys.INFO ("");
+    Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");    
+    Sys.INFO ("  -v, version              Display version info.");
+    Sys.INFO ("      help    [COMMAND]    Display help for a command.");
+    Sys.INFO ("");
+    
+    Sys.INFO ("OPTIONS:");
+    Sys.INFO ("      --quiet              Output only data to stdout.");
+    Sys.INFO ("  -V, --verbose            Display extended runtime info.");
+    Sys.INFO ("      --debug              Display extensive runtime info.");
+    Sys.INFO ("      --force              Override exit on some errors.");
+    Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
+    Sys.INFO ("      --port               Arweave gateway port.");
+    Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
+    Sys.INFO ("  -f, --format             Output data format. May be 'txt' or 'html'.");
+    Sys.INFO ("");
+
     Sys.EXIT (0);
 }
+
+
+
 
 
 

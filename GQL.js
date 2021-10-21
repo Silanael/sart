@@ -45,11 +45,17 @@ class Query
         this.EntriesAmount = 0;
     }
     
-    GetTXID    (index)      { return this.Edges[index]?.node?.id;                                           }
-    GetAddress (index)      { return this.Edges[index]?.node?.owner?.address;                               }
-    GetTags    (index)      { return this.Edges[index]?.node?.tags;                                         }
-    GetTag     (index, tag) { return this.Edges[index]?.node?.tags?.find (e => e.name == tag);              }
-    HasTag     (index, tag) { return this.GetTag (index, tag) != undefined;                                 }
+    GetTXID        (index)      { return this.Edges[index]?.node?.id;                                           }
+    GetAddress     (index)      { return this.Edges[index]?.node?.owner?.address;                               }
+    GetBlockHeight (index)      { return this.Edges[index]?.node?.block?.height;                                }
+    GetTags        (index)      { return this.Edges[index]?.node?.tags;                                         }    
+    HasTag         (index, tag) { return this.GetTag (index, tag) != undefined;                                 }
+
+    GetTag (index, tag)
+    { 
+        const r = this.Edges[index]?.node?.tags?.find (e => e.name == tag);        
+        return r != undefined ? r.value : undefined;
+    }
 }
 
 
@@ -104,7 +110,7 @@ class SimpleTXQuery extends Query
                 {              
                   id,
                   owner {address},
-                  block {id},
+                  block {id,height},
                   tags  {name, value}            
                 }
               }
@@ -152,10 +158,19 @@ class SimpleTXQuery extends Query
        {        
            Sys.DEBUG ("Pass #" + pass_num + " begin:", __TAG);
            
-           this.Create ( { "cursor": cursor, "first": fetch_amount, "owner":config.owner, "tags":config.tags, "sort":config.sort } );                              
-           results = await RunGQLQuery (this.Arweave, this.Query);
-       
-           pass_edges     = results.data.data.transactions.edges;
+           this.Create ( { "cursor": cursor, "first": fetch_amount, "owner":config.owner, "tags":config.tags, "sort":config.sort } );                         
+           
+           results    = await RunGQLQuery (this.Arweave, this.Query);                  
+           pass_edges = results.data?.data?.transactions?.edges;
+           
+           if (pass_edges == undefined)
+           {
+               Sys.ERR ("Something went wrong with a query.");
+               Sys.DEBUG (results);
+               process.exit ();
+               break;
+           }
+
            pass_entries   = pass_edges.length;
            total_entries += pass_entries;     
 
@@ -235,7 +250,7 @@ function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MA
             {              
               id,
               owner {address},
-              block {id},
+              block {id, height},
               tags  {name, value}            
             }
           }
@@ -254,6 +269,10 @@ function CreateGQLTransactionQuery ( config = { cursor: undefined, first: GQL_MA
 async function RunGQLQuery (Arweave, query_str)
 {            
     const arweave = Arweave.Init ();
+
+    Sys.DEBUG ("Running query:");
+    Sys.DEBUG (query_str);
+
     const results = await arweave.api.post (Settings.GetGQLHostString (), { query: query_str } );
 
     return results;

@@ -20,13 +20,21 @@ function IsArweaveHash (str)          { return str.length == 43 && /[a-zA-Z0-9\-
 function IsArFSID      (str)          { return str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 function GetUNIXTime   ()             { return new Date ().getTime (); }
 function GetVersion    ()             { return Package.version; }
+function GetVersionStr ()             { return "v" + Package.version + " (" + Package.versiondate + ")"; }
 
 
-function GetDate ()
+function GetDate (date_time_spacer_chr = ' ')
 { 
     const now = new Date (); 
-    return        now.getFullYear () + "-" + now.getMonth   () + "-" + now.getDate    () 
-          + "_" + now.getHours    () + ":" + now.getMinutes () + ":" + now.getSeconds ();
+
+    const y   = now.getFullYear ();
+    const m   = String (now.getMonth   () + 1 ) .padStart (2, '0');
+    const d   = String (now.getDate    ()     ) .padStart (2, '0');
+    const h   = String (now.getHours   ()     ) .padStart (2, '0');
+    const min = String (now.getMinutes ()     ) .padStart (2, '0');
+    const s   = String (now.getSeconds ()     ) .padStart (2, '0');
+
+    return y + "-" + m + "-" + d + date_time_spacer_chr + h + ":" + min + ":" + s;
 }
 
 
@@ -66,4 +74,5 @@ function RequireParam (param, name, src)
 }
 
 
-module.exports = { IsFlag, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, GetDate, GetUNIXTime, GetVersion };
+module.exports = { IsFlag, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
+                  GetDate, GetUNIXTime, GetVersion, GetVersionStr };

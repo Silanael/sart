@@ -71,18 +71,16 @@ const ARFSMETA_VAR_MAP =
 async function FindDriveOwner (drive_id)
 {
     
-    const query = GQL.CreateGQLTransactionQuery ( { "cursor" : undefined, 
-                                                    "first"  : 1, 
-                                                    "owner"  : undefined, 
-                                                    "sort"   : GQL.SORT_OLDEST_FIRST ,
-                                                    "tags"   :[ { name: TAG_DRIVEID,    values:drive_id },
-                                                                { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
-                                                } );
-    Sys.DEBUG (query, "FindDriveOwner");
 
-
-    const q = new GQL.SimpleTXQuery (query);    
-    await q.Execute (Arweave);
+    const q = new GQL.SimpleTXQuery (Arweave);
+    await q.Execute
+    ( { "cursor" : undefined, 
+        "first"  : 1, 
+        "owner"  : undefined, 
+        "sort"   : GQL.SORT_OLDEST_FIRST ,
+        "tags"   :[ { name: TAG_DRIVEID,    values:drive_id },
+                    { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
+    } );
 
     let entry = null;
 
@@ -194,45 +192,169 @@ async function ListDrives (address)
         "tags"   :[ { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
     } );
     
+    
+    const now = Util.GetDate ();
+    const drives = [];
+
+
     if (Settings.IsHTMLOut () )
     {
+        const red        = "#900000";
+        const red_dim    = "#700000";
+        const black      = "#000000";
+        const border     = "#B50000";
+        const spacing_px = 5
+        const padding_px = 5
+
         Sys.OUT_TXT ("<html>");
-        Sys.OUT_TXT ("<head><title>List of ArDrive-drives</title></head>");
-        Sys.OUT_TXT ("<body bgcolor='#000000' text='#A00000' link='B50000' vlink='B00000'>");
+        Sys.OUT_TXT (`<head><title>List of ArDrive-drives - ${now}</title></head>`);
+        Sys.OUT_TXT (`<body bgcolor='${black}' text='${red}' link='${red}' vlink='${red_dim}'>`);
+        Sys.OUT_TXT ("<H1>ArDrive public drives</H1>");
+        Sys.OUT_TXT (`<H3>${now} GMT+3</H3>`);
+
+        Sys.OUT_TXT ("<H2>!!! WARNING !!!</H2>");
+        Sys.OUT_TXT (`<p>`);        
+        Sys.OUT_TXT (`This is an unfiltered, automatic index of user content in <a href="https://www.arweave.org/">the permaweb</a>.`);
+        Sys.OUT_TXT (`<br>As such, <u>it may contain unwanted, shocking and even illegal content</u>.`);
+        Sys.OUT_TXT (`<br>I cannot be held responsible for any traumas the weak-minded ones may receive from following the links here.`);
+        Sys.OUT_TXT (`</p>`);
+
+        Sys.OUT_TXT (`<p><u><b>BROWSE AT YOUR OWN RISK</b></u></p>`);
+        
+
+        Sys.OUT_TXT ("<div id='DriveList'>");
+        Sys.OUT_TXT (`   <table border="1" bordercolor="${border}" cellspacing="${spacing_px}" cellpadding="${padding_px}">`);
+        Sys.OUT_TXT (`      <tr>`);
+        Sys.OUT_TXT (`          <th align="left" bgcolor="${red}"> <font color="${black}">#</font>        </th>`);
+        Sys.OUT_TXT (`          <th align="left" bgcolor="${red}"> <font color="${black}">DRIVE ID</font> </th>`);
+        Sys.OUT_TXT (`          <th align="left" bgcolor="${red}"> <font color="${black}">OWNER</font>    </th>`);        
+        Sys.OUT_TXT (`          <th align="left" bgcolor="${red}"> <font color="${black}">NAME</font>     </th>`);        
+        Sys.OUT_TXT ("      </tr>");
     }
+
+
 
     const len = query.EntriesAmount;
     for (let c = 0; c < len; ++c)
     {        
-        if (query.HasTag (c, "ArFS") )
-        {
-            const tags          = query.GetTags (c);     
-            const drive_id      = tags.find (e => e.name == "Drive-Id")?.value;
-            const drive_privacy = tags.find (e => e.name == "Drive-Privacy")?.value;
+        const number      = len - c;
+        const owner       = query.GetAddress (c);
+        const txid        = query.GetTXID (c);
+        const height      = query.GetBlockHeight (c);
+        const tags        = query.GetTags (c);                 
 
+        const has_arfs    = query.HasTag (c, "ArFS");
+        const has_driveid = query.HasTag (c, "Drive-Id");
+        const has_privacy = query.HasTag (c, "Drive-Privacy");
+
+
+        if (!has_driveid)
+        {
+            Sys.WARN ("TX " + txid + " - Drive with no Drive ID. This should not happen.");
+            if (Settings.IsHTMLOut () )
+                Sys.OUT_TXT ("<!-- " + txid + " - Drive with missing DriveID. -->");
+            
+            continue;                                           
+        }
+
+        const drive_id   = query.GetTag (c, "Drive-Id");
+        
+
+
+        if (drives[drive_id] == undefined && has_arfs && has_driveid && has_privacy)
+        {
+
+            // Find real owner, going backwards from the end of the list
+            let real_owner = owner;
+            for (let b = len - 1; b > c; --b)
+            {                
+                if (query.GetTag (b, "Drive-Id") == drive_id && query.GetBlockHeight (b) < height)
+                {
+                    let old_real = real_owner;
+                    real_owner = query.GetAddress (b);
+                    Sys.DEBUG ("TX: " + txid + ": Real owner for drive " + drive_id + " updated to " + real_owner + ", was " + old_real);
+                }
+            }
+
+            // Owner mismatch
+            if (real_owner != owner)
+            {
+                Sys.ERR ("TX " + txid + ": Entry for drive " + drive_id + " found from address:" + owner + " when it really belongs to " + real_owner + ".");
+                Sys.ERR ("TX " + txid + ": A possible drive collision attack!");
+                if (Settings.IsHTMLOut () )
+                    Sys.OUT_TXT ("<!-- " + txid + " - Drive-Id collision with " + drive_id + " (real owner: " + real_owner + ") - possible attack -->");
+    
+                continue;
+            }
+
+
+            drives[drive_id] = true;
+            
+            const drive_privacy  = tags.find (e => e.name == "Drive-Privacy").value;
+            const arfs_version   = tags.find (e => e.name == "ArFS").value;            
+            const __tag          = "ArFS: " + drive_id;         
+            
+            
             if (Settings.IsHTMLOut () )
             {
-                if (drive_privacy.toLowerCase () == "public")
+                
+                // Public drive
+                if (drive_privacy == "public")
                 {
-                    const link = `https://app.ardrive.io/#/drives/${drive_id}`;
-                    Sys.OUT_TXT (`<br><a href="${link}">${drive_id}</a>`);
+                    Sys.VERBOSE ("Fetching metadata from TX " + txid + " ...", __tag);                    
+                    const data           = await Arweave.GetTxStrData (txid);
+
+                    const drive_metadata = JSON.parse (data);
+                    const drive_name     = drive_metadata.name != null && drive_metadata.name.length > 0 ? drive_metadata.name : "???";
+                    const link           = `https://app.ardrive.io/#/drives/${drive_id}`;
+                                        
+                    Sys.OUT_TXT ("      <tr>"
+                                +`<th align="left">${number}</th>`
+                                +`<th align="left"><a href="${link}" style="text-decoration:none">${drive_id}</a></th>`
+                                +`<th align="left">${owner}</th>`
+                                +`<th align="left"><a href="${link}" style="text-decoration:none">${drive_name}</a></th>`                                
+                                + "</tr>");
                 }
+          
+                // Private drive, just make a note of it.
+                else if (drive_privacy == "private")
+                    Sys.OUT_TXT (`      <!-- Private drive: ${drive_id} -->`);
+
                 else
-                    Sys.OUT_TXT (`<!-- Private drive: ${drive_id} -->`);
+                {
+                    Sys.WARN ("Unknown Drive-Privacy for drive " + drive_id + ": " + drive_privacy);
+                    Sys.OUT_TXT (`      <!-- Drive with unknown Drive-Privacy '${drive_privacy}': ${drive_id} -->`);
+                }
             }
 
             else            
                 Sys.OUT_TXT (drive_id + " " + query.GetTXID (c) + " " + drive_privacy);
         }
+
+        else if (drives[drive_id] != undefined)
+        {
+            Sys.WARN ("TX " + txid + " - Old metadata for drive " + drive_id);
+            if (Settings.IsHTMLOut () )
+                Sys.OUT_TXT ("      <!-- Old metadata for drive:" + drive_id + ": " + txid + " -->");                                           
+        }
+
         else
-            Sys.WARN ("TX " + query.GetTXID (c) + " - No ArFS-tag present.");
+        {
+            Sys.WARN ("TX " + txid + " - Drive with missing tags.");
+            if (Settings.IsHTMLOut () )
+                Sys.OUT_TXT ("      <!-- " + txid + " - Drive with missing tags: DriveID:" + has_driveid + " Drive-Privacy:" 
+                                           + has_privacy + " ArFS:" + has_arfs + " -->");
+        }
     }
      
     if (Settings.IsHTMLOut () )
     {
+        Sys.OUT_TXT ("   </table>");        
+        Sys.OUT_TXT ("</div>");
+        Sys.OUT_TXT (`<br>&copy <a href="http://www.silanael.com">Silanael</a> 2021-10-21_01`);
         Sys.OUT_TXT ("</body>");
         Sys.OUT_TXT ("</html>");
-        Sys.OUT_TXT ("<!-- Page created on " + Util.GetDate () + " with SART v" + Util.GetVersion () + " -->" );
+        Sys.OUT_TXT ("<!-- Page created on " + now + " with SART v" + Util.GetVersion () + " -->" );
         Sys.OUT_TXT ("<!-- (C) Silanael 2021 - www.silanael.com / zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4-->");        
     }
 
