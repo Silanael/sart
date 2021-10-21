@@ -96,18 +96,24 @@ class ArFSURL
 
     Parse (url)
     {   
+        let url_with_proto;
         let url_no_proto;
-
+        
         const proto_rest = url.split ("://", 2);            
         if (proto_rest.length == 2)
         {
-            url_no_proto = proto_rest [1];            
+            url_with_proto = url;
+            url_no_proto   = proto_rest[1];
+                 
             if (proto_rest[0].toLowerCase () != "arfs")
                 return this.#Err ("Not an arfs:// URL: " + url);            
         }                
         else
-            url_no_proto = proto_rest[0];
-
+        {
+            url_with_proto = "arfs://" + url;
+            url_no_proto   = url;
+        }
+        
 
         // Split the string into segments separated by a '/'
         const segments = url_no_proto.split ("/");        
@@ -116,7 +122,7 @@ class ArFSURL
         if (segments.length < 3)
             return this.#Err ("Invalid URL: " + url);
 
-            
+
         const drive_id     = segments[0].toLowerCase ();
         const mode         = segments[1].toLowerCase ();
         
@@ -137,13 +143,14 @@ class ArFSURL
         
 
         // Grab target path from the original url after the "drive-id/mode/"-part.
-        const target = url_no_proto.replace (/.+\/.+\//, "");        
-        if (target == null || target.length <= 0)
+        const target = url_with_proto.split (/arfs:\/\/[^\/]+\/[^\/]+\//);
+
+        if (target == null || target.length < 2)
             return this.#Err ("No target provided in URL.");
 
 
         // Finalize
-        this.Path  = target;
+        this.Path  = target[1];
         this.Valid = true;
         
         Sys.INFO (this);
