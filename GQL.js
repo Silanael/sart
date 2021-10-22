@@ -34,7 +34,10 @@ const __TAG                  = "GQL";
 // while it lasted.
 class Query
 {
-    Arweave = null;
+    Arweave       = null;
+    Edges         = null;
+    EntriesAmount = null;
+
 
     // How does one make these things protected?
     constructor (arweave)
@@ -63,14 +66,14 @@ class Query
     }
  
     
-    GetTXID          (index)      { return this.Edges[index]?.node?.id;                                           }
-    GetAddress       (index)      { return this.Edges[index]?.node?.owner?.address;                               }
-    GetBlockHeight   (index)      { return this.Edges[index]?.node?.block?.height;                                }
-    GetTags          (index)      { return this.Edges[index]?.node?.tags;                                         }    
-    HasTag           (index, tag) { return this.GetTag (index, tag) != undefined;                                 }
-    GetEdge          (index)      { return this.GetEdges()[index];                                                }
-    GetEdges         ()           { return this.Edges                                                             }
-    GetEntriesAmount ()           { return this.EntriesAmount;                                                    }
+    GetTXID          (index)      { return this.GetEdge (index)?.node?.id;                                       }
+    GetAddress       (index)      { return this.GetEdge (index)?.node?.owner?.address;                           }
+    GetBlockHeight   (index)      { return this.GetEdge (index)?.node?.block?.height;                            }
+    GetTags          (index)      { return this.GetEdge (index)?.node?.tags;                                     }    
+    HasTag           (index, tag) { return this.GetTag  (index, tag) != undefined;                               }
+    GetEdge          (index)      { return this.Edges != null ? this.Edges[index] : null;                        }
+    GetEdges         ()           { return this.Edges                                                            }
+    GetEntriesAmount ()           { return this.EntriesAmount;                                                   }
     
 
     GetTag (index, tag)
@@ -223,8 +226,8 @@ class TXQuery extends Query
        this.EntriesAmount = edges.length;
 
 
-       Sys.VERBOSE ("Total entries: " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : ""), __TAG)       
-       
+       Sys.VERBOSE ("Total entries: " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : ""), __TAG)   
+              
        return this.EntriesAmount >= desired_amount;
    }
 
