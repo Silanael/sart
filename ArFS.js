@@ -31,6 +31,7 @@ const ENTITYTYPE_DRIVE    = "drive";
 const ARFSENTITYMETA_NAME         = "name";
 const ARFSENTITYMETA_ROOTFOLDERID = "rootFolderId";
 
+
 const METADATA_CONTENT_TYPES = ["application/json"]; Object.freeze (METADATA_CONTENT_TYPES);
 
 const __TAG = "arfs";
@@ -77,6 +78,13 @@ const URLMODES =
     "path"  : "path",
     "drive" : "drive",
 }; Object.freeze (URLMODES);
+
+
+
+
+
+
+
 
 
 
@@ -206,12 +214,29 @@ class ArFSURL
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ArFSDrive
 {
     DriveID         = null;
     OwnerAddress    = null;    
-    DriveName       = null;
+    DriveName       = null;    
     RootFolderID    = null;
+    
+    RootFolder      = null;
     Files           = [];
 
     MetaTXID_Latest = null;
@@ -219,21 +244,23 @@ class ArFSDrive
 
 
     Valid           = false;
+    
 
 
     constructor (drive_id)
     {
-        if (Util.IsArFSID (drive_id) )
-        {
-            this.DriveID = drive_id;
-        }
+        if (Util.IsArFSID (drive_id) )        
+            this.DriveID = drive_id;    
 
         else
             Sys.ERR ("Invalid Drive ID: " + drive_id, ArFSDrive.name);
     }
 
+    GetOwner () { return this.OwnerAddress };
+
+
     async Init ()
-    {
+    {    
         await this.FetchOwner ();
         await this.UpdateDriveInfo ();
     }
@@ -270,12 +297,28 @@ class ArFSDrive
         // Parse ArFS entity metadata
         if (metadata != null)
         {
-            this.DriveName    = metadata[ARFSENTITYMETA_NAME];
-            this.RootFolderID = metadata[ARFSENTITYMETA_ROOTFOLDERID];
-
+            this.DriveName       = metadata[ARFSENTITYMETA_NAME];
             this.Metadata_Latest = metadata;        
-            this.Valid           = true; 
+            
+            const new_rootfolder = metadata[ARFSENTITYMETA_ROOTFOLDERID];
 
+            // Root folder changed or first time receiving
+            if (this.RootFolderID != new_rootfolder)
+            {
+                if (this.RootFolderID != null)
+                    Sys.WARN ("Root folder for drive " + this.DriveID + " changed from " + this.RootFolderID 
+                                                                              + " to "   + new_rootfolder, ArFSDrive.name);
+                this.RootFolderID = new_rootfolder;                
+                this.RootFolder = new ArFSDir (this.RootFolderID, this);
+
+                this.Valid = this.RootFolder.Valid;
+            }
+            
+            if (this.DriveName == null || this.DriveName == "")                
+                Sys.WARN ("Drive " + this.DriveID + " has no name.");        
+                                
+
+            Sys.VERBOSE ("Metadata parsed for drive " + this.DriveID, ArFSDrive.name)
             Sys.DEBUG (this.Metadata_Latest);
         }
         else        
@@ -285,9 +328,10 @@ class ArFSDrive
         return this.Valid;
     }
 
-
-
     
+
+
+
     // Finds the earliest metadata entry of the Drive ID and stores its owner.
     async FetchOwner ()
     {
@@ -333,6 +377,146 @@ class ArFSDrive
     }
 
 }
+
+
+
+
+
+
+
+class ArFSDir
+{
+    FolderID               = null;
+    Drive                  = null; 
+
+    Name                   = null;
+    
+    UNIXTime_MetaTX        = null;
+
+    MetaTXID_Latest        = null;
+    Metadata_Latest        = null;
+    MetaDataTX_Latest_tags = null;
+
+    Valid                  = false;
+
+    // ***
+
+    Files                  = [];
+
+
+    constructor (folder_id, drive)
+    {
+        if (Util.IsArFSID (folder_id) )
+        {   
+            this.FolderID = folder_id;
+            this.Drive    = drive;            
+            this.Valid    = this.Drive != null;
+        }
+
+        else
+            Sys.ERR ("Invalid Folder ID: " + folder_id, ArFSDir.name);
+    }
+
+    GetOwner () { return this.Drive?.GetOwner (); };
+
+
+    async FetchFiles ()
+    {
+        if (!this.Valid)
+        {
+            Sys.ERR ("FetchFiles: Folder ID: " + this.FolderID + " not in a valid state.", ArFSDir.name);
+            return false;
+        }
+
+        const file_owner = this.GetOwner ();
+
+        Sys.VERBOSE ("Fetching files in directory " + this.FolderID + "... ");
+
+        // Seek for the files from the owner address that are contained
+        // within this directory.
+        const query = new GQL.TXQuery (Arweave);
+        await query.ExecuteReqOwner
+        ({         
+            sort:  GQL.SORT_NEWEST_FIRST,
+            owner: file_owner,
+            tags: 
+            [ 
+                { name:"Parent-Folder-Id", values:this.FolderID  },
+                { name:"Entity-Type",      values:"file"         },                
+            ]
+        });
+                  
+        const len = query.GetEntriesAmount ();
+
+        Sys.VERBOSE ("Processing " + len + " entries in directory " + this.FolderID + "... ");
+
+        for (let C = 0; C < len; ++C)
+        {
+            const file_id = query.GetTag (C, "File-Id")?.toLowerCase ();
+            if (Util.IsArFSID (file_id) )
+            {                
+                if (this.Files[file_id] == null)
+                    this.Files[file_id] = new ArFSFile (file_id, this);
+                else
+                    Sys.DEBUG ("Entry for File-Id " + file_id + " already present in " + this.FolderID + " - omitting.");
+            }            
+        }
+    }
+
+}
+
+
+
+class ArFSFile
+{
+    FileID                 = null;
+    Dir                    = null;
+
+    Filename               = null;
+    FileSize_Actual_B      = null;
+    FileSize_Claimed_B     = null; // ArFS entity metadata (.json)
+
+    FileUNIXTime_Claimed   = null; // ArFS entity metadata (.json)
+    FileUNIXTime_DataTX    = null;
+    FileUNIXTime_MetaTX    = null;
+
+    FileContentType        = null; // MIME typoe
+
+    MetaTXID_Latest        = null;
+    Metadata_Latest        = null;
+    MetaDataTX_Latest_tags = null;
+    
+    DataTXID               = null;
+
+
+    constructor (file_id, drive, data_txid = null)
+    {
+        if (Util.IsArFSID (file_id) )
+        {   
+            this.FileID = file_id;    
+            data_txid   = data_txid;
+        }
+
+        else
+            Sys.ERR ("Invalid File ID: " + drive_id, ArFSFile.name);
+    }
+
+    GetOwner () { return this.Dir?.GetOwner (); };
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Gets and parses the ArFS metadata from the metadata TX data.

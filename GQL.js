@@ -10,6 +10,8 @@
 // Imports
 const Settings = require ('./settings.js');
 const Sys      = require ('./sys.js');
+const Util     = require ('./util.js');
+
 
 
 // Constants
@@ -136,6 +138,17 @@ class TXQuery extends Query
 
    
 
+   /* Returns true if desired amount of entries was gotten, false if not. Owner must be specified. */
+   async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
+   {
+        if (config?.owner != null)
+        {
+            const ret = await this.Execute (config);
+            return ret;
+        }
+        else
+            return false; // TODO: Add error
+   }
 
   
 
@@ -143,13 +156,16 @@ class TXQuery extends Query
    async Execute ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
    {    
 
-       let cursor = undefined;
-       let results;
+       if (config.owner != null && !Util.IsArweaveHash (config.owner) ) // TODO: Add error
+            return false;
+
+       let results       = null;
+       let cursor        = undefined;       
        let total_entries = 0;
-       let pass_edges;
-       let pass_entries = 0;
-       let pass_num     = 1;
-       let edges        = [];
+       let pass_edges    = null;
+       let pass_entries  = 0;
+       let pass_num      = 1;
+       let edges         = [];
        
        const desired_amount = config.first != undefined ? config.first : 0;
        const fetch_amount   = config.first != undefined ? config.first : GQL_MAX_RESULTS;

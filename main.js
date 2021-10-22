@@ -232,7 +232,9 @@ async function Testing (argv)
     {        
         const drive = new ArFS.ArFSDrive  (arfs_url.DriveID);
         await drive.Init ();
-        Sys.INFO (drive); 
+        await drive.RootFolder?.FetchFiles ();
+
+        Sys.INFO (drive);
     }
 }
 
