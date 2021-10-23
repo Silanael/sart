@@ -27,6 +27,29 @@ const __TAG                  = "GQL";
 
 
 
+class Entry
+{
+    TXID  = null;
+    Owner = null;
+    Block = null;
+    Tags  = null;
+    
+    constructor (txid, owner, block, tags)
+    { 
+        this.TXID  = txid;
+        this.Owner = owner;
+        this.Block = block;
+        this.Tags  = tags != null ? tags : []; 
+    }
+
+    GetTag (tag)
+    { 
+        const r = this.Tags.find (e => e.name == tag);        
+        return r != null ? r.value : null;
+    }
+}
+
+
 
 // My first class written in JavaScript. Yay.
 // I've been holding back with them a bit,
@@ -36,6 +59,7 @@ class Query
 {
     Arweave       = null;
     Edges         = null;
+    Entries       = [];
     EntriesAmount = null;
 
 
@@ -51,6 +75,8 @@ class Query
         this.EntriesAmount = 0;
     }
 
+
+
     async ExecuteOnce (query)
     {
         if (query != null)
@@ -63,8 +89,9 @@ class Query
         
         this.Edges = this.Results.data.data.transactions.edges;
         this.EntriesAmount = this.Edges.length;
+        this._ParseEntries ();
     }
- 
+     
     
     GetTXID          (index)      { return this.GetEdge (index)?.node?.id;                                       }
     GetAddress       (index)      { return this.GetEdge (index)?.node?.owner?.address;                           }
@@ -74,6 +101,7 @@ class Query
     GetEdge          (index)      { return this.Edges != null ? this.Edges[index] : null;                        }
     GetEdges         ()           { return this.Edges                                                            }
     GetEntriesAmount ()           { return this.EntriesAmount;                                                   }
+    GetEntry         (index)      { return this.Entries[index];                                                  }
     
 
     GetTag (index, tag)
@@ -81,16 +109,34 @@ class Query
         const  r = this.Edges[index]?.node?.tags?.find (e => e.name == tag);        
         return r != undefined ? r.value : undefined;
     }
+
+    _ParseEntries ()
+    {
+        this.Edges.forEach (edge => this.Entries.push
+        (
+            new Entry 
+            (
+                edge.node?.id,
+                edge.node?.owner?.address,
+                edge.node?.block?.height,
+                edge.node?.tags
+            )
+        ));    
+    }
+
 }
+
 
 
 
 class TXQuery extends Query
 {
+
     constructor (arweave, query)
     {
         super (arweave, query);        
     }
+
 
     static CreateTxQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, owner: undefined, tags: [], sort: SORT_DEFAULT} )
     {
@@ -104,10 +150,11 @@ class TXQuery extends Query
         const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
         
         let tag_str = "";
-        if (config.tags.length > 0)
+        const tags_amount = config.tags.length;
+        if (tags_amount > 0)
         {
             tag_str = "tags:[";
-            config.tags.forEach ( tag => {tag_str += `{ name:"${tag.name}", values:"${tag.values}"},` } ); 
+            config.tags.forEach ( tag => {tag_str += `{ name:"${tag.name}", values:[${GetGQLValueStr (tag.values)}]},` } ); 
             tag_str += "],";
         }
 
@@ -224,6 +271,7 @@ class TXQuery extends Query
        this.Results       = results;  
        this.Edges         = edges;
        this.EntriesAmount = edges.length;
+       this._ParseEntries ();
 
 
        Sys.VERBOSE ("Total entries: " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : ""), __TAG)   
@@ -255,6 +303,28 @@ async function RunGQLQuery (Arweave, query_str)
 }
 
 
+
+
+
+
+function GetGQLValueStr (value)
+{     
+    if (Array.isArray (value) )
+    {
+        let str = "";
+        const len = value.length;
+        for (let C = 0; C < len; ++C)
+        {
+            if (C > 0)
+                str += `,"${value[C]}"`;
+            else
+                str += `"${value[C]}"`;
+        }
+        return str;
+    }
+    else
+        return `"${value}"`;
+}
 
 
 
