@@ -231,8 +231,7 @@ async function Testing (argv)
     if (arfs_url.IsValid () )
     {        
         const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
-        await drive.Init ();
-        await drive.RootFolder?.FetchEntities ();
+        await drive.Init ();              
 
         //Sys.INFO (drive);
     }

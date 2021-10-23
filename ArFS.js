@@ -111,7 +111,7 @@ class ArFSURL
 
     Valid    = false;
 
-
+    
     constructor (url = null)
     {
         if (url != null)
@@ -119,7 +119,10 @@ class ArFSURL
     }
     
 
-    IsValid () { return this.Valid; } 
+    IsValid      () { return this.Valid;                                          } 
+    IsFullDrive  () { return this.Mode == URLMODES["drive"];                      }
+    IsRootFolder () { return this.Mode == URLMODES["path"] && this.Target == "/"; }
+    IsPath       () { return this.Mode == URLMODES["path"] && this.Target != "/"; }
 
 
     Parse (url)
@@ -167,7 +170,7 @@ class ArFSURL
         // Assume users wants entire drive content.
         if (segments.length == 1)
         {
-            this.Mode   = ArFSURL.MODE_DRIVE;
+            this.Mode   = URLMODES["drive"];
             this.Target = "";
             this.Valid  = true;
             return true;
@@ -177,7 +180,7 @@ class ArFSURL
         // Assume user wants the content of the root directory.
         else if (segments.length == 2 && segments[1] == "")
         {
-            this.Mode   = ArFSURL.MODE_PATH;
+            this.Mode   = URLMODES["path"];
             this.Target = "/";
             this.Valid  = true;
             return true;
@@ -220,10 +223,6 @@ class ArFSURL
     }
 
         
-    static get MODE_ID    () { return URLMODES["id"];    }
-    static get MODE_TX    () { return URLMODES["tx"];    }
-    static get MODE_PATH  () { return URLMODES["path"];  }
-    static get MODE_DRIVE () { return URLMODES["drive"]; }
 
 }
 
@@ -253,18 +252,49 @@ class ArFSEntity
 
     UNIXTime_MetaTX  = null;
 
+    Contains         = [];
+
     Valid            = true;
 
 
 
     // Overridable
-    _OnARFSMetadataSet ()             { Sys.ERR ("OnARFSMetadataSet not properly overridden!", __TAG); return false; }
-    _RemoveEntity      (arfs_entity)  { };
+           _OnARFSMetadataSet ()                  { Sys.ERR ("OnARFSMetadataSet not properly overridden!", __TAG); return false; }
+           _RemoveEntity      (arfs_entity)       { }; 
+    async  _FetchContained   (output_list)       { Sys.ERR ("_UpdateContained not properly overridden!"); }
+     
+
+    static CREATE (arfs_id = null, entity_type = null, master = null, gql_entry = null)
+    {
+
+        if (gql_entry != null)
+            entity_type = gql_entry.GetTag (TAG_ENTITYTYPE);
+        
+
+        switch (entity_type)
+        {
+            case ENTITYTYPE_FILE:
+                return new ArFSFile (arfs_id, master, gql_entry);
+
+            case ENTITYTYPE_FOLDER:
+                return new ArFSDir (arfs_id, master, gql_entry);
+
+            case ENTITYTYPE_DRIVE:
+                return new ArFSDrive (arfs_id, master, gql_entry);
+
+            case null:
+                Sys.ERR ("CREATE: Entity type not set!");
+                return null;
+
+            default:
+                Sys.ERR ("CREATE: Unknown entity type " + entity_type);
+                return null;
+        }            
+    }
 
 
     constructor (arfs_id, entity_type, master = null, gql_entry= null)
     {
-
         this.MasterEntity = master;
     
 
@@ -313,9 +343,9 @@ class ArFSEntity
         await this._FetchOwner ();
         await this.UpdateMetadata ();
     }
-          
 
 
+  
     // Find the earliest metadata entry of the Drive ID and stores its owner.
     async _FetchOwner ()
     {
@@ -347,6 +377,29 @@ class ArFSEntity
 
 
 
+    // 'list', when true, will output found entities in real time.
+    async Update (recursive = false, output_list = false)
+    {        
+        let success = true;
+        
+        success |= await this.UpdateMetadata   ();
+        success |= await this._FetchContained (output_list);
+        
+        if (recursive)            
+        {
+            const keys   = Object.keys   (this.Contains);
+            const values = Object.values (this.Contains);
+            const len    = keys.length;
+            
+            for (let C = 0; C < len; ++C)
+            {
+                Sys.VERBOSE (this.ArFSID + ": Updating contained entry " + (C+1) + " / " + len + " ...");
+                success |= await values[C].Update (true, output_list);
+            }
+        }
+
+        return success;
+    }
 
 
   
@@ -456,6 +509,8 @@ class ArFSEntity
     }
 
 
+   
+
     // For output.
     GetFlagStr ()
     {
@@ -531,12 +586,10 @@ class ArFSDrive extends ArFSEntity
             if (this.RootFolderID != null)
                 Sys.WARN ("Root folder for drive " + this.DriveID + " changed from " + this.RootFolderID 
                                                                           + " to "   + new_rootfolder, ArFSDrive.name);
-            this.RootFolderID = new_rootfolder;                
-            this.RootFolder = new ArFSDir (this.RootFolderID, this);
-            
-            await this.RootFolder.Init ();
-
-            this.Valid = this.RootFolder.Valid;
+            this.RootFolderID                = new_rootfolder;                
+            this.RootFolder                  = new ArFSDir (this.RootFolderID, this);
+            this.Contains[this.RootFolderID] = this.RootFolder;
+            this.Valid                       = this.RootFolder.Valid;
         }
         
         if (this.ArFSName == null || this.ArFSName == "")                
@@ -545,6 +598,46 @@ class ArFSDrive extends ArFSEntity
         return true;
     }
 
+
+    async List (arfs_url)
+    {
+        if (!arfs_url.Valid)
+        {
+            Sys.ERR ("Invalid URL " + arfs_url, this.DriveID);
+            return false;
+        }
+
+        else if (arfs_url.DriveID != this.ArFSID)
+        {
+            Sys.ERR ("Drive " + this.ArFSID + " requested to fetch path pointing to drive " + arfs_url.DriveID);
+            return false;
+        }
+
+        let success;
+
+        if (arfs_url.IsFullDrive () )
+        {
+            Sys.VERBOSE ("Listing full drive " + this.ArFSID + ":");
+            success = await this.Update (true, true);
+        }
+        
+        else if (arfs_url.IsRootFolder () )
+        {
+            if (this.RootFolder == null)
+                this.Update (false, false);
+
+            if (this.RootFolder != null)
+            {
+                Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
+                success = await this.RootFolder.Update (false, true);
+            }
+            else
+                Sys.ERR ("Unable to fetch root folder for drive " + this.ArFSID + "!");
+        }
+                
+
+        return success;
+    }
 
 }
 
@@ -563,9 +656,6 @@ class ArFSDrive extends ArFSEntity
 class ArFSDir extends ArFSEntity
 {   
 
-    Files = [];
-
-
     constructor (arfs_id, master = null, gql_entry= null )
     {
         super (arfs_id, ENTITYTYPE_FOLDER, master, gql_entry);  
@@ -577,6 +667,7 @@ class ArFSDir extends ArFSEntity
         return true;
     }
 
+
     /* Override */ _RemoveEntity (entity)
     {
         if (entity != null && Files[entity.ArFSID] != null)
@@ -587,11 +678,11 @@ class ArFSDir extends ArFSEntity
         }
     }
 
-    async FetchEntities ()
+
+    /* Override */ async _FetchContained (output_list)
     {       
 
         const owner_addr = await this.GetOwner ();
-
 
         Sys.VERBOSE ("Fetching directory content.. ", this.ArFSID);
         
@@ -610,23 +701,37 @@ class ArFSDir extends ArFSEntity
         });
         
         const len = query.GetEntriesAmount ();
+        let processed = 0;
+        
         Sys.VERBOSE ("Processing " + len + " entries...", this.ArFSID);
 
         for (let C = 0; C < len; ++C)
-        {     
-            const new_file = new ArFSFile (null, this, query.GetEntry (C) );
-            await new_file.Init ();
-
-            if (new_file.Valid && new_file.IsContainedIn (this) )
+        {                 
+            const new_entity = ArFSEntity.CREATE (null, null, this, query.GetEntry (C) );
+            
+            // Failed to create.
+            if (new_entity == null)
             {
-                this.Files[new_file.ArFSID] = new_file;
-                Sys.OUT_TXT (this.GetFlagStr () + " " + new_file.ArFSID + " " + new_file.ArFSName);
+                Sys.ERR ("Invalid entry encountered.");
+                continue; 
+            }
+
+
+            await new_entity.Init ();
+
+            if (new_entity.Valid && new_entity.IsContainedIn (this) )
+            {
+                this.Contains[new_entity.ArFSID] = new_entity;
+                ++processed;
+
+                if (output_list)
+                    Sys.OUT_TXT (this.GetFlagStr () + " " + new_entity.ArFSID + " " + new_entity.ArFSName);
             }
 
 
         }
         
-        Sys.VERBOSE ("Entries in the directory processed." + this.ArFSID);
+        Sys.VERBOSE (processed + " / " + len + " entries added." + this.ArFSID);
     }
 
 

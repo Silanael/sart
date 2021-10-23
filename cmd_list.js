@@ -30,6 +30,16 @@ async function HandleCommand (args)
 {
     Util.RequireArgs (args, 1);
 
+    const arfs_url = new ArFS.ArFSURL (args[0]);
+    
+    if (arfs_url.IsValid () )
+    {        
+        const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
+        await drive.Init ();
+        await drive.List (arfs_url); 
+    }
+
+    /*
     const target = args[0];
     target_lower = target.toLowerCase ();
 
@@ -49,7 +59,7 @@ async function HandleCommand (args)
 
     // Call the sub-handler
     Targets[target_lower] (args);
-
+    */
 }
 
 
