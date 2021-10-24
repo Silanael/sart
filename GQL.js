@@ -274,7 +274,7 @@ class TXQuery extends Query
        this._ParseEntries ();
 
 
-       Sys.VERBOSE ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", __TAG)   
+       Sys.DEBUG ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", __TAG)   
        
        
        return this.EntriesAmount >= desired_amount;

@@ -44,8 +44,12 @@ const METADATA_CONTENT_TYPES = ["application/json"];                            
 const ARFS_ENTITY_TYPES      = [ENTITYTYPE_DRIVE, ENTITYTYPE_FILE, ENTITYTYPE_FOLDER];  Object.freeze (ARFS_ENTITY_TYPES);
 const ENTITYTYPES_INFOLDER   = [ENTITYTYPE_FILE, ENTITYTYPE_FOLDER]; // Things that may be contained by folders.
 
+const ENTITYSYMBOLS          = { [ENTITYTYPE_DRIVE] : 'D', [ENTITYTYPE_FOLDER] : 'd', [ENTITYTYPE_FILE] : 'f'}
+
 function IsValidEntityType     (entity_type) { return ARFS_ENTITY_TYPES.includes (entity_type?.toLowerCase () );  }
 function GetIDTag              (entity_type) { return ENTITYTYPE_IDTAG_MAP[entity_type]; }
+function GetEntitySymbol       (entity_type) { const s = ENTITYSYMBOLS[entity_type]; return s != null ? s : '?'; }
+
 
 const __TAG = "arfs";
 
@@ -108,6 +112,7 @@ class ArFSURL
     DriveID  = null;
     Mode     = null;
     Target   = null;
+    Path     = null;
 
     Valid    = false;
 
@@ -159,7 +164,8 @@ class ArFSURL
 
 
         // Verify Drive ID
-        const drive_id  = segments[0].toLowerCase ();        
+        const drive_id  = segments[0].toLowerCase ();    
+
         if (Util.IsArFSID (drive_id) )
             this.DriveID = drive_id;
         else
@@ -172,8 +178,7 @@ class ArFSURL
         {
             this.Mode   = URLMODES["drive"];
             this.Target = "";
-            this.Valid  = true;
-            return true;
+            this.Valid  = true;            
         }
         
         // We got a trailing slash but nothing after.
@@ -182,34 +187,40 @@ class ArFSURL
         {
             this.Mode   = URLMODES["path"];
             this.Target = "/";
-            this.Valid  = true;
-            return true;
+            this.Valid  = true;            
         }
         
         
-
-        // Verify mode
-        const mode = segments[1].toLowerCase ();
-        if (URLMODES[mode] != null)
-            this.Mode = mode;
+        // Mode present
         else
-            return this.#Err ("Unknown mode in URL: " + mode);            
+        {
+            // Verify mode
+            const mode = segments[1].toLowerCase ();
+            if (URLMODES[mode] != null)
+                this.Mode = mode;
+            else
+                return this.#Err ("Unknown mode in URL: " + mode);            
 
         
 
-        // Grab target path from the original url after the "drive-id/mode/"-part.
-        const target = url_with_proto.split (/arfs:\/\/[^\/]+\/[^\/]+\//);
+            // Grab target path from the original url after the "drive-id/mode/"-part.
+            const target = url_with_proto.split (/arfs:\/\/[^\/]+\/[^\/]+\//);
 
 
-        // Verify grab
-        if (target == null || target.length < 2)
-            return this.#Err ("No target provided in URL.");
+            // Verify grab
+            if (target == null || target.length < 2)
+                return this.#Err ("No target provided in URL.");
 
 
-        // Finalize
-        this.Target = target[1];
-        this.Valid  = true;
-        
+            // Finalize
+            this.Target = target[1];
+            this.Valid  = true;
+        }
+
+
+        this.Path = this.Target.split ("/");
+
+
         
         return this.Valid;
     }
@@ -334,9 +345,11 @@ class ArFSEntity
 
     
     GetIDTag      ()       { return GetIDTag (this.ArFSEntityType);                                   }
-    IsContainedIn (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID; }
-
-
+    IsContainedIn (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID}
+    IsFile        ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;   }
+    IsFolder      ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER; }
+    IsDrive       ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;  }
+    HasName       (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }
     
 
     
@@ -472,8 +485,10 @@ class ArFSEntity
             if (new_parent != old_parent)
             {
                 this.ParentFolderId = new_parent;
+
                 if (old_parent == null)
-                    Sys.VERBOSE ("Parent folder set to " + new_parent);
+                    Sys.DEBUG ("Parent folder set to " + new_parent, this.ArFSID);
+
                 else
                 {
                     Sys.VERBOSE ("Parent folder changed from " + old_parent + " to " + new_parent + " (move operation)");
@@ -524,7 +539,7 @@ class ArFSEntity
     // For output.
     GetFlagStr ()
     {
-        const d = this.ArFSEntityType == ENTITYTYPE_FOLDER ? 'd' : '-'; // f = file, d = dir, D = drive
+        const d = GetEntitySymbol (this.ArFSEntityType); // f = file, d = dir, D = drive
         const p = '-'; // p = private, - = public
         const l = '-'; // - = local, e = data on another drive, E = metadata on another drive, ! = both on another drive
         const r = 'r'; // Read
@@ -578,6 +593,7 @@ class ArFSEntity
 
 class ArFSDrive extends ArFSEntity
 {  
+
     RootFolderID    = null;    
     RootFolder      = null;
 
@@ -632,7 +648,15 @@ class ArFSDrive extends ArFSEntity
         // Update the directory metadata and is content        
         await this.Update ();
         
-        
+
+        // Root folder missing, cannot list
+        if (this.RootFolder == null)
+        {
+            Sys.ERR ("Unable to fetch root folder for drive " + this.ArFSID + "!");
+            return false;
+        }
+
+
         // Full drive listing
         if (arfs_url.IsFullDrive () )
         {
@@ -642,18 +666,20 @@ class ArFSDrive extends ArFSEntity
         
         // List root folder only
         else if (arfs_url.IsRootFolder () )
-        {            
-            if (this.RootFolder != null)
-            {
-                Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
-                success = await this.RootFolder.List ();
-            }
-            else
-                Sys.ERR ("Unable to fetch root folder for drive " + this.ArFSID + "!");
+        {                    
+            Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
+            success = await this.RootFolder.List ();                    
         }
                 
+        // Path listing
         else
-            Sys.ERR ("Unsupported for now.");
+        {
+            const dir = await this.RootFolder.GetDirByURL (arfs_url, 0);
+
+            if (dir != null)
+                await dir.List ();
+        }
+        
 
         return success;
     }
@@ -675,7 +701,11 @@ class ArFSDrive extends ArFSEntity
 class ArFSDir extends ArFSEntity
 {   
 
-    Entities = {};
+    Entities        = {};
+
+    FilesAmount     = 0;
+    DirAmount       = 0;
+    EntitiesAmount  = 0;
 
 
     constructor (arfs_id, master = null, gql_entry = null )
@@ -745,25 +775,91 @@ class ArFSDir extends ArFSEntity
     }
 
 
-    async List ()
+    async UpdateContainedEntities (list = false)
     {
-        await this.Update ();
-        
-        const keys   = Object.keys   (this.Entities);
         const values = Object.values (this.Entities);
-        const amount = keys.length;
+        const amount = values.length;
 
-        Sys.INFO ("Listing content of " + this.ArFSName + " (" + this.ArFSID + "):");
-        Sys.INFO ("");
-
+        this.FilesAmount     = 0;
+        this.DirAmount       = 0;
+        this.EntitiesAmount  = 0;
+    
         for (let C = 0; C < amount; ++C)
         {
             let entity = values[C];
             await entity.Update ();
 
-            if (entity.IsContainedIn (this) )
-                Sys.OUT_TXT (entity.GetFlagStr () + " " + entity.ArFSID + " " + entity.ArFSName);
+            // The entity has moved away from this directory.
+            if (!entity.IsContainedIn (this) )
+                delete this.Entities[entity.ArFSID];
+
+            // A valid entity
+            else
+            {
+                                              ++this.EntitiesAmount;
+                if      (entity.IsFile   () ) ++this.FilesAmount;
+                else if (entity.IsFolder () ) ++this.DirAmount;
+
+                if (list)
+                    Sys.OUT_TXT (entity.GetFlagStr () + " " + entity.ArFSID + " " + entity.ArFSName);
+            }
         }
+    }
+
+
+
+
+    async List ()
+    {
+        await this.Update ();
+
+        Sys.INFO ("Listing content of '" + this.ArFSName + "' (" + this.ArFSID + "):");
+        Sys.INFO ("");
+
+        await this.UpdateContainedEntities (true);
+        
+        Sys.INFO ("");
+        Sys.INFO (this.EntitiesAmount + " entries (" + this.FilesAmount + " files, " + this.DirAmount + " folders)");
+    }
+
+
+
+    // A recursive function that travels along the path of the URL,
+    // updating directory content as it goes.
+    async GetDirByURL (arfs_url, index)
+    {
+        await this.Update ();
+        await this.UpdateContainedEntities (false);
+
+        // Fetch the next directory in the path
+        let dir = this.GetDirByName (arfs_url.Path[index] );
+
+        if (dir != null)
+        {
+            if (index >= arfs_url.Path.length - 1)
+                return dir;
+
+            else            
+                dir = await dir.GetDir (arfs_url, index + 1);
+        }
+        
+        return dir;
+    }
+
+
+    GetDirByName (name)
+    {
+        // TODO: Make a name-entity lookup table
+        const values = Object.values (this.Entities);
+        const len = values.length;
+        for (let C = 0; C < len; ++C)
+        {
+            let entity = values[C];
+            if (entity.IsFolder () && entity.HasName (name) )
+                return entity;
+        }
+
+        return null;
     }
 
 }
