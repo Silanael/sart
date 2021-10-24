@@ -252,17 +252,18 @@ class ArFSEntity
 
     UNIXTime_MetaTX  = null;
 
-    Contains         = [];
-
     Valid            = true;
 
 
 
-    // Overridable
+    // Overridables
+    //
            _OnARFSMetadataSet ()                  { Sys.ERR ("OnARFSMetadataSet not properly overridden!", __TAG); return false; }
-           _RemoveEntity      (arfs_entity)       { }; 
-    async  _FetchContained   (output_list)       { Sys.ERR ("_UpdateContained not properly overridden!"); }
+           _RemoveEntity      (arfs_entity)       { } 
+    async  _OnUpdate          ()                  { }
      
+
+
 
     static CREATE (arfs_id = null, entity_type = null, master = null, gql_entry = null)
     {
@@ -293,10 +294,13 @@ class ArFSEntity
     }
 
 
+
+
     constructor (arfs_id, entity_type, master = null, gql_entry= null)
     {
-        this.MasterEntity = master;
-    
+        if (master != null)
+            this._SetMaster (master);
+        
 
         // Setup using the result from a GQL-query
         if (gql_entry != null)
@@ -315,12 +319,12 @@ class ArFSEntity
 
         // Validate Entity-Type
         if (!IsValidEntityType (this.ArFSEntityType) )
-            return this.#SetInvalid ("Unknown entity type " + this.ArFSEntityType);
+            return this._SetInvalid ("Unknown entity type " + this.ArFSEntityType);
 
 
         // Validate ID
         if (!Util.IsArFSID (this.ArFSID) )
-            return this.#SetInvalid ("Invalid ID for entity '" + this.ArFSEntityType + "': " + this.ArFSID);
+            return this._SetInvalid ("Invalid ID for entity '" + this.ArFSEntityType + "': " + this.ArFSID);
         
     }
 
@@ -328,33 +332,64 @@ class ArFSEntity
 
 
 
-    async GetOwner      ()       { return this.HasOwner () ? this.OwnerAddress : await this._FetchOwner (); }
-          HasOwner      ()       { return this.OwnerAddress != null && this.OwnerAddress != "";             }
-          GetIDTag      ()       { return GetIDTag (this.ArFSEntityType);                                   }
-          IsContainedIn (entity) { return this.MasterEntity != null && this.MasterEntity == entity;         }
+    
+    GetIDTag      ()       { return GetIDTag (this.ArFSEntityType);                                   }
+    IsContainedIn (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID; }
 
 
     
 
     
-    async Init ()
+    async Update ()
     { 
-        Sys.DEBUG ("Initializing...", this.ArFSID);
-        await this._FetchOwner ();
-        await this.UpdateMetadata ();
+        Sys.DEBUG ("Updating ", this.ArFSID);
+        
+        await this._UpdateMetadata ();
+        await this._OnUpdate ();
     }
 
+
+    _SetMaster (master)
+    {
+        if (this.MasterEntity != null)
+            this.MasterEntity._RemoveEntity (this);
+
+        this.MasterEntity   = master;
+        this.ParentFolderId = master?.ArFSID;
+    }
+    
+
+    async GetOwner ()
+    {
+        if (this.OwnerAddress != null && this.OwnerAddress != "")
+        {
+            Sys.DEBUG ("GetOwner: Owner address already set.", this.ArFSID);
+            return this.OwnerAddress;
+        }
+
+        else if (this.MasterEntity != null && this.MasterEntity.OwnerAddress != null)
+        {
+            Sys.DEBUG ("GetOwner: Using owner address of Master " + this.MasterEntity.ArFSID + ".", this.ArFSID);
+            return this.MasterEntity.OwnerAddress;
+        }
+
+        else
+        {
+            await this._FetchOwner ();
+            return this.OwnerAddress;
+        }
+    }
 
   
     // Find the earliest metadata entry of the Drive ID and stores its owner.
     async _FetchOwner ()
-    {
-        Sys.VERBOSE ("Fetching owner for " + this.ArFSEntityType + " " + this.ArFSID + " ...");
+    {        
+        Sys.DEBUG ("Fetching owner for " + this.ArFSEntityType + " " + this.ArFSID + " ...");
 
         const id_tag = this.GetIDTag ();
         
         if (id_tag == null)
-            return this.#SetInvalid ("Could not get transaction tag for entity type '" + this.ArFSEntityType + "'", "UpdateMetaData");
+            return this._SetInvalid ("Could not get transaction tag for entity type '" + this.ArFSEntityType + "'", "UpdateMetaData");
 
         
         const query = new GQL.TXQuery (Arweave);
@@ -369,51 +404,26 @@ class ArFSEntity
             ]
         });
 
-        const owner = query.GetAddress (0);
-        Sys.VERBOSE ("FetchOwner: Got " + owner, this.ArFSID);            
+        this.OwnerAddress = query.GetAddress (0);
+        Sys.VERBOSE ("Owner set to " + this.OwnerAddress, this.ArFSID);            
 
-        return owner;
+
+        return this.OwnerAddress;
     }
 
-
-
-    // 'list', when true, will output found entities in real time.
-    async Update (recursive = false, output_list = false)
-    {        
-        let success = true;
-        
-        success |= await this.UpdateMetadata   ();
-        success |= await this._FetchContained (output_list);
-        
-        if (recursive)            
-        {
-            const keys   = Object.keys   (this.Contains);
-            const values = Object.values (this.Contains);
-            const len    = keys.length;
-            
-            for (let C = 0; C < len; ++C)
-            {
-                Sys.VERBOSE (this.ArFSID + ": Updating contained entry " + (C+1) + " / " + len + " ...");
-                success |= await values[C].Update (true, output_list);
-            }
-        }
-
-        return success;
-    }
 
 
   
     // Fetch the latest metadata for the entity.
-    async UpdateMetadata ()
+    async _UpdateMetadata ()
     {        
 
         // Make sure we have owner. Will fetch if need be.
         const entity_owner = await this.GetOwner ();
     
         if (entity_owner == null || entity_owner == "")
-            return this.#SetInvalid ("Could not determine owner.", "_UpdateMetaData");
+            return this._SetInvalid ("Could not determine owner.", "_UpdateMetaData");
         
-
 
         // Arweave transaction tag ("File-Id" etc.)
         const id_tag = this.GetIDTag ();
@@ -473,7 +483,7 @@ class ArFSEntity
             
         }
         else
-            return this.#SetInvalid ("Failed to fetch newest metadata.");
+            return this._SetInvalid ("Failed to fetch newest metadata.");
         
         
         // Get ArFS entity metadata from the transaction data
@@ -514,12 +524,14 @@ class ArFSEntity
     // For output.
     GetFlagStr ()
     {
-        const d = this.ArFSEntityType == ENTITYTYPE_FOLDER ? 'd' : '-'; // Directory
+        const d = this.ArFSEntityType == ENTITYTYPE_FOLDER ? 'd' : '-'; // f = file, d = dir, D = drive
+        const p = '-'; // p = private, - = public
+        const l = '-'; // - = local, e = data on another drive, E = metadata on another drive, ! = both on another drive
         const r = 'r'; // Read
-        const w = '-'; // Write    
-        const s = '-'; // Status
-        const e = '-'; // Encrypted
-        return d+r+w+s+e;
+        const w = '-'; // Write
+        const s = '-'; // Status: V = verified,     - = unchecked,    o = orphaned, 
+                       //         M = meta missing, D = data missing, C = collision, ! = multiple errors        
+        return d+p+l+r+w+s;
     }
 
 
@@ -543,7 +555,7 @@ class ArFSEntity
 
 
     // Mark the entity as invalid
-    #SetInvalid (error, src)
+    _SetInvalid (error, src)
     {
         Sys.ERR (error, "ArFS: " + this.ArFSID + (src != null ? ": " + src : "") );
         this.Valid = false;
@@ -587,8 +599,7 @@ class ArFSDrive extends ArFSEntity
                 Sys.WARN ("Root folder for drive " + this.DriveID + " changed from " + this.RootFolderID 
                                                                           + " to "   + new_rootfolder, ArFSDrive.name);
             this.RootFolderID                = new_rootfolder;                
-            this.RootFolder                  = new ArFSDir (this.RootFolderID, this);
-            this.Contains[this.RootFolderID] = this.RootFolder;
+            this.RootFolder                  = new ArFSDir (this.RootFolderID, this);            
             this.Valid                       = this.RootFolder.Valid;
         }
         
@@ -601,6 +612,8 @@ class ArFSDrive extends ArFSEntity
 
     async List (arfs_url)
     {
+
+        // See that the URL is good
         if (!arfs_url.Valid)
         {
             Sys.ERR ("Invalid URL " + arfs_url, this.DriveID);
@@ -613,28 +626,34 @@ class ArFSDrive extends ArFSEntity
             return false;
         }
 
+
         let success;
 
+        // Update the directory metadata and is content        
+        await this.Update ();
+        
+        
+        // Full drive listing
         if (arfs_url.IsFullDrive () )
         {
             Sys.VERBOSE ("Listing full drive " + this.ArFSID + ":");
-            success = await this.Update (true, true);
+            Sys.INFO ("TODO");            
         }
         
+        // List root folder only
         else if (arfs_url.IsRootFolder () )
-        {
-            if (this.RootFolder == null)
-                this.Update (false, false);
-
+        {            
             if (this.RootFolder != null)
             {
                 Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
-                success = await this.RootFolder.Update (false, true);
+                success = await this.RootFolder.List ();
             }
             else
                 Sys.ERR ("Unable to fetch root folder for drive " + this.ArFSID + "!");
         }
                 
+        else
+            Sys.ERR ("Unsupported for now.");
 
         return success;
     }
@@ -656,7 +675,10 @@ class ArFSDrive extends ArFSEntity
 class ArFSDir extends ArFSEntity
 {   
 
-    constructor (arfs_id, master = null, gql_entry= null )
+    Entities = {};
+
+
+    constructor (arfs_id, master = null, gql_entry = null )
     {
         super (arfs_id, ENTITYTYPE_FOLDER, master, gql_entry);  
     }
@@ -679,9 +701,8 @@ class ArFSDir extends ArFSEntity
     }
 
 
-    /* Override */ async _FetchContained (output_list)
+    /* Override */ async _OnUpdate ()
     {       
-
         const owner_addr = await this.GetOwner ();
 
         Sys.VERBOSE ("Fetching directory content.. ", this.ArFSID);
@@ -716,24 +737,34 @@ class ArFSDir extends ArFSEntity
                 continue; 
             }
 
-
-            await new_entity.Init ();
-
-            if (new_entity.Valid && new_entity.IsContainedIn (this) )
-            {
-                this.Contains[new_entity.ArFSID] = new_entity;
-                ++processed;
-
-                if (output_list)
-                    Sys.OUT_TXT (this.GetFlagStr () + " " + new_entity.ArFSID + " " + new_entity.ArFSName);
-            }
-
-
+            this.Entities[new_entity.ArFSID] = new_entity;
+            ++processed;        
         }
         
         Sys.VERBOSE (processed + " / " + len + " entries added." + this.ArFSID);
     }
 
+
+    async List ()
+    {
+        await this.Update ();
+        
+        const keys   = Object.keys   (this.Entities);
+        const values = Object.values (this.Entities);
+        const amount = keys.length;
+
+        Sys.INFO ("Listing content of " + this.ArFSName + " (" + this.ArFSID + "):");
+        Sys.INFO ("");
+
+        for (let C = 0; C < amount; ++C)
+        {
+            let entity = values[C];
+            await entity.Update ();
+
+            if (entity.IsContainedIn (this) )
+                Sys.OUT_TXT (entity.GetFlagStr () + " " + entity.ArFSID + " " + entity.ArFSName);
+        }
+    }
 
 }
 

@@ -221,7 +221,7 @@ class TXQuery extends Query
        const fetch_amount   = config.first != undefined ? config.first : GQL_MAX_RESULTS;
        
 
-       Sys.VERBOSE ("Starting to fetch transactions..", __TAG);        
+       Sys.DEBUG ("Starting to fetch transactions..", __TAG);        
        do
        {        
            Sys.DEBUG ("Pass #" + pass_num + " begin:", __TAG);
@@ -255,7 +255,7 @@ class TXQuery extends Query
            {
                cursor = pass_edges.at(-1).cursor;
                edges  = edges.concat (pass_edges)      
-               Sys.VERBOSE ("Pass #" + pass_num + ": " + pass_entries + " entries.", __TAG);       
+               Sys.DEBUG ("Pass #" + pass_num + ": " + pass_entries + " entries.", __TAG);       
                ++pass_num;
            }       
            else
@@ -274,8 +274,9 @@ class TXQuery extends Query
        this._ParseEntries ();
 
 
-       Sys.VERBOSE ("Total entries: " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : ""), __TAG)   
-              
+       Sys.VERBOSE ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", __TAG)   
+       
+       
        return this.EntriesAmount >= desired_amount;
    }
 

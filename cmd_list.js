@@ -35,7 +35,6 @@ async function HandleCommand (args)
     if (arfs_url.IsValid () )
     {        
         const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
-        await drive.Init ();
         await drive.List (arfs_url); 
     }
 
