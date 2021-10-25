@@ -44,7 +44,7 @@ const METADATA_CONTENT_TYPES = ["application/json"];                            
 const ARFS_ENTITY_TYPES      = [ENTITYTYPE_DRIVE, ENTITYTYPE_FILE, ENTITYTYPE_FOLDER];  Object.freeze (ARFS_ENTITY_TYPES);
 const ENTITYTYPES_INFOLDER   = [ENTITYTYPE_FILE, ENTITYTYPE_FOLDER]; // Things that may be contained by folders.
 
-const ENTITYSYMBOLS          = { [ENTITYTYPE_DRIVE] : 'D', [ENTITYTYPE_FOLDER] : 'd', [ENTITYTYPE_FILE] : 'f'}
+const ENTITYSYMBOLS          = { [ENTITYTYPE_DRIVE] : 'D', [ENTITYTYPE_FOLDER] : 'd', [ENTITYTYPE_FILE] : '-'}
 
 function IsValidEntityType     (entity_type) { return ARFS_ENTITY_TYPES.includes (entity_type?.toLowerCase () );  }
 function GetIDTag              (entity_type) { return ENTITYTYPE_IDTAG_MAP[entity_type]; }
@@ -899,7 +899,7 @@ class ArFSDir extends ArFSEntity
                 return dir;
 
             else            
-                dir = await dir.GetDir (arfs_url, index + 1);
+                dir = await dir.GetDirByURL (arfs_url, index + 1);
         }
         
         if (dir != null)
@@ -920,7 +920,7 @@ class ArFSDir extends ArFSEntity
         for (let C = 0; C < len; ++C)
         {
             let entity = values[C];
-            if (entity.IsFolder () && entity.HasName (name) )
+            if (entity.IsFolder () && entity.HasTargetName (name) )
                 return entity;
         }
 
