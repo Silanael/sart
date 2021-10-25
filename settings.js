@@ -38,6 +38,8 @@ const Config =
     Force            : false,
 
     OutputFormat     : OutputFormats.TXT,
+
+    DisplayAll       : false
 };
 
 
@@ -54,6 +56,7 @@ function IsTXTOut           ()      { return Config.OutputFormat == OutputFormat
 function SetForce           ()      { Config.Force = true;                              }
 function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true;   }
 function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true;   }
+function SetDisplayAll      ()      { Config.DisplayAll   = true;;                      }
 
 
 
@@ -156,6 +159,7 @@ module.exports =
     SetVerbose,
     SetQuiet,
     SetDebug,
-    SetForce
+    SetForce,
+    SetDisplayAll
 };
 

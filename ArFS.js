@@ -354,15 +354,18 @@ class ArFSEntity
     GetDisplayName ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
     GetNameAndID   ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
     
-    GetPathAndName ()
-    {       
-        let pathstr      = this.GetName ();
-        let master       = this.MasterEntity;
-        let parent_name;
+    GetPathNameToRoot ()
+    {    
+        let pathstr = "/" + this.GetName ();
+
+        if (this.IsRootFolder)
+            return pathstr;
+
+        let master       = this.MasterEntity;        
         
-        while ((parent_name = master?.GetName () ) != null)
-        {
-            pathstr = parent_name + "/" + pathstr;
+        while (master != null && master.IsFolder () && !master.IsRootFolder)
+        {       
+            pathstr = "/" + master.GetName () + pathstr;
             master = master.MasterEntity;
         }
 
@@ -569,7 +572,7 @@ class ArFSEntity
 
     GetListStr ()
     {
-        return this.GetFlagStr () + " " + this.ArFSID + " " + this.GetPathAndName ();
+        return this.ArFSID + " " + this.GetFlagStr () + " " + this.GetPathNameToRoot ();
     }
 
 
@@ -637,7 +640,9 @@ class ArFSDrive extends ArFSEntity
                 Sys.WARN ("Root folder for drive " + this.DriveID + " changed from " + this.RootFolderID 
                                                                           + " to "   + new_rootfolder, ArFSDrive.name);
             this.RootFolderID                = new_rootfolder;                
-            this.RootFolder                  = new ArFSDir (this.RootFolderID, this);            
+            this.RootFolder                  = new ArFSDir (this.RootFolderID, this);
+            this.RootFolder.IsRootFolder     = true;
+            
             this.Valid                       = this.RootFolder.Valid;
         }
         
@@ -733,6 +738,8 @@ class ArFSDir extends ArFSEntity
     FilesAmount     = 0;
     DirAmount       = 0;
     EntitiesAmount  = 0;
+
+    IsRootFolder    = false;
 
 
     constructor (arfs_id, master = null, gql_entry = null )

@@ -57,19 +57,21 @@ const Commands =
 // Arg-Command mapping table
 const Flags =
 {
-    "-V"          : { "F": Settings.SetVerbose,  "A":false },
-    "--verbose"   : { "F": Settings.SetVerbose,  "A":false },    
-    "--quiet"     : { "F": Settings.SetQuiet,    "A":false },
-    "--debug"     : { "F": Settings.SetDebug,    "A":false },
+    "-V"          : { "F": Settings.SetVerbose,    "A":false },
+    "--verbose"   : { "F": Settings.SetVerbose,    "A":false },    
+    "--quiet"     : { "F": Settings.SetQuiet,      "A":false },
+    "--debug"     : { "F": Settings.SetDebug,      "A":false },
+    "-a"          : { "F": Settings.SetDisplayAll, "A":false },
+    "--all"       : { "F": Settings.SetDisplayAll, "A":false },
     
-    "-h"          : { "F": Settings.SetHost,     "A":true  },        
-    "--host"      : { "F": Settings.SetHost,     "A":true  },    
-    "--port"      : { "F": Settings.SetPort,     "A":true  },
-    "--proto"     : { "F": Settings.SetProto,    "A":true  }, 
-    "--force"     : { "F": Settings.SetForce,    "A":false },
-
-    "--format"    : { "F": Settings.SetFormat,   "A":true  }, 
-    "-f"          : { "F": Settings.SetFormat,   "A":true  }, 
+    "-h"          : { "F": Settings.SetHost,       "A":true  },
+    "--host"      : { "F": Settings.SetHost,       "A":true  },
+    "--port"      : { "F": Settings.SetPort,       "A":true  },
+    "--proto"     : { "F": Settings.SetProto,      "A":true  }, 
+    "--force"     : { "F": Settings.SetForce,      "A":false },
+  
+    "--format"    : { "F": Settings.SetFormat,     "A":true  }, 
+    "-f"          : { "F": Settings.SetFormat,     "A":true  }, 
 }
 
 
@@ -204,6 +206,7 @@ function DisplayHelp ()
     Sys.INFO ("      --quiet              Output only data to stdout.");
     Sys.INFO ("  -V, --verbose            Display extended runtime info.");
     Sys.INFO ("      --debug              Display extensive runtime info.");
+    Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.)");
     Sys.INFO ("      --force              Override exit on some errors.");
     Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
     Sys.INFO ("      --port               Arweave gateway port.");
@@ -226,7 +229,7 @@ function DisplayVersion (argv)
 async function Testing (argv)
 {
     Util.RequireArgs (argv, 1);
-    const arfs_url = new ArFS.ArFSURL (argv[0]);
+    const arfs_url = new ArFS.ArFSURL (argv[0]);ArweaveProto = proto; ManualDest = true
     
     if (arfs_url.IsValid () )
     {        
