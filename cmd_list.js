@@ -37,7 +37,7 @@ async function HandleCommand (args)
         const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
         await drive.List (arfs_url); 
     }
-
+    
     /*
     const target = args[0];
     target_lower = target.toLowerCase ();

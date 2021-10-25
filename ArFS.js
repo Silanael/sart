@@ -124,10 +124,10 @@ class ArFSURL
     }
     
 
-    IsValid      () { return this.Valid;                                          } 
-    IsFullDrive  () { return this.Mode == URLMODES["drive"];                      }
-    IsRootFolder () { return this.Mode == URLMODES["path"] && this.Target == "/"; }
-    IsPath       () { return this.Mode == URLMODES["path"] && this.Target != "/"; }
+    IsValid      () { return this.Valid;                                                                 } 
+    IsFullDrive  () { return this.Mode == URLMODES["drive"];                                             }
+    IsRootFolder () { return this.Mode == URLMODES["path"] && (this.Target == "/" || this.Target == ""); }
+    IsPath       () { return this.Mode == URLMODES["path"] &&  this.Target != "/" && this.Target != "";  }
 
 
     Parse (url)
@@ -344,13 +344,30 @@ class ArFSEntity
 
 
     
-    GetIDTag      ()       { return GetIDTag (this.ArFSEntityType);                                   }
-    IsContainedIn (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID}
-    IsFile        ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;   }
-    IsFolder      ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER; }
-    IsDrive       ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;  }
-    HasName       (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }
+    GetIDTag       ()       { return GetIDTag (this.ArFSEntityType);                                                }
+    IsContainedIn  (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID            }
+    IsFile         ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;                                        }
+    IsFolder       ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER;                                      }
+    IsDrive        ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;                                       }
+    HasTargetName  (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }
+    GetName        ()       { return this.ArFSName;                                                                 }
+    GetDisplayName ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
+    GetNameAndID   ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
     
+    GetPathAndName ()
+    {       
+        let pathstr      = this.GetName ();
+        let master       = this.MasterEntity;
+        let parent_name;
+        
+        while ((parent_name = master?.GetName () ) != null)
+        {
+            pathstr = parent_name + "/" + pathstr;
+            master = master.MasterEntity;
+        }
+
+        return pathstr;
+    }
 
     
     async Update ()
@@ -550,6 +567,11 @@ class ArFSEntity
     }
 
 
+    GetListStr ()
+    {
+        return this.GetFlagStr () + " " + this.ArFSID + " " + this.GetPathAndName ();
+    }
+
 
     // A convenience setter function.
     #SetOrFail (variable, value, err_on_fail)
@@ -643,7 +665,7 @@ class ArFSDrive extends ArFSEntity
         }
 
 
-        let success;
+        let success = false;;
 
         // Update the directory metadata and is content        
         await this.Update ();
@@ -661,7 +683,7 @@ class ArFSDrive extends ArFSEntity
         if (arfs_url.IsFullDrive () )
         {
             Sys.VERBOSE ("Listing full drive " + this.ArFSID + ":");
-            Sys.INFO ("TODO");            
+            await this.RootFolder.List ( { recursive: true} );
         }
         
         // List root folder only
@@ -672,14 +694,19 @@ class ArFSDrive extends ArFSEntity
         }
                 
         // Path listing
-        else
-        {
+        else if (arfs_url.IsPath () )
+        {   
+
+            Sys.VERBOSE ("Locating target: " + arfs_url.Target);
             const dir = await this.RootFolder.GetDirByURL (arfs_url, 0);
 
             if (dir != null)
                 await dir.List ();
         }
         
+        else
+            Sys.ERR ("Unknown path mode " + arfs_url.Mode);
+
 
         return success;
     }
@@ -775,8 +802,8 @@ class ArFSDir extends ArFSEntity
     }
 
 
-    async UpdateContainedEntities (list = false)
-    {
+    async UpdateContainedEntities (args = { recursive : false, list : false } )
+    {        
         const values = Object.values (this.Entities);
         const amount = values.length;
 
@@ -791,17 +818,30 @@ class ArFSDir extends ArFSEntity
 
             // The entity has moved away from this directory.
             if (!entity.IsContainedIn (this) )
+            {
                 delete this.Entities[entity.ArFSID];
+                Sys.VERBOSE ("Removed " + entity + " from " + this.name + " as it was moved.");
+            }
 
             // A valid entity
             else
             {
-                                              ++this.EntitiesAmount;
-                if      (entity.IsFile   () ) ++this.FilesAmount;
-                else if (entity.IsFolder () ) ++this.DirAmount;
+                ++this.EntitiesAmount;
+                const is_dir = entity.IsFolder ();
+                
+                if (args.list)
+                    Sys.OUT_TXT (entity.GetListStr () );
 
-                if (list)
-                    Sys.OUT_TXT (entity.GetFlagStr () + " " + entity.ArFSID + " " + entity.ArFSName);
+                if (is_dir)
+                {
+                    ++this.DirAmount;
+                    if (args.recursive)
+                        await entity.UpdateContainedEntities (args);
+                }
+
+                else if (entity.IsFile () )
+                    ++this.FilesAmount;
+                
             }
         }
     }
@@ -809,14 +849,16 @@ class ArFSDir extends ArFSEntity
 
 
 
-    async List ()
+    async List ( args = { recursive : false, list : true} )
     {
+        args.list = true;
+
         await this.Update ();
 
         Sys.INFO ("Listing content of '" + this.ArFSName + "' (" + this.ArFSID + "):");
         Sys.INFO ("");
 
-        await this.UpdateContainedEntities (true);
+        await this.UpdateContainedEntities (args);
         
         Sys.INFO ("");
         Sys.INFO (this.EntitiesAmount + " entries (" + this.FilesAmount + " files, " + this.DirAmount + " folders)");
@@ -831,8 +873,18 @@ class ArFSDir extends ArFSEntity
         await this.Update ();
         await this.UpdateContainedEntities (false);
 
+        const name = arfs_url.Path[index];
+
+        if (name == null || name == "")
+        {
+            Sys.VERBOSE ("GetDirByURL: No path provided (" + arfs_url.Path + ") - using this folder (" + this.name + ").");
+            return this;
+        }
+
+        Sys.VERBOSE ("Searching for " + name + " from " + this.name + " (" + this.ArFSID + ") - step " + index + " ...");
+
         // Fetch the next directory in the path
-        let dir = this.GetDirByName (arfs_url.Path[index] );
+        let dir = this.GetDirByName (name);
 
         if (dir != null)
         {
@@ -843,6 +895,12 @@ class ArFSDir extends ArFSEntity
                 dir = await dir.GetDir (arfs_url, index + 1);
         }
         
+        if (dir != null)
+            Sys.VERBOSE ("Directory " + arfs_url.Path + " located: " + dir.ArFSID);
+
+        else
+            Sys.ERR ("Failed to locate directory " + arfs_url.Path);
+
         return dir;
     }
 
