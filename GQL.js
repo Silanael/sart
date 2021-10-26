@@ -29,19 +29,27 @@ const __TAG                  = "GQL";
 
 class Entry
 {
-    TXID  = null;
-    Owner = null;
-    Block = null;
-    Tags  = null;
+    TXID         = null;
+    Owner        = null;
+    BlockHeight  = null;
+    Tags         = null;
+    Timestamp    = null;
     
-    constructor (txid, owner, block, tags)
+    constructor (txid, owner, block, tags, timestamp)
     { 
-        this.TXID  = txid;
-        this.Owner = owner;
-        this.Block = block;
-        this.Tags  = tags != null ? tags : []; 
+        this.TXID      = txid;
+        this.Owner     = owner;
+        this.BlockHeight     = block;
+        this.Tags      = tags != null ? tags : []; 
+        this.Timestamp = timestamp;
     }
 
+    GetTXID        () { return this.TXID;  }
+    GetOwner       () { return this.Owner; }
+    GetBlockHeight () { return this.BlockHeight; }
+    GetBlockTime   () { return this.BlockTime;   }
+
+    
     GetTag (tag)
     { 
         const r = this.Tags.find (e => e.name == tag);        
@@ -148,7 +156,11 @@ class TXQuery extends Query
 
         const cursor_str = config.cursor != undefined ? `after:  "${config.cursor}" ,` : "";                                                      
         const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
+        const sort_str   = config.sort   != undefined ? `sort:    ${config.sort}    ,` : "";
         
+        if (config.first == null)
+            config.first = GQL_MAX_RESULTS;
+
         let tag_str = "";
         const tags_amount = config.tags.length;
         if (tags_amount > 0)
@@ -164,7 +176,7 @@ class TXQuery extends Query
             transactions
             (             
               first:${config.first},
-              sort:${config.sort},
+              ${sort_str}
               ${cursor_str}
               ${owner_str}
               ${tag_str}                    
@@ -177,7 +189,7 @@ class TXQuery extends Query
                 {              
                   id,
                   owner {address},
-                  block {id,height},
+                  block {id,height,timestamp},
                   tags  {name, value}            
                 }
               }

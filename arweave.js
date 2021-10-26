@@ -73,7 +73,8 @@ async function DisplayArweaveInfo (args)
 
 }
 
-
+async function GetNetworkInfo   () { const arweave = Init (); const r = await arweave.network.getInfo (); return r; }
+      function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
 
 
 
@@ -109,6 +110,7 @@ async function GetTxData (txid)
 { 
      const arweave = await Init ();     
      const data = await arweave.transactions.getData (txid, {decode: true} );
+
      return data;
 }
 
@@ -122,6 +124,14 @@ async function GetTxStrData (txid)
 }
 
 
+async function GetTxRawData (txid)
+{    
+    const arweave = await Init ();
+    const data = await arweave.chunks.downloadChunkedData (txid); 
+    return data;
+}
+
+
 async function GetTXsForAddress (address, tags = [] )
 {
     const query = GQL.Query ()
@@ -132,5 +142,5 @@ async function GetTXsForAddress (address, tags = [] )
 
 
 
-module.exports = { Init, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, 
-                   OutputTxData, GetTXsForAddress};
+module.exports = { Init, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
+                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo};

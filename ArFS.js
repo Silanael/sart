@@ -49,6 +49,9 @@ const ENTITYSYMBOLS          = { [ENTITYTYPE_DRIVE] : 'D', [ENTITYTYPE_FOLDER] :
 function IsValidEntityType     (entity_type) { return ARFS_ENTITY_TYPES.includes (entity_type?.toLowerCase () );  }
 function GetIDTag              (entity_type) { return ENTITYTYPE_IDTAG_MAP[entity_type]; }
 function GetEntitySymbol       (entity_type) { const s = ENTITYSYMBOLS[entity_type]; return s != null ? s : '?'; }
+function IsFile                (entity_type) { return entity_type == ENTITYTYPE_FILE;   }
+function IsFolder              (entity_type) { return entity_type == ENTITYTYPE_FOLDER; }
+function IsDrive               (entity_type) { return entity_type == ENTITYTYPE_DRIVE;  }
 
 
 const __TAG = "arfs";
@@ -252,16 +255,17 @@ class ArFSEntity
     ArFSID           = null;
     ArFSName         = null;
     ArFSEntityType   = null;
-    ArFSParentID     = null;
-
+            
     OwnerAddress     = null;
-    MasterEntity     = null;
 
     MetaTXID_Latest  = null;
     Metadata_Latest  = null;
     MetaBlock_latest = null;
 
     UNIXTime_MetaTX  = null;
+
+    BlockHeight      = 0;
+    BlockTimestamp   = 0;
 
     Valid            = true;
 
@@ -280,7 +284,11 @@ class ArFSEntity
     {
 
         if (gql_entry != null)
-            entity_type = gql_entry.GetTag (TAG_ENTITYTYPE);
+        {
+            this.BlockHeight    = gql_entry.GetBlockHeight ();
+            this.BlockTimestamp = gql_entry.GetBlockTime ();
+            entity_type         = gql_entry.GetTag (TAG_ENTITYTYPE);
+        }
         
 
         switch (entity_type)
@@ -309,10 +317,7 @@ class ArFSEntity
 
     constructor (arfs_id, entity_type, master = null, gql_entry= null)
     {
-        if (master != null)
-            this._SetMaster (master);
         
-
         // Setup using the result from a GQL-query
         if (gql_entry != null)
         {
@@ -337,6 +342,7 @@ class ArFSEntity
         if (!Util.IsArFSID (this.ArFSID) )
             return this._SetInvalid ("Invalid ID for entity '" + this.ArFSEntityType + "': " + this.ArFSID);
         
+      
     }
 
 
@@ -344,15 +350,19 @@ class ArFSEntity
 
 
     
-    GetIDTag       ()       { return GetIDTag (this.ArFSEntityType);                                                }
-    IsContainedIn  (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID            }
-    IsFile         ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;                                        }
-    IsFolder       ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER;                                      }
-    IsDrive        ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;                                       }
-    HasTargetName  (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }
-    GetName        ()       { return this.ArFSName;                                                                 }
-    GetDisplayName ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
-    GetNameAndID   ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
+    GetIDTag             ()       { return GetIDTag (this.ArFSEntityType);                                                }
+    IsContainedIn        (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID            }
+    IsFile               ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;                                        }
+    IsFolder             ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER;                                      }
+    IsDrive              ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;                                       }
+    GetID                ()       { return this.ArFSID;                                                                   }    
+    GetName              ()       { return this.ArFSName;                                                                 }
+    GetDisplayName       ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
+    GetNameAndID         ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
+    HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }
+    IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                 }
+    IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                    }
+
     
     GetPathNameToRoot ()
     {    
@@ -382,15 +392,7 @@ class ArFSEntity
     }
 
 
-    _SetMaster (master)
-    {
-        if (this.MasterEntity != null)
-            this.MasterEntity._RemoveEntity (this);
-
-        this.MasterEntity   = master;
-        this.ParentFolderId = master?.ArFSID;
-    }
-    
+ 
 
     async GetOwner ()
     {
@@ -495,9 +497,23 @@ class ArFSEntity
         {
             Sys.VERBOSE ("Fetched the newest metadata: TXID " + entry.TXID);
 
+            const new_blockheight = entry.GetBlockHeight ();
+            const new_timestamp   = entry.GetBlockTime   ();
+
+            if (this.BlockHeight > new_blockheight || this.BlockTimestamp > new_timestamp)
+            {
+                Sys.ERR ("Fetch for newest metadata (TXID: " + entry.TXID + ")" 
+                         + " resulted entry with lower block height or timestamp " 
+                         + " (Current height:" + this.BlockHeight + ", timestamp:" + this.BlockTimestamp + ")."
+                         + " Keeping the old entry.");
+
+                return this.Valid;
+            }
+
             this.MetaTXID_Latest  = entry.TXID;
             this.MetaBlock_latest = entry.Block;
             this.UNIXTime_MetaTX  = entry.GetTag (TAG_UNIXTIME);
+            
 
             const old_parent = this.ArFSParentID;
             const new_parent = entry.GetTag (TAG_PARENTFOLDERID);
@@ -609,6 +625,48 @@ class ArFSEntity
 
 
 
+class ArFSItem extends ArFSEntity
+{
+    OwnerDrive       = null;
+    MasterEntity     = null;
+    ArFSParentID     = null;
+
+
+    constructor (arfs_id, entity_type, master = null, gql_entry = null)
+    {
+        super (arfs_id, entity_type, master, gql_entry);
+
+        // Set ownership 
+        if (master != null)
+            this._SetMaster (master);
+
+        if (this.OwnerDrive == null)
+            Sys.ERR (this.GetNameAndID + " doesn't have a drive.");
+    }
+
+   
+    _SetMaster (master)
+    {
+        if (this.MasterEntity != master)
+        {
+            if (this.MasterEntity != null)
+                this.MasterEntity._RemoveEntity (this);
+
+            this.MasterEntity   = master;
+            this.ParentFolderId = master?.ArFSID;
+
+            this.OwnerDrive = master.IsDrive () ? master : master.OwnerDrive;
+            
+            if (this.OwnerDrive != null)
+                this.OwnerDrive.AddEntity (this);        
+            
+        }
+    }    
+
+}
+
+
+
 
 
 
@@ -622,13 +680,49 @@ class ArFSDrive extends ArFSEntity
     RootFolderID    = null;    
     RootFolder      = null;
 
+    Files           = {};
+    Folders         = {};
+    Orphaned        = [];
+
 
     constructor (arfs_id, master = null, gql_entry = null)
     {
         super (arfs_id, ENTITYTYPE_DRIVE, master, gql_entry);
     }
-    
  
+
+    AddEntity (entity)
+    {
+        const ref = this._GetListFor (entity);
+        const id  = entity.GetID ();
+        
+        if (ref == null)
+            Sys.ERR ("Unable to add " + entity.GetNameAndID () + " into " + this.GetNameAndID () + ".");
+
+        else if (ref[id] != null)
+            //Sys.ERR (this.GetNameAndID () + " already contains " + ref[id].GetNameAndID () + ", tried to add " + entity.GetNameAndID() );
+            Sys.VERBOSE (this.GetNameAndID () + " already contains " + ref[id].GetNameAndID () + ", replaced with " + entity.GetNameAndID() );
+
+        
+        ref[id] = entity;
+        entity.OwnerDrive = this;
+
+        Sys.VERBOSE ("Added " + entity.GetNameAndID () + " into drive " + this.GetNameAndID () + " (" + ref.name + ").");            
+        
+        
+    }
+ 
+    ContainsID      (id)          { return this.Folders[id] != null || this.Files[id] != null; }    
+    _GetListFor     (entity)      { return entity.IsFile ()     ? this.Files : entity.IsFolder ()     ? this.Folders : null; }
+    _GetListForType (entity_type) { return IsFile (entity_type) ? this.Files : IsFolder (entity_type) ? this.Folders : null; }
+
+    GetEntityByID (id)
+    {
+        const file = this.Files[id];
+        return file != null ? file : this.Folders[id];        
+    }
+
+
     /* Override */async _OnARFSMetadataSet (entry, metadata)
     {                        
         const new_rootfolder = metadata[ARFSENTITYMETA_ROOTFOLDERID];
@@ -641,7 +735,7 @@ class ArFSDrive extends ArFSEntity
                                                                           + " to "   + new_rootfolder, ArFSDrive.name);
             this.RootFolderID                = new_rootfolder;                
             this.RootFolder                  = new ArFSDir (this.RootFolderID, this);
-            this.RootFolder.IsRootFolder     = true;
+            this.RootFolder.IsRootFolder     = true;            
             
             this.Valid                       = this.RootFolder.Valid;
         }
@@ -689,13 +783,45 @@ class ArFSDrive extends ArFSEntity
         {
             Sys.VERBOSE ("Listing full drive " + this.ArFSID + ":");
             await this.RootFolder.List ( { recursive: true} );
+
+            if (Settings.Config.DisplayAll)
+            {
+                Sys.VERBOSE ("Seeking for orphaned files..");
+                const query = new GQL.TXQuery (Arweave);
+        
+                await query.ExecuteReqOwner
+                ({
+                    owner: this.OwnerAddress,
+                    tags:
+                    [
+                        { name: "Drive-Id",    values:this.GetID ()        },
+                        { name: "Entity-Type", values:ENTITYTYPES_INFOLDER },
+                    ]
+                });
+        
+                const entries = query.GetEntriesAmount ();
+                for (let C = 0; C < entries; ++C)
+                {
+                    const entry       = query.GetEntry (C);
+                    const entity_type = entry.GetTag (TAG_ENTITYTYPE);
+                    const ID          = entry.GetTag (GetIDTag (entity_type) );
+                    const parentid    = entry.GetTag (TAG_PARENTFOLDERID)
+                    
+                    // Root folder has no TAG_PARENTFOLDERID.
+                    if (parentid != null && this.Folders[parentid] == null)
+                        Sys.ERR ("Orphaned item found: " + ID + " TXID:" + entry.GetTXID () + " - says to be in " + parentid);                
+                            
+                }
+                                            
+            }
+
         }
         
         // List root folder only
         else if (arfs_url.IsRootFolder () )
         {                    
             Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
-            success = await this.RootFolder.List ();                    
+            success = await this.RootFolder.List ();            
         }
                 
         // Path listing
@@ -716,6 +842,9 @@ class ArFSDrive extends ArFSEntity
         return success;
     }
 
+
+  
+
 }
 
 
@@ -730,7 +859,7 @@ class ArFSDrive extends ArFSEntity
 
 
 
-class ArFSDir extends ArFSEntity
+class ArFSDir extends ArFSItem
 {   
 
     Entities        = {};
@@ -784,6 +913,7 @@ class ArFSDir extends ArFSEntity
                 { name:"Entity-Type",      values:ENTITYTYPES_INFOLDER  },                
             ]
         });
+
         
         const len = query.GetEntriesAmount ();
         let processed = 0;
@@ -792,7 +922,19 @@ class ArFSDir extends ArFSEntity
 
         for (let C = 0; C < len; ++C)
         {                 
-            const new_entity = ArFSEntity.CREATE (null, null, this, query.GetEntry (C) );
+            const entry = query.GetEntry (C);
+
+            const type  = entry.GetTag       (TAG_ENTITYTYPE);
+            const id    = entry.GetTag       (GetIDTag (type));
+            const btime = entry.GetBlockTime ();
+            
+            if (this.OwnerDrive != null && this.OwnerDrive.GetEntityByID (id)?.IsNewerThanTimestamp (btime) )
+            {
+                Sys.VERBOSE ("Encountered an old transaction for " + id + " (TXID:" + entry.GetTXID () + ") - ignoring.");
+                continue;
+            }
+
+            const new_entity = ArFSEntity.CREATE (null, null, this, entry);
             
             // Failed to create.
             if (new_entity == null)
@@ -931,7 +1073,7 @@ class ArFSDir extends ArFSEntity
 
 
 
-class ArFSFile extends ArFSEntity
+class ArFSFile extends ArFSItem
 {     
     FileSize_Actual_B      = null;
     FileSize_Claimed_B     = null; // ArFS entity metadata (.json)

@@ -28,9 +28,9 @@ const Targets =
 
 async function HandleCommand (args)
 {
-    Util.RequireArgs (args, 1);
+    args.RequireAmount (1);
 
-    const arfs_url = new ArFS.ArFSURL (args[0]);
+    const arfs_url = new ArFS.ArFSURL (args.Pop () );
     
     if (arfs_url.IsValid () )
     {        

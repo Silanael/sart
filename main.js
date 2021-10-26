@@ -18,6 +18,7 @@ const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
 const Util     = require ('./util.js');
 const List     = require ('./cmd_list.js');
+const Get      = require ('./cmd_get.js');
 const Search   = require ('./cmd_search.js');
 const Console  = require ('./cmd_console.js');
 
@@ -49,6 +50,7 @@ const Commands =
     "console"     : Console.HandleCommand,
     "getfile"     : ArFS.DownloadFile,
     "getdata"     : Arweave.GetTxData,
+    "get"         : Get.HandleCommand,         
     "test"        : Testing
 }
 
@@ -111,7 +113,7 @@ function Main (argv)
             let cmd = Commands[arg_raw.toLowerCase ()];
             
             if (cmd != undefined)            
-                cmd (Util.GetCmdArgs (argv, C, Flags) );
+                cmd (new Util.Args (Util.GetCmdArgs (argv, C, Flags)) );
            
             else
                 Sys.ERR_FATAL (`Unknown command: "${arg}".`);                    

@@ -3,10 +3,15 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// settings.js - 2021-10-17_01
+// settings.js - 2021-10-17 -> 2021-10-26_01
 //
 
 //const Util             = require("./util.js");
+
+
+// Whether to allow the program to access the system,
+// restricting fopen and SYS if set to false.
+const SystemAccess = true;
 
 
 const LogLevels =
@@ -33,13 +38,15 @@ const Config =
     ArweavePort      : 443,
     ArweaveProto     : "https",    
     ManualDest       : false,
+    
+    OutputFormat     : OutputFormats.TXT,
+    DisplayAll       : false,
 
-    MetaDataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
     Force            : false,
 
-    OutputFormat     : OutputFormats.TXT,
+    MetaDataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
+    ContainerMode    : false,
 
-    DisplayAll       : false
 };
 
 
