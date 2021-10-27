@@ -65,6 +65,8 @@ const Flags =
     "--debug"     : { "F": Settings.SetDebug,      "A":false },
     "-a"          : { "F": Settings.SetDisplayAll, "A":false },
     "--all"       : { "F": Settings.SetDisplayAll, "A":false },
+    "-r"          : { "F": Settings.SetRecursive,  "A":false },
+    "--recursive" : { "F": Settings.SetRecursive,  "A":false },
     
     "-h"          : { "F": Settings.SetHost,       "A":true  },
     "--host"      : { "F": Settings.SetHost,       "A":true  },

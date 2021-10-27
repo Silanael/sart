@@ -821,7 +821,7 @@ class ArFSDrive extends ArFSEntity
         else if (arfs_url.IsRootFolder () )
         {                    
             Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
-            success = await this.RootFolder.List ();            
+            success = await this.RootFolder.List ( {recursive: Settings.Config.Recursive} );
         }
                 
         // Path listing
@@ -832,7 +832,7 @@ class ArFSDrive extends ArFSEntity
             const dir = await this.RootFolder.GetDirByURL (arfs_url, 0);
 
             if (dir != null)
-                await dir.List ();
+                await dir.List ( {recursive: Settings.Config.Recursive} );
         }
         
         else
