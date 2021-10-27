@@ -75,6 +75,116 @@ function GetVersionStr ()             { return "v" + Package.version + " (" + Pa
 
 
 
+function _StrCmp_Prep (str, compare_to, lowercase = true)
+{ 
+    if (str == null || compare_to == null)
+        return Sys.ERR ("StrCmp: Invalid input: str:'" + str + "', compare_to:'" + compare_to + "'.");
+    
+    else if (!lowercase)
+        return { str: str, compare_to: compare_to }
+
+    else
+        return { str: str.toLowerCase (), compare_to: compare_to.toLowerCase () }
+} 
+
+
+function StrCmp (str, compare_to, lowercase = true)
+{
+    const input = _StrCmp_Prep (str, compare_to, lowercase);
+    
+    if (input != null)        
+        return input.str === input.compare_to; // Yeah, I finally used '===' here.
+}
+
+
+function StrCmp_Regex (str, compare_to, lowercase = true)
+{
+    const input = _StrCmp_Prep (str, compare_to, lowercase);
+    
+    if (input != null)        
+    {
+        const match = input.compare_to.match (input.str);
+        return match != null && match != "";
+    }        
+}
+
+
+
+
+function StrCmp_Wildcard (str, compare_to, lowercase = true)
+{
+    const input = _StrCmp_Prep (str, compare_to, lowercase);
+    
+    if (input != null)        
+    {
+        const tgt    = input.compare_to;
+        const tgtlen = input.compare_to.length;
+        const str    = input.str;
+
+        // Handle '*'
+        const s        = str.split ("*");       
+        const segments = s.length;
+
+        Sys.INFO (s);
+
+        // A failsafe
+        if (segments <= 0)
+        {
+            Sys.VERBOSE ("StrCmp_Wildcard's split returned 0 segments for some reason - comparison may not be accurate.");
+            return str === tgt;
+        }
+        
+        // Input has only one *
+        else if (segments == 1 || s[0] == "" || s[1] == "")
+            return _StrCmp_Matches_WCard (str, tgt, 0, tgtlen, true);
+
+        else
+        {
+            let offset = 0;
+            for (let part = 0; part < segments; ++part)
+            {
+                if ( (offset = _StrCmp_Matches_WCard (s[part], tgt, offset, tgtlen, false)) == -1)
+                    return false;
+            }
+            return true;
+        }
+                        
+    }        
+}
+
+
+function _StrCmp_Matches_WCard (str, tgt, tgt_offs, tgt_len, has_to_start_from_tgt_offs)
+{
+    if (str == null)
+        return false;
+
+    else if (has_to_start_from_tgt_offs)
+    {
+        // Could have done this with a regex, but what the hell.
+        const len = str.length;
+        let strc;
+        for (let C = 0; C < len && tgt_offs < tgt_len; ++C)
+        {
+            strc = str[C];
+            if (strc != "?" && strc != tgt[tgt_offs])
+                return -1;
+            else
+                ++tgt_offs;
+        }
+    }
+
+    else
+    {
+        //const regex = tgt.replace (/?)
+        //const len = str.length;
+        //let strc;
+    }
+
+    return tgt_offs;
+}
+
+
+
 function GetDate (date_time_spacer_chr = ' ')
 { 
     const now = new Date (); 
@@ -130,4 +240,5 @@ function RequireParam (param, name, src)
 
 module.exports = { Args,
                    IsFlag, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
-                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg };
+                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard };

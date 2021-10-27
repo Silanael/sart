@@ -113,6 +113,8 @@ function ERR (str, src)
 {
     if (!Settings.IsQuiet () )
         console.error (src != null ? src + ": " + str : str);
+
+    return false;
 }
 
 
@@ -124,6 +126,8 @@ function ERR_OVERRIDABLE (str)
 
     if (!Settings.IsForceful () )
         EXIT (-1);
+
+    return false;
 }
 
 

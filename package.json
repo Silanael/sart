@@ -1,11 +1,13 @@
 {
-  "name": "sart",
-  "version": "0.8.0",
-  "versiondate": "2021-10-21_01",
+  "name": "SART",
+  "version": "0.9.0",
+  "versiondate": "2021-10-27_01",
   "description": "Silanael ARweave Tool",
   "main": "main.js",
   "scripts": {
-    "test": "node ./main.js"
+    "start":   "node ./main.js",
+    "help":    "node ./main.js --help",
+    "version": "node ./main.js --version"
   },
   "dependencies":
   {
@@ -19,7 +21,10 @@
     "Arweave",
     "ArDrive",
     "tool",
-    "utility"
+    "utility",
+    "SART",
+    "Silanael",
+    "CLI"
   ],
   "author": "Silanael",
   "license": "GPL-2.0-modified"

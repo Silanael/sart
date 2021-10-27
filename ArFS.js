@@ -359,9 +359,18 @@ class ArFSEntity
     GetName              ()       { return this.ArFSName;                                                                 }
     GetDisplayName       ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
     GetNameAndID         ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
-    HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }
+    HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }    
+    HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;   }    
+    HasTargetNameWildCard(name_w ){ return Util.StrCmp (this.ArFSName, name_w, { wildcards: true } );                     }    
     IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                 }
     IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                    }
+
+
+    Matches (requirements = {name: null, entity_type: null, arfs_id: null} )
+    {        
+        //if (requirements.name != null)
+
+    }
 
     
     GetPathNameToRoot ()
@@ -1015,6 +1024,24 @@ class ArFSDir extends ArFSItem
 
 
 
+    GetContainedEntity (name, opts = { allow_wildcards: Settings.Config.AllowWildcards, entity_type: null } )
+    {
+        // TODO: Make a name-entity lookup table
+        const values = Object.values (this.Entities);
+        const len = values.length;
+        for (let C = 0; C < len; ++C)
+        {
+            let entity = values[C];
+            if (entity.Matches ( { "name":name, entity_type:opts.entity_type } ) );
+                return entity;
+        }
+
+        return null;
+    }
+
+
+
+
     // A recursive function that travels along the path of the URL,
     // updating directory content as it goes.
     async GetDirByURL (arfs_url, index)
@@ -1531,7 +1558,7 @@ async function ListDriveFiles (drive_id)
 
 
             // Check that the data-field of the metadata tx is of reasonable size.
-            if (file.Metadata_Size > Settings.Config.MetaDataMaxSize)
+            if (file.Metadata_Size > Settings.Config.MetadataMaxSize)
             {
                 Sys.ERR ("Unusually large data field: " + file.Metadata_Size + "B", prefix);
                 if (!Settings.IsForceful () )

@@ -37,11 +37,11 @@ class Entry
     
     constructor (txid, owner, block, tags, timestamp)
     { 
-        this.TXID      = txid;
-        this.Owner     = owner;
-        this.BlockHeight     = block;
-        this.Tags      = tags != null ? tags : []; 
-        this.Timestamp = timestamp;
+        this.TXID        = txid;
+        this.Owner       = owner;
+        this.BlockHeight = block;
+        this.Tags        = tags != null ? tags : []; 
+        this.Timestamp   = timestamp;
     }
 
     GetTXID        () { return this.TXID;  }
@@ -310,7 +310,7 @@ async function RunGQLQuery (Arweave, query_str)
     Sys.DEBUG ("Running query:");
     Sys.DEBUG (query_str);
 
-    const results = await arweave.api.post (Settings.GetGQLHostString (), { query: query_str } );
+    const results = await Arweave.Post (Settings.GetGQLHostString (), { query: query_str } );
 
     return results;
 }

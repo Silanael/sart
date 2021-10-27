@@ -59,9 +59,35 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );     
-
+    );    
+    
 }
+
+
+// HTTP POST request. Currently using 
+async function Post (host_str, data_obj)
+{
+    if (data_obj != null)
+    {
+        const arweave = Init ();
+
+        try
+        {
+            const ret = await arweave.api.post (host_str, data_obj );
+            return ret;
+        }
+        catch (exception)
+        {
+            Sys.DEBUG ("Exception at arweave.js Post () - Exception:");
+            Sys.DEBUG (exception);
+            Sys.DEBUG ("Exception at arweave.js Post () - Input obj:");
+            Sys.DEBUG (data_obj);
+            Sys.ERR_FATAL ("HTTP POST to " + host_str + " failed!");
+        }        
+    }
+    return null;
+}
+
 
 
 async function DisplayArweaveInfo (args)
@@ -73,8 +99,16 @@ async function DisplayArweaveInfo (args)
 
 }
 
-async function GetNetworkInfo   () { const arweave = Init (); const r = await arweave.network.getInfo (); return r; }
-      function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
+
+async function GetNetworkInfo   ()
+{ 
+    const arweave = Init (); 
+    const r = await arweave.network.getInfo (); 
+    return r; 
+}
+
+
+function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
 
 
 
@@ -142,5 +176,5 @@ async function GetTXsForAddress (address, tags = [] )
 
 
 
-module.exports = { Init, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
+module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo};

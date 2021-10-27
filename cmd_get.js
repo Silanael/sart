@@ -26,9 +26,10 @@ const SUBCOMMANDS =
     "txrawdata"    : Handler_RawData,
     "pathmanifest" : Handler_RawData,    
     "arweave"      : Handler_Arweave,
+    "pendingcount" : Handler_Arweave,
 }
 
-const ARWEAVE_FIELDS = "network, version, release, height, current, blocks, peers, queue_length, node_state_latency";
+const ARWEAVE_FIELDS = "network, version, release, height, current, blocks, peers, queue_length, node_state_latency, pendingcount";
 
 
 

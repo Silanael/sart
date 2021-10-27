@@ -41,12 +41,13 @@ const Config =
     
     Recursive        : false,
     DisplayAll       : false,    
+    AllowWildcards   : true,
 
     OutputFormat     : OutputFormats.TXT,
 
     Force            : false,
 
-    MetaDataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
+    MetadataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
     ContainerMode    : false,
 
 };

@@ -169,6 +169,8 @@ function ParseFlags (argc, argv)
     Sys.DEBUG ("Flags parsed.");
 }
 
+
+
 function FetchFlagArg (argc, argv, pos, flag)
 {
     ++pos;
@@ -198,7 +200,10 @@ function DisplayHelp ()
     Sys.INFO ("");
     Sys.INFO ("Usage: sart [OPTION] [COMMAND] [PARAM]");
     Sys.INFO ("");
-    
+        
+    Sys.INFO (">>> DEVELOPMENT VERSION <<<")
+    Sys.INFO ("")
+
     Sys.INFO ("COMMANDS:");
     Sys.INFO ("");
     Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");    
@@ -210,8 +215,9 @@ function DisplayHelp ()
     Sys.INFO ("      --quiet              Output only data to stdout.");
     Sys.INFO ("  -V, --verbose            Display extended runtime info.");
     Sys.INFO ("      --debug              Display extensive runtime info.");
-    Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.)");
-    Sys.INFO ("      --force              Override exit on some errors.");
+    Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.).");
+    Sys.INFO ("  -r, --recursive          Do a recursive listing (drive listing default).");
+    Sys.INFO ("      --force              Disable abort on some fatal errors.");
     Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
     Sys.INFO ("      --port               Arweave gateway port.");
     Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
@@ -232,16 +238,11 @@ function DisplayVersion (argv)
 
 async function Testing (argv)
 {
-    Util.RequireArgs (argv, 1);
-    const arfs_url = new ArFS.ArFSURL (argv[0]);ArweaveProto = proto; ManualDest = true
-    
-    if (arfs_url.IsValid () )
-    {        
-        const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
-        await drive.Init ();              
-
-        //Sys.INFO (drive);
-    }
+    argv.RequireAmount (2);
+    const test_tgt = argv.Pop ();
+    const src = argv.Pop ();
+    Sys.INFO ("Comparing " + src + " to " + test_tgt + " ...");
+    Sys.INFO (Util.StrCmp_Wildcard (src, test_tgt) );
 }
 
 
