@@ -10,6 +10,8 @@
 // Imports
 const Sys      = require ("./sys");
 const Package  = require ("./package.json");
+const { Config } = require("./settings");
+const { Settings } = require("./main");
 
 
 
@@ -102,10 +104,7 @@ function StrCmp_Regex (str, compare_to, lowercase = true)
     const input = _StrCmp_Prep (str, compare_to, lowercase);
     
     if (input != null)        
-    {
-        const match = input.compare_to.match (input.str);
-        return match != null && match != "";
-    }        
+        return input.compare_to.search (input.str) != -1;    
 }
 
 
@@ -117,71 +116,23 @@ function StrCmp_Wildcard (str, compare_to, lowercase = true)
     
     if (input != null)        
     {
-        const tgt    = input.compare_to;
-        const tgtlen = input.compare_to.length;
-        const str    = input.str;
-
-        // Handle '*'
-        const s        = str.split ("*");       
-        const segments = s.length;
-
-        Sys.INFO (s);
-
-        // A failsafe
-        if (segments <= 0)
-        {
-            Sys.VERBOSE ("StrCmp_Wildcard's split returned 0 segments for some reason - comparison may not be accurate.");
-            return str === tgt;
-        }
+                
+        const dot_escape = input.str  .replace (/\./g, "\\."  );
+        const asterisk   = dot_escape .replace (/\*/g, ".*"   );
+        const questionm  = asterisk   .replace (/\?/g, ".{1}" );
         
-        // Input has only one *
-        else if (segments == 1 || s[0] == "" || s[1] == "")
-            return _StrCmp_Matches_WCard (str, tgt, 0, tgtlen, true);
-
-        else
-        {
-            let offset = 0;
-            for (let part = 0; part < segments; ++part)
-            {
-                if ( (offset = _StrCmp_Matches_WCard (s[part], tgt, offset, tgtlen, false)) == -1)
-                    return false;
-            }
-            return true;
-        }
-                        
-    }        
-}
-
-
-function _StrCmp_Matches_WCard (str, tgt, tgt_offs, tgt_len, has_to_start_from_tgt_offs)
-{
-    if (str == null)
-        return false;
-
-    else if (has_to_start_from_tgt_offs)
-    {
-        // Could have done this with a regex, but what the hell.
-        const len = str.length;
-        let strc;
-        for (let C = 0; C < len && tgt_offs < tgt_len; ++C)
-        {
-            strc = str[C];
-            if (strc != "?" && strc != tgt[tgt_offs])
-                return -1;
-            else
-                ++tgt_offs;
-        }
+        const regex = "^" + questionm + "$";
+        
+        const result = input.compare_to.search (regex) != -1;
+        
+        // TODO: Add debug output
+        
+        return result;
     }
-
     else
-    {
-        //const regex = tgt.replace (/?)
-        //const len = str.length;
-        //let strc;
-    }
-
-    return tgt_offs;
+        return false;
 }
+
 
 
 

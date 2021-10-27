@@ -361,7 +361,7 @@ class ArFSEntity
     GetNameAndID         ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
     HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }    
     HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;   }    
-    HasTargetNameWildCard(name_w ){ return Util.StrCmp (this.ArFSName, name_w, { wildcards: true } );                     }    
+    HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                  }    
     IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                 }
     IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                    }
 
