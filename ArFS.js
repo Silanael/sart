@@ -31,6 +31,7 @@ const ENTITYTYPE_DRIVE    = "drive";
 
 const ARFSENTITYMETA_NAME         = "name";
 const ARFSENTITYMETA_ROOTFOLDERID = "rootFolderId";
+const ARFSENTITYMETA_DATATXID     = "dataTxId";
 
 const ENTITYTYPE_IDTAG_MAP =
 {
@@ -358,7 +359,8 @@ class ArFSEntity
     GetID                ()       { return this.ArFSID;                                                                   }    
     GetName              ()       { return this.ArFSName;                                                                 }
     GetDisplayName       ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
-    GetNameAndID         ()       { return this.GetDisplayName () + "(" + this.ArFSID + ")";                              }
+    GetNameAndID         ()       { return this.GetDisplayName () + " (" + this.ArFSID + ")";                             }
+    GetIDAndName         ()       { return this.ArFSID + " (" + this.GetDisplayName () + ")";                             }
     HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }    
     HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;   }    
     HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                  }    
@@ -650,7 +652,7 @@ class ArFSItem extends ArFSEntity
             this._SetMaster (master);
 
         if (this.OwnerDrive == null)
-            Sys.ERR (this.GetNameAndID + " doesn't have a drive.");
+            Sys.ERR (this.GetNameAndID () + " doesn't have a drive.");
     }
 
    
@@ -960,7 +962,7 @@ class ArFSDir extends ArFSItem
     }
 
 
-    async UpdateContainedEntities (args = { recursive : false, list : false } )
+    async UpdateContainedEntities (args = { recursive : false, list : false }, folderids_visited = {} )
     {        
         const values = Object.values (this.Entities);
         const amount = values.length;
@@ -968,6 +970,12 @@ class ArFSDir extends ArFSItem
         this.FilesAmount     = 0;
         this.DirAmount       = 0;
         this.EntitiesAmount  = 0;
+
+        if (this.ArFSID != null)
+            folderids_visited[this.ArFSID] = this;
+        else
+            Sys.ERR ("ID not set for a folder.");
+
     
         for (let C = 0; C < amount; ++C)
         {
@@ -993,8 +1001,20 @@ class ArFSDir extends ArFSItem
                 if (is_dir)
                 {
                     ++this.DirAmount;
+                    
                     if (args.recursive)
-                        await entity.UpdateContainedEntities (args);
+                    {
+                        if (folderids_visited[entity.ArFSID] == null)
+                            await entity.UpdateContainedEntities (args);
+
+                        // A folder entry points to an already visited folder, ignore it.
+                        else
+                        {
+                            Sys.WARN    ("Entity " + entity.GetNameAndID () + " points to an already visited directory - ignoring.");
+                            Sys.VERBOSE ("Already visited " + folderids_visited[entity.ArFSID]?.GetNameAndID () + 
+                                         ", entry " + entity.GetNameAndID + " points to it in " + this.GetNameAndID () + " ."  );
+                        }
+                    }
                 }
 
                 else if (entity.IsFile () )
@@ -1100,6 +1120,24 @@ class ArFSDir extends ArFSItem
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class ArFSFile extends ArFSItem
 {     
     FileSize_Actual_B      = null;
@@ -1122,9 +1160,37 @@ class ArFSFile extends ArFSItem
 
     /* Override */ async _OnARFSMetadataSet (entry, metadata)
     { 
+        const data_txid = metadata[ARFSENTITYMETA_DATATXID];
+
+        if (data_txid != null)
+        {
+            this.DataTXID = data_txid;
+            Sys.VERBOSE (this.GetNameAndID () + ": Data TX ID set to " + data_txid + " .");
+        }
+        else
+        {
+            Sys.ERR ("Metadata didn't contain Data TX ID for " + this.GetNameAndID () + " !");
+            return false;
+        }
+
         return true;
     }
 
+    async Download ()
+    {
+        if (this.OwnerAddress == null)
+            Sys.ERR ("Download: No owner address set for " + this.GetNameAndID () + " !" );
+
+        else if (this.DataTXID != null)
+        {
+            Sys.WARN ("Downloading file " + this.GetIDAndName () + " from data TX: " + this.DataTXID + " on address: " + this.OwnerAddress + " ...");
+            const data = await Arweave.GetTxData (this.DataTXID); 
+
+            Sys.OUT_BIN (data);
+        }
+        else
+            Sys.ERR ("No Data TX set for " + this.GetNameAndID () + " !");
+    }
 
 }
 
@@ -1620,4 +1686,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile };
+module.exports = { ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile };

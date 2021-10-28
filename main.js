@@ -45,12 +45,12 @@ const Commands =
     "-v"          : DisplayVersion,    
     "--version"   : DisplayVersion,
     "info"        : Arweave.DisplayArweaveInfo,
-    "list"        : List.HandleCommand,
-    "search"      : Search.HandleCommand,
-    "console"     : Console.HandleCommand,
-    "getfile"     : ArFS.DownloadFile,
-    "getdata"     : Arweave.GetTxData,
-    "get"         : Get.HandleCommand,         
+    "list"        : List,
+    //"search"      : Search.HandleCommand,
+    //"console"     : Console.HandleCommand,
+    //"getfile"     : ArFS.DownloadFile,
+    //"getdata"     : Arweave.GetTxData,
+    "get"         : Get,
     "test"        : Testing
 }
 
@@ -114,8 +114,16 @@ function Main (argv)
                         
             let cmd = Commands[arg_raw.toLowerCase ()];
             
-            if (cmd != undefined)            
-                cmd (new Util.Args (Util.GetCmdArgs (argv, C, Flags)) );
+            if (cmd != undefined)
+            {
+                const command_params = new Util.Args (Util.GetCmdArgs (argv, C, Flags) );
+
+                if (cmd.HandleCommand != null)
+                    cmd.HandleCommand (command_params);
+
+                else
+                    cmd (command_params);
+            }
            
             else
                 Sys.ERR_FATAL (`Unknown command: "${arg_raw}".`);                    
@@ -184,47 +192,66 @@ function FetchFlagArg (argc, argv, pos, flag)
 
 
 
-function DisplayHelp ()
+function DisplayHelp (args)
 {
-    const headerstr     = "Silanael ARweave Tool";
-    const versionstring = Util.GetVersionStr ();
+    const cmd_req = args?.PopLC ();
 
-    const longestlen = headerstr.length > versionstring.length ? headerstr.length 
-                                                               : versionstring.length;
-    const linelen = longestlen + 4;
+    if (cmd_req != null)
+    {
+        const handler = Commands[cmd_req];
+        if (handler != null)
+        {
+            if (handler.Help != null)
+                handler.Help ();
+            else
+                Sys.INFO ("No help available for '" + cmd_req + "'.");
+        }
+        else
+            Sys.ERR ("HELP: Command '" + cmd_req + "' does not exist.");
+    } 
 
-    Sys.INFO ("".padStart (linelen,   "#"));
-    Sys.INFO ("# " + headerstr    .padEnd (longestlen, " ") + " #");
-    Sys.INFO ("# " + versionstring.padEnd (longestlen, " ") + " #");    
-    Sys.INFO ("".padStart (linelen,   "#"));    
-    Sys.INFO ("");
-    Sys.INFO ("Usage: sart [OPTION] [COMMAND] [PARAM]");
-    Sys.INFO ("");
+    else
+    {
+        const headerstr     = "Silanael ARweave Tool";
+        const versionstring = Util.GetVersionStr ();
+
+        const longestlen = headerstr.length > versionstring.length ? headerstr.length 
+                                                                   : versionstring.length;
+        const linelen = longestlen + 4;
+
+        Sys.INFO ("".padStart (linelen,   "#"));
+        Sys.INFO ("# " + headerstr    .padEnd (longestlen, " ") + " #");
+        Sys.INFO ("# " + versionstring.padEnd (longestlen, " ") + " #");    
+        Sys.INFO ("".padStart (linelen,   "#"));    
+        Sys.INFO ("");
+        Sys.INFO ("Usage: sart [OPTION] [COMMAND] [PARAM]");
+        Sys.INFO ("");
+
+        Sys.INFO (">>> DEVELOPMENT VERSION <<<")
+        Sys.INFO ("")
+
+        Sys.INFO ("COMMANDS:");
+        Sys.INFO ("");
+        Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");    
+        Sys.INFO ("  -v, version              Display version info.");
+        Sys.INFO ("      help    [COMMAND]    Display help for a command.");
+        Sys.INFO ("");
         
-    Sys.INFO (">>> DEVELOPMENT VERSION <<<")
-    Sys.INFO ("")
+        Sys.INFO ("OPTIONS:");
+        Sys.INFO ("      --quiet              Output only data to stdout.");
+        Sys.INFO ("  -V, --verbose            Display extended runtime info.");
+        Sys.INFO ("      --debug              Display extensive runtime info.");
+        Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.).");
+        Sys.INFO ("  -r, --recursive          Do a recursive listing (drive listing default).");
+        Sys.INFO ("      --force              Disable abort on some fatal errors.");
+        Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
+        Sys.INFO ("      --port               Arweave gateway port.");
+        Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
+        //Sys.INFO ("  -f, --format             Output data format. May be 'txt' or 'html'.");
+        Sys.INFO ("");
+    }
 
-    Sys.INFO ("COMMANDS:");
-    Sys.INFO ("");
-    Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");    
-    Sys.INFO ("  -v, version              Display version info.");
-    Sys.INFO ("      help    [COMMAND]    Display help for a command.");
-    Sys.INFO ("");
-    
-    Sys.INFO ("OPTIONS:");
-    Sys.INFO ("      --quiet              Output only data to stdout.");
-    Sys.INFO ("  -V, --verbose            Display extended runtime info.");
-    Sys.INFO ("      --debug              Display extensive runtime info.");
-    Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.).");
-    Sys.INFO ("  -r, --recursive          Do a recursive listing (drive listing default).");
-    Sys.INFO ("      --force              Disable abort on some fatal errors.");
-    Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
-    Sys.INFO ("      --port               Arweave gateway port.");
-    Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
-    Sys.INFO ("  -f, --format             Output data format. May be 'txt' or 'html'.");
-    Sys.INFO ("");
-
-    Sys.EXIT (0);
+    Sys.EXIT (0);    
 }
 
 

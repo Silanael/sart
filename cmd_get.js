@@ -26,12 +26,44 @@ const SUBCOMMANDS =
     "txrawdata"    : Handler_RawData,
     "pathmanifest" : Handler_RawData,    
     "arweave"      : Handler_Arweave,
-    "pendingcount" : Handler_Arweave,
+    "file"         : Handler_ArFS,
 }
 
-const ARWEAVE_FIELDS = "network, version, release, height, current, blocks, peers, queue_length, node_state_latency, pendingcount";
+const ARWEAVE_FIELDS = "network, version, release, height, current, blocks, peers, queue_length, node_state_latency";
 
 
+function Help (args)
+{
+    Sys.INFO ("GET USAGE");
+    Sys.INFO ("---------");
+    Sys.INFO ("");
+    Sys.INFO ("Get a file from a transaction:")
+    Sys.INFO ("   get file [txid] > file.ext");
+    Sys.INFO ("");
+    Sys.INFO ("Get an ArDrive-file:")
+    Sys.INFO ("   get file [file-id] > file.ext");
+    Sys.INFO ("");
+    Sys.INFO ("Get transaction in JSON format:")
+    Sys.INFO ("   get tx [txid]");
+    Sys.INFO ("");
+    Sys.INFO ("Get transaction data:")
+    Sys.INFO ("   get txdata [txid] > file.ext");
+    Sys.INFO ("");
+    Sys.INFO ("Get path manifest:")
+    Sys.INFO ("   get txrawdata [txid] > manifest.json");
+    Sys.INFO ("");
+    Sys.INFO ("Get Arweave network status:")
+    Sys.INFO ("   get arweave");
+    Sys.INFO ("");
+    Sys.INFO ("Get specific Arweave network info:")
+    Sys.INFO ("   get arweave [field]");
+    Sys.INFO ("");
+    Sys.INFO ("");
+    Sys.INFO ("NOTE: Don't run with NPM, instead use:");
+    Sys.INFO ("   node ./main.js get ...");
+    Sys.INFO ("");
+    
+}
 
 
 async function HandleCommand (args)
@@ -48,8 +80,8 @@ async function HandleCommand (args)
     else
         Sys.ERR_FATAL ("GET: Unknown sub-command '" + subcmd + "'.");
 
-
 }
+
 
 
 async function Handler_Arweave (args)
@@ -118,6 +150,36 @@ async function Handler_RawData (args)
 
 
 
+// TODO: Move to ArFS.js.
+async function Handler_ArFS (args)
+{
+    const target = args.RequireAmount (1).Pop ();
+
+    if (Util.IsArFSID (target) )
+    {
+        const file = new ArFS.ArFSFile (target, null, null, null);
+        await file.Update ();
+
+        if (file.Valid && file.IsFile () )
+            await file.Download ();
+
+        else
+            Sys.ERR_FATAL ("Download failed: Target " + target + " doesn't exist, isn't a file or failed to fetch.");
+    }
+
+    else if (Util.IsArweaveHash (target) )
+    {
+        Sys.WARN ("Downloading transaction data from TX: " + target + " ...");
+        Sys.OUT_BIN (await Arweave.GetTxData (target) );
+    }
+    else
+        Sys.ERR_FATAL ("Invalid target: '" + target + "' - not an ArFS-ID or a transaction ID.");
+}
+
+
+
+
+
 
 // TODO: Move to Util.
 function PrintObj_Out (obj)
@@ -139,4 +201,4 @@ function PrintObj_Out (obj)
 }
 
 
-module.exports = { HandleCommand }
+module.exports = { HandleCommand, Help }

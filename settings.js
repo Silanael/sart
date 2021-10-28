@@ -43,6 +43,7 @@ const Config =
     DisplayAll       : false,    
     AllowWildcards   : true,
 
+    OutputFields     : null,
     OutputFormat     : OutputFormats.TXT,
 
     Force            : false,

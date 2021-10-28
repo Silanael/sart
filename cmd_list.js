@@ -24,6 +24,25 @@ const Targets =
 }
 
 
+function Help (args)
+{
+    Sys.INFO ("LIST USAGE");
+    Sys.INFO ("----------");
+    Sys.INFO ("");
+    Sys.INFO ("List drive content:")
+    Sys.INFO ("   list <drive-id>");
+    Sys.INFO ("");
+    Sys.INFO ("List root directory content:")
+    Sys.INFO ("   list <drive-id>/");
+    Sys.INFO ("");
+    Sys.INFO ("List folder content:")
+    Sys.INFO ("   list <drive-id>/path/<folder>/<folder>");
+    Sys.INFO ("");
+    Sys.INFO ("List content of folder and all of its subfolders:")
+    Sys.INFO ("   list <drive-id>/path/<folder>/<folder> -r");
+    Sys.INFO ("");
+}
+
 
 
 async function HandleCommand (args)
@@ -92,4 +111,4 @@ async function ListDrives (args)
 }
 
 
-module.exports = { HandleCommand }
+module.exports = { HandleCommand, Help }
