@@ -22,6 +22,7 @@ const TAG_FILEID          = "File-Id";
 const TAG_DRIVEID         = "Drive-Id";
 const TAG_FOLDERID        = "Folder-Id";
 const TAG_PARENTFOLDERID  = "Parent-Folder-Id";
+const TAG_DRIVEPRIVACY    = "Drive-Privacy";
 const TAG_ENTITYTYPE      = "Entity-Type";
 const TAG_CONTENTTYPE     = "Content-Type";
 const TAG_UNIXTIME        = "Unix-Time";
@@ -32,6 +33,9 @@ const ENTITYTYPE_DRIVE    = "drive";
 const ARFSENTITYMETA_NAME         = "name";
 const ARFSENTITYMETA_ROOTFOLDERID = "rootFolderId";
 const ARFSENTITYMETA_DATATXID     = "dataTxId";
+
+const ARFSDRIVEPRIVACY_PUBLIC  = "public";
+const ARFSDRIVEPRIVACY_PRIVATE = "private";
 
 const ENTITYTYPE_IDTAG_MAP =
 {
@@ -67,7 +71,8 @@ const __TAG = "arfs";
 const TXTAG_VAR_MAP =
 {    
     "file-id"           : "FileId",
-    "drive-id"          : "DriveId",       
+    "drive-id"          : "DriveId",
+    "drive-privacy"     : "DrivePrivacy",     
     "parent-folder-id"  : "ParentFolderId",
     "content-type"      : "ContentType_TX",
     "app-name"          : "ArFSAppName",
@@ -690,6 +695,7 @@ class ArFSDrive extends ArFSEntity
 
     RootFolderID    = null;    
     RootFolder      = null;
+    IsPrivateDrive  = false;
 
     Files           = {};
     Folders         = {};
@@ -735,7 +741,18 @@ class ArFSDrive extends ArFSEntity
 
 
     /* Override */async _OnARFSMetadataSet (entry, metadata)
-    {                        
+    {       
+        if (!entry.HasTag (TAG_DRIVEPRIVACY))
+        {
+            this._SetInvalid ("Drive " + this.GetNameAndID () + " has no " + TAG_DRIVEPRIVACY + " ..");
+            return false;
+        }
+        else
+        {
+            this.IsPrivateDrive = Util.StrCmp (entry.GetTag (TAG_DRIVEPRIVACY), ARFSDRIVEPRIVACY_PRIVATE);            
+            Sys.VERBOSE ("Drive " + this.GetNameAndID () + " is " + (this.IsPrivateDrive ? "private" : "public") );
+        }
+        
         const new_rootfolder = metadata[ARFSENTITYMETA_ROOTFOLDERID];
 
         // Root folder changed or first time receiving
@@ -1001,7 +1018,7 @@ class ArFSDir extends ArFSItem
                 if (is_dir)
                 {
                     ++this.DirAmount;
-                    
+
                     if (args.recursive)
                     {
                         if (folderids_visited[entity.ArFSID] == null)

@@ -44,15 +44,15 @@ class Entry
         this.Timestamp   = timestamp;
     }
 
-    GetTXID        () { return this.TXID;  }
-    GetOwner       () { return this.Owner; }
-    GetBlockHeight () { return this.BlockHeight; }
-    GetBlockTime   () { return this.BlockTime;   }
-
+    GetTXID        ()    { return this.TXID;  }
+    GetOwner       ()    { return this.Owner; }
+    GetBlockHeight ()    { return this.BlockHeight; }
+    GetBlockTime   ()    { return this.BlockTime;   }
+    HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null; }
     
     GetTag (tag)
     { 
-        const r = this.Tags.find (e => e.name == tag);        
+        const r = this.Tags.find (e => e.name == tag);
         return r != null ? r.value : null;
     }
 }
