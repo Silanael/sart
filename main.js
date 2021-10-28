@@ -109,7 +109,7 @@ function Main (argv)
                 
             
             // Ignore flags and flag parameters
-            if (Util.IsFlag (arg_raw, Flags) || (C > FIRST_ARG && Util.IsFlag (argv[C-1], Flags)) )
+            if (Util.IsFlag (arg_raw, Flags) || (C > FIRST_ARG && Util.IsFlagWithArg (argv[C-1], Flags)) )
                 continue;
                         
             let cmd = Commands[arg_raw.toLowerCase ()];
@@ -118,7 +118,7 @@ function Main (argv)
                 cmd (new Util.Args (Util.GetCmdArgs (argv, C, Flags)) );
            
             else
-                Sys.ERR_FATAL (`Unknown command: "${arg}".`);                    
+                Sys.ERR_FATAL (`Unknown command: "${arg_raw}".`);                    
 
             // Process only one command.
             command_found = true;

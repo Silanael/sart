@@ -10,8 +10,7 @@
 // Imports
 const Sys      = require ("./sys");
 const Package  = require ("./package.json");
-const { Config } = require("./settings");
-const { Settings } = require("./main");
+
 
 
 
@@ -68,7 +67,8 @@ function PopArg (args)
 
 
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
-function IsFlag        (arg, flags)   { return flags[arg] != undefined; }
+function IsFlag        (arg, flags)   { return flags[arg] != null; }
+function IsFlagWithArg (arg, flags)   { return flags[arg]?.A; }
 function IsArweaveHash (str)          { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID      (str)          { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 function GetUNIXTime   ()             { return new Date ().getTime (); }
@@ -190,6 +190,6 @@ function RequireParam (param, name, src)
 
 
 module.exports = { Args,
-                   IsFlag, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
+                   IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard };
