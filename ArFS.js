@@ -1022,7 +1022,7 @@ class ArFSDir extends ArFSItem
                     if (args.recursive)
                     {
                         if (folderids_visited[entity.ArFSID] == null)
-                            await entity.UpdateContainedEntities (args);
+                            await entity.UpdateContainedEntities (args, folderids_visited);
 
                         // A folder entry points to an already visited folder, ignore it.
                         else
