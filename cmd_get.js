@@ -21,7 +21,7 @@ const GQL      = require ('./GQL.js');
 const SUBCOMMANDS =
 {
     "tx"           : Handler_TX,
-    "txtags"       : null,
+    "txtags"       : Handler_TXTags,
     "txdata"       : Handler_Data,
     "txrawdata"    : Handler_RawData,
     "pathmanifest" : Handler_RawData,    
@@ -114,14 +114,62 @@ async function Handler_Arweave (args)
 async function Handler_TX (args)
 {
     const txid = args.RequireAmount (1).Pop ();
+    const field = args.Pop ();
 
     if (Util.IsArweaveHash (txid) )
-        Sys.OUT_TXT (await Arweave.GetTx (txid) );
+    {
+        const tx = await Arweave.GetTx (txid);
+        
+        // Another argument given, output only one field.
+        if (field != null)
+        {
+            if (Util.StrCmp (field, "tags") )
+                PrintObj_Out (Util.DecodeTXTags (tx).entries )
+
+            else if (tx[field] != null)
+                PrintObj_Out (tx[field]);
+
+            else
+                Sys.ERR ("TX: Unknown field '" + field + "'.");
+        }
+            
+        // Print the entire TX.
+        else            
+        {
+            // Replace the encoded tags with an array of decoded ones for output.
+            if (Settings.IsTXTOut () )
+            tx.tags = Util.DecodeTXTags (tx);
+
+            PrintObj_Out (tx);        
+        }
+
+    }
     else
         Sys.ERR_FATAL ("Invalid argument: '" + txid + "' - not a transaction ID.");
 }
 
 
+
+async function Handler_TXTags (args)
+{
+    const txid = args.RequireAmount (1).Pop ();
+
+    if (Util.IsArweaveHash (txid) )
+    {
+        const tx = await Arweave.GetTx (txid);
+        const len = tx.tags != null ? tx.tags.length : 0;
+        
+        if (len <= 0)
+            Sys.ERR ("No tags obtained from transaction " + txid + " !");
+
+        else
+            PrintObj_Out (Util.DecodeTXTags (tx).entries )
+
+    }
+    else
+        Sys.ERR_FATAL ("Invalid argument: '" + txid + "' - not a transaction ID.");
+
+}
 
 
 async function Handler_Data (args)
@@ -182,22 +230,35 @@ async function Handler_ArFS (args)
 
 
 // TODO: Move to Util.
-function PrintObj_Out (obj)
+function PrintObj_Out (obj, opts = { indent: 0 } )
 {
     if (obj == null)
         return false;
 
-    // Get longest field name
-    let longest_len = 0;
-    Object.entries(obj).forEach ( e => { if (e[0]?.length > longest_len) longest_len = e[0].length; }  );
+    switch (Settings.Config.OutputFormat)
+    {
+        case Settings.OutputFormats.JSON:
+            Sys.OUT_TXT (obj);
+            break;
 
-    // list all
-    Object.entries(obj).forEach
-    ( e => 
-    { 
-        Sys.OUT_TXT (e[0]?.toUpperCase()?.padEnd (longest_len, " ") + "  " + e[1]);
-    }  
-    );
+        // Text
+        default:
+            // Get longest field name
+            let longest_len = 0;
+            Object.entries(obj).forEach ( e => { if (e[0]?.length > longest_len) longest_len = e[0].length; }  );
+
+            // list all
+            Object.entries(obj).forEach
+            ( e => 
+            {                
+                const val_str     = e[1];        
+                Sys.OUT_TXT (e[0]?.toUpperCase()?.padEnd (longest_len, " ").padStart (opts.indent * 4, " ") + "  " + val_str);        
+            }  
+            );
+        break;
+    }
+
+    
 }
 
 

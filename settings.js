@@ -28,6 +28,7 @@ const OutputFormats =
     LIST    : "list",
     CSV     : "csv",
     HTML    : "html",
+    JSON    : "json",
 }
 
 const Config =
@@ -64,6 +65,7 @@ function IsForceful         ()      { return Config.Force;                      
 function IsHTMLOut          ()      { return Config.OutputFormat == OutputFormats.HTML; }
 function IsCSVOut           ()      { return Config.OutputFormat == OutputFormats.CSV;  }
 function IsTXTOut           ()      { return Config.OutputFormat == OutputFormats.TXT;  }
+function IsJSONOut          ()      { return Config.OutputFormat == OutputFormats.JSON; }
 function SetForce           ()      { Config.Force = true;                              }
 function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true;   }
 function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true;   }
@@ -164,6 +166,7 @@ module.exports =
     IsHTMLOut,
     IsCSVOut,
     IsTXTOut,
+    IsJSONOut,
     SetHost,
     SetPort,
     SetProto,

@@ -12,6 +12,7 @@ const Sys      = require ("./sys");
 const Package  = require ("./package.json");
 
 
+const CHR_LF = "\n";
 
 
 class Args
@@ -135,6 +136,26 @@ function StrCmp_Wildcard (str, compare_to, lowercase = true)
 
 
 
+function ObjToStr (obj, opts = { kvp_separator: ":", entry_separator: " "} )
+{
+    if (obj == null)
+        return null;
+
+    let   str     = "";    
+    const entries = Object.entries (obj);
+    const len     = entries.length;
+
+    for (let C = 0; C < len; ++C)
+    {
+        const entry = entries[C];
+        if (entry != null)
+            str += (C > 0 ? opts.entry_separator : "") + entry[0] + opts.kvp_separator  + entry[1];
+    }
+    return str;
+}
+
+
+
 
 function GetDate (date_time_spacer_chr = ' ')
 { 
@@ -189,7 +210,47 @@ function RequireParam (param, name, src)
 }
 
 
+
+
+function DecodeTXTags (tx)
+{
+    if (tx == null)
+    {
+        Sys.VERBOSE ("Util.DecodeTags: No TX given.");
+        return null;
+    }
+
+    const txid = tx.id;
+    const len  = tx.tags != null ? tx.tags.length : 0;
+            
+    if (len <= 0)
+        Sys.ERR ("No tags obtained from transaction " + txid + " !");
+
+    else
+    {
+        const decoded_tags =
+        { 
+            entries: {},
+            toString () 
+            { 
+                return Object.entries (this.entries)?.length + " -> " + ObjToStr (this.entries); 
+            } 
+        };
+                 
+        let tag;
+        for (let C = 0; C < len; ++C)
+        {
+            tag = tx.tags[C];
+            decoded_tags.entries [tag.get ('name',  { decode: true, string: true }) ]
+                                = tag.get ('value', { decode: true, string: true });
+        }
+        return decoded_tags;
+    }    
+}
+
+
+
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags };
