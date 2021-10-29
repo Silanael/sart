@@ -22,7 +22,7 @@ const Get      = require ('./cmd_get.js');
 const Search   = require ('./cmd_search.js');
 const Console  = require ('./cmd_console.js');
 
-
+const ArweaveLib  = require ('arweave');
 
 
 
@@ -265,11 +265,20 @@ function DisplayVersion (argv)
 
 async function Testing (argv)
 {
-    argv.RequireAmount (2);
-    const test_tgt = argv.Pop ();
-    const src = argv.Pop ();
-    Sys.INFO ("Comparing " + src + " to " + test_tgt + " ...");
-    Sys.INFO (Util.StrCmp_Wildcard (src, test_tgt) );
+    const arweave = ArweaveLib.init
+    (
+        {
+            host:     Settings.Config.ArweaveHost,
+            port:     Settings.Config.ArweavePort,
+            protocol: Settings.Config.ArweaveProto
+        }
+    );    
+    
+    const arg = argv.Pop ();
+    Sys.INFO (arg);
+    Sys.INFO (Util.GetSizeStr (arg, false, null) );    
+    Sys.INFO (Util.GetSizeStr (arg, true, 4) );
+
 }
 
 

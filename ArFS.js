@@ -13,6 +13,7 @@ const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
 const GQL      = require ('./GQL.js');
+const Listing  = require ('./Listing.js');
 
 
 
@@ -33,6 +34,7 @@ const ENTITYTYPE_DRIVE    = "drive";
 const ARFSENTITYMETA_NAME         = "name";
 const ARFSENTITYMETA_ROOTFOLDERID = "rootFolderId";
 const ARFSENTITYMETA_DATATXID     = "dataTxId";
+const ARFSENTITYMETA_SIZE         = "size";
 
 const ARFSDRIVEPRIVACY_PUBLIC  = "public";
 const ARFSDRIVEPRIVACY_PRIVATE = "private";
@@ -366,11 +368,13 @@ class ArFSEntity
     GetDisplayName       ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
     GetNameAndID         ()       { return this.GetDisplayName () + " (" + this.ArFSID + ")";                             }
     GetIDAndName         ()       { return this.ArFSID + " (" + this.GetDisplayName () + ")";                             }
+    GetSizeBytes         ()       { return null;                                                                             }    
     HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }    
     HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;   }    
     HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                  }    
     IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                 }
     IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                    }
+
 
 
     Matches (requirements = {name: null, entity_type: null, arfs_id: null} )
@@ -396,6 +400,15 @@ class ArFSEntity
         }
 
         return pathstr;
+    }
+
+    GetSizeStr ()
+    { 
+        const size_b      = this.GetSizeBytes (); 
+        const digits = Settings.Config.SizeDigits;
+
+        return size_b != null ? Util.GetSizeStr (size_b, true, digits)
+                              : " ".repeat (digits);
     }
 
     
@@ -604,7 +617,7 @@ class ArFSEntity
 
     GetListStr ()
     {
-        return this.ArFSID + " " + this.GetFlagStr () + " " + this.GetPathNameToRoot ();
+        return this.ArFSID + " " + this.GetFlagStr () + " " + this.GetSizeStr () + " " + this.GetPathNameToRoot ();
     }
 
 
@@ -979,14 +992,17 @@ class ArFSDir extends ArFSItem
     }
 
 
-    async UpdateContainedEntities (args = { recursive : false, list : false }, folderids_visited = {} )
+    async UpdateContainedEntities (args = { recursive : false, list : false, Listing: null }, folderids_visited = {} )
     {        
-        const values = Object.values (this.Entities);
-        const amount = values.length;
-
         this.FilesAmount     = 0;
         this.DirAmount       = 0;
         this.EntitiesAmount  = 0;
+
+        const values  = Object.values (this.Entities);
+        const amount  = values.length;
+        const Listing = args.Listing;
+
+
 
         if (this.ArFSID != null)
             folderids_visited[this.ArFSID] = this;
@@ -996,6 +1012,8 @@ class ArFSDir extends ArFSItem
     
         for (let C = 0; C < amount; ++C)
         {
+            ++Listing.ArFSEntriesAmount;
+
             let entity = values[C];
             await entity.Update ();
 
@@ -1010,6 +1028,8 @@ class ArFSDir extends ArFSItem
             else
             {
                 ++this.EntitiesAmount;
+                ++Listing.ArFSEntitiesAmount;
+
                 const is_dir = entity.IsFolder ();
                 
                 if (args.list)
@@ -1018,6 +1038,7 @@ class ArFSDir extends ArFSItem
                 if (is_dir)
                 {
                     ++this.DirAmount;
+                    ++Listing.ArFSFoldersAmount;
 
                     if (args.recursive)
                     {
@@ -1035,7 +1056,11 @@ class ArFSDir extends ArFSItem
                 }
 
                 else if (entity.IsFile () )
+                {
                     ++this.FilesAmount;
+                    ++Listing.ArFSFilesAmount;
+                    Listing.Bytes_Reported += entity.GetSizeBytes ();
+                }
                 
             }
         }
@@ -1045,8 +1070,12 @@ class ArFSDir extends ArFSItem
 
 
     async List ( args = { recursive : false, list : true} )
-    {
-        args.list = true;
+    {   
+        const L = new Listing.Listing ();     
+
+        args.list    = true;
+        args.Listing = L;
+        
 
         await this.Update ();
 
@@ -1054,9 +1083,15 @@ class ArFSDir extends ArFSItem
         Sys.INFO ("");
 
         await this.UpdateContainedEntities (args);
+        args.Listing?.Done ();
         
         Sys.INFO ("");
-        Sys.INFO (this.EntitiesAmount + " entries (" + this.FilesAmount + " files, " + this.DirAmount + " folders)");
+        //Sys.INFO (this.EntitiesAmount + " entries (" + this.FilesAmount + " files, " + this.DirAmount + " folders)");
+        
+        Sys.INFO ("Listing done in " + (L.TimeTaken_ms / 1000) + "ms." );
+        Sys.INFO (Util.GetSizeStr (L.Bytes_Reported, true, Settings.Config.SizeDigits) 
+                  + " in " + L.ArFSEntitiesAmount + " entities (" 
+                  + L.ArFSFilesAmount + " files, " + L.ArFSFoldersAmount + " folders)");
     }
 
 
@@ -1175,22 +1210,31 @@ class ArFSFile extends ArFSItem
         this.DataTXID = data_txid;        
     }
 
+    /* Override */ GetSizeBytes () { return this.FileSize_Claimed_B; }
+
+
+
     /* Override */ async _OnARFSMetadataSet (entry, metadata)
     { 
-        const data_txid = metadata[ARFSENTITYMETA_DATATXID];
+        const data_txid        = metadata[ARFSENTITYMETA_DATATXID];
+        const data_claimedsize = metadata[ARFSENTITYMETA_SIZE];
 
         if (data_txid != null)
         {
             this.DataTXID = data_txid;
             Sys.VERBOSE (this.GetNameAndID () + ": Data TX ID set to " + data_txid + " .");
         }
-        else
+        else    
+            this._SetInvalid ("Metadata didn't contain Data TX ID!");                
+
+        if (data_claimedsize != null)
         {
-            Sys.ERR ("Metadata didn't contain Data TX ID for " + this.GetNameAndID () + " !");
-            return false;
+            this.FileSize_Claimed_B = data_claimedsize;
+            Sys.VERBOSE (this.GetNameAndID () + ": Claimed file size: " + Util.GetSizeStr (data_claimedsize, true, Settings.Config.SizeDigits) 
+                         + "(" + Util.GetSizeStr (data_claimedsize, false) + ")." );
         }
 
-        return true;
+        return this.Valid;
     }
 
     async Download ()

@@ -46,6 +46,7 @@ const Config =
 
     OutputFields     : null,
     OutputFormat     : OutputFormats.TXT,
+    SizeDigits       : 5,
 
     Force            : false,
 

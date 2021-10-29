@@ -154,6 +154,55 @@ function ObjToStr (obj, opts = { kvp_separator: ":", entry_separator: " "} )
     return str;
 }
 
+const SIZE_UNITS =
+[
+    { i:"B", d: 1                },
+    { i:"K", d: 1024             },
+    { i:"M", d: Math.pow (2, 20) },
+    { i:"G", d: Math.pow (2, 30) },
+    { i:"T", d: Math.pow (2, 40) },
+    { i:"P", d: Math.pow (2, 50) },
+    { i:"E", d: Math.pow (2, 60) }
+];
+
+
+
+function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
+{
+    if (human_readable)
+    {        
+        let val;        
+        let e;
+        const len = SIZE_UNITS.length;
+
+        
+        for (let C = len - 1; C >= 0; --C)
+        {
+            e = SIZE_UNITS[C];
+            val = bytes_amount / e.d;
+
+            if (val >= 1)
+            {
+                const str = (max_chars != null && max_chars > 1 ? new Number (val).toPrecision (max_chars - 2) : val) + e.i;;
+                return max_chars != null ? str.padStart (max_chars, " ") : str;
+            }            
+        }
+    }
+
+    else
+    {
+        let str = bytes_amount + " bytes";
+        
+        if (max_chars != null && str.length > max_chars)
+        {
+            str = bytes_amount.toString ();
+            str.length <= max_chars ? str : "9".repeat (max_chars);
+        }
+        else
+            return str;                        
+    }
+}
+
 
 
 
@@ -253,4 +302,4 @@ function DecodeTXTags (tx)
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr };
