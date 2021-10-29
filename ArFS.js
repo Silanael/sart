@@ -993,15 +993,17 @@ class ArFSDir extends ArFSItem
 
 
     async UpdateContainedEntities (args = { recursive : false, list : false, Listing: null }, folderids_visited = {} )
-    {        
+    {   
+        if (args.Listing == null)
+            args.Listing = new Listing.Listing ();
+
         this.FilesAmount     = 0;
         this.DirAmount       = 0;
         this.EntitiesAmount  = 0;
 
         const values  = Object.values (this.Entities);
-        const amount  = values.length;
-        const Listing = args.Listing;
-
+        const amount  = values.length;                
+        
 
 
         if (this.ArFSID != null)
@@ -1012,7 +1014,7 @@ class ArFSDir extends ArFSItem
     
         for (let C = 0; C < amount; ++C)
         {
-            ++Listing.ArFSEntriesAmount;
+            ++args.Listing.ArFSEntriesAmount;
 
             let entity = values[C];
             await entity.Update ();
@@ -1028,7 +1030,7 @@ class ArFSDir extends ArFSItem
             else
             {
                 ++this.EntitiesAmount;
-                ++Listing.ArFSEntitiesAmount;
+                ++args.Listing.ArFSEntitiesAmount;
 
                 const is_dir = entity.IsFolder ();
                 
@@ -1038,7 +1040,7 @@ class ArFSDir extends ArFSItem
                 if (is_dir)
                 {
                     ++this.DirAmount;
-                    ++Listing.ArFSFoldersAmount;
+                    ++args.Listing.ArFSFoldersAmount;
 
                     if (args.recursive)
                     {
@@ -1058,8 +1060,8 @@ class ArFSDir extends ArFSItem
                 else if (entity.IsFile () )
                 {
                     ++this.FilesAmount;
-                    ++Listing.ArFSFilesAmount;
-                    Listing.Bytes_Reported += entity.GetSizeBytes ();
+                    ++args.Listing.ArFSFilesAmount;
+                    args.Listing.Bytes_Reported += entity.GetSizeBytes ();
                 }
                 
             }
@@ -1069,12 +1071,13 @@ class ArFSDir extends ArFSItem
 
 
 
-    async List ( args = { recursive : false, list : true} )
+    async List ( args = { recursive : false, list : true, Listing : new Listing.Listing () } )
     {   
-        const L = new Listing.Listing ();     
 
-        args.list    = true;
-        args.Listing = L;
+        if (args.Listing == null)
+            args.Listing = new Listing.Listing ();
+
+        args.list = true;
         
 
         await this.Update ();
@@ -1088,10 +1091,13 @@ class ArFSDir extends ArFSItem
         Sys.INFO ("");
         //Sys.INFO (this.EntitiesAmount + " entries (" + this.FilesAmount + " files, " + this.DirAmount + " folders)");
         
-        Sys.INFO ("Listing done in " + (L.TimeTaken_ms / 1000) + "ms." );
+        const L = args.Listing;
+        
         Sys.INFO (Util.GetSizeStr (L.Bytes_Reported, true, Settings.Config.SizeDigits) 
-                  + " in " + L.ArFSEntitiesAmount + " entities (" 
+                  + " (reported) in " + L.ArFSEntitiesAmount + " entities (" 
                   + L.ArFSFilesAmount + " files, " + L.ArFSFoldersAmount + " folders)");
+        Sys.INFO ("Listing done in " + (L.TimeTaken_ms / 1000) + "sec." );
+
     }
 
 
@@ -1119,7 +1125,7 @@ class ArFSDir extends ArFSItem
     async GetDirByURL (arfs_url, index)
     {
         await this.Update ();
-        await this.UpdateContainedEntities (false);
+        await this.UpdateContainedEntities ();
 
         const name = arfs_url.Path[index];
 

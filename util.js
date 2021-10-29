@@ -183,10 +183,24 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
 
             if (val >= 1)
             {
-                const str = (max_chars != null && max_chars > 1 ? new Number (val).toPrecision (max_chars - 2) : val) + e.i;;
-                return max_chars != null ? str.padStart (max_chars, " ") : str;
+                let str = val + e.i;
+
+                if (max_chars != null)
+                {
+                    if (str.length > max_chars)
+                    {
+                        const slice_len = max_chars - 1;
+                        str = val.toString ().slice (0, str[slice_len - 1] != "." ? slice_len : slice_len - 1) + e.i;
+                    }
+                }
+
+                str = str.padStart (max_chars, " ");                    
+
+                if (max_chars == null || str.length <= max_chars)
+                    return str;
             }            
         }
+        return "?".repeat (max_chars != null ? max_chars : 5);
     }
 
     else

@@ -277,7 +277,7 @@ async function Testing (argv)
     const arg = argv.Pop ();
     Sys.INFO (arg);
     Sys.INFO (Util.GetSizeStr (arg, false, null) );    
-    Sys.INFO (Util.GetSizeStr (arg, true, 4) );
+    Sys.INFO (Util.GetSizeStr (arg, true, 5) );
 
 }
 
