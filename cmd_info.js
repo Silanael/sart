@@ -8,12 +8,14 @@
 //
 
 // Imports
-const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js');
-const Util     = require ('./util.js');
-const Arweave  = require ('./arweave.js');
-const ArFS     = require ('./ArFS.js');
-const GQL      = require ('./GQL.js');
+const Sys          = require ('./sys.js');
+const Settings     = require ('./settings.js');
+const Util         = require ('./util.js');
+const Arweave      = require ('./arweave.js');
+const ArFS         = require ('./ArFS.js');
+const GQL          = require ('./GQL.js');
+const PrintObj_Out = require("./PrintObj_Out").PrintObj_Out;
+
 
 
 function Help (args)
@@ -45,14 +47,7 @@ async function HandleCommand (args)
     {
         Type:         "UNKNOWN",
         Identifier:   target,
-        Network:      "Arweave",
-        //Address:        null,
-        //Target:       null,
-        //Errors:       null,
-        //TagsAmount:   0,
-        //Tags:         null,
-        //DataSize_B:   0,
-        //DataLocation: null,
+        Network:      "Arweave",    
     }
 
 
@@ -60,10 +55,22 @@ async function HandleCommand (args)
     const tx = await Arweave.GetTx (target);
 
     if (tx != null)
+        await Handler_TX (info, tx);
+    
+  
+    PrintObj_Out (info);
+     
+}
+
+
+
+async function Handler_TX (info, tx)
+{
+    if (tx != null)
     {
         info.Type     = "Transaction";
         info.TXFormat = tx.format;
-        info.TXID     = target;
+        info.TXID     = tx.id;
         info.Address  = await Arweave.OwnerToAddress (tx.owner);             
         info.LastTX   = tx.last_tx;
         if (Util.IsSet (tx.target) ) info.Target   = tx.target;   
@@ -73,7 +80,7 @@ async function HandleCommand (args)
         // Tags
         info.TagsAmount = tx.tags?.length > 0 ? tx.tags.length : 0;
         if (info.TagsAmount > 0)
-            info.Tags = Util.DecodeTXTags (tx).entries;
+            info.Tags = Util.DecodeTXTags (tx);
 
 
         // Data
@@ -100,12 +107,9 @@ async function HandleCommand (args)
                 Sys.ERR ("Transaction " + target + " has quantity set, but no target!");
                 info.Errors =  info.Errors != null ? info.Errors : "" + "Quantity set but no target. ";
             }
-        }
-        Sys.INFO (info);
-    }
-     
+        }        
+    }    
 }
-
 
 
 module.exports = { HandleCommand, Help }
