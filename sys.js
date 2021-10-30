@@ -25,7 +25,7 @@ function ErrorHandler (error)
     if (error != undefined)
     {
         DEBUG (error);
-        
+        INFO (error);
         let msg = error.code;
         
         // The Error is a string or so.
@@ -156,6 +156,25 @@ function EXIT (code)
 
 
 
+function ON_EXCEPTION (exception, src = "Something")
+{    
+    if (exception != null)
+    {        
+        if (Settings.IsDebug () )
+        {            
+            DEBUG (src + " caused the following exception:")
+            DEBUG (exception);
+        }
+        if (Settings.IsVerbose () )
+            VERBOSE (src + " failed.");
+    }
+    else
+        ERR ("Sys.ON_EXCEPTION: Parameter missing (Caused by " + src + ").");
+
+    return false;
+}
+
+
 module.exports = 
 {
     OUT_TXT,
@@ -170,5 +189,6 @@ module.exports =
     ERR_MISSING_ARG,
     ERR_FATAL,
     EXIT,
+    ON_EXCEPTION,
     ErrorHandler,
 };

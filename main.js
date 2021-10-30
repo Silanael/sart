@@ -21,6 +21,7 @@ const List     = require ('./cmd_list.js');
 const Get      = require ('./cmd_get.js');
 const Search   = require ('./cmd_search.js');
 const Console  = require ('./cmd_console.js');
+const Info     = require ('./cmd_info.js');
 
 const ArweaveLib  = require ('arweave');
 
@@ -44,8 +45,10 @@ const Commands =
     "version"     : DisplayVersion,        
     "-v"          : DisplayVersion,    
     "--version"   : DisplayVersion,
-    "info"        : Arweave.DisplayArweaveInfo,
+    "info"        : Info,
+    "-i"          : Info,
     "list"        : List,
+    "-l"          : List,
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,

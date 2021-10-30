@@ -70,6 +70,7 @@ function PopArg (args)
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
 function IsFlag        (arg, flags)   { return flags[arg] != null; }
 function IsFlagWithArg (arg, flags)   { return flags[arg]?.A; }
+function IsSet         (value)        { return value != null && value.length > 0; }
 function IsArweaveHash (str)          { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID      (str)          { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 function GetUNIXTime   ()             { return new Date ().getTime (); }
@@ -316,4 +317,4 @@ function DecodeTXTags (tx)
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet };

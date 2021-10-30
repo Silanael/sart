@@ -14,6 +14,7 @@ const Sys         = require ('./sys.js');
 const Settings    = require ('./settings.js');
 const Util        = require ('./util.js');
 const GQL         = require ('./GQL.js');
+const { debug } = require('arweave/node/lib/merkle');
 
 
 
@@ -59,7 +60,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );    
+    ); 
     
 }
 
@@ -86,6 +87,13 @@ async function Post (host_str, data_obj)
         }        
     }
     return null;
+}
+
+
+async function OwnerToAddress (owner)
+{
+    const arweave = Init ();
+    return await arweave.wallets.ownerToAddress (owner);
 }
 
 
@@ -125,56 +133,94 @@ async function SearchTag (tag, value)
 async function GetTx (txid)
 {    
     const arweave = Init ();
-    tx = await arweave.transactions.get (txid);    
+    
+    try               { tx = await arweave.transactions.get (txid);                               }
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTx (" + txid + ")"); tx = null;  }
+
     return tx;
 }
 
 
 
 async function OutputTxData (txid)
-{
-    
+{    
      const arweave = await Init ();
-     arweave.transactions.getData (txid, {decode: true} )                
-             .then ( data => { process.stdout.write (data) } );
 
+     try
+     {
+        arweave.transactions.getData (txid, {decode: true} )                
+                 .then ( data => { process.stdout.write (data) } );
+     }
+     catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.OutputTxData (" + txid + ")"); tx = null;  }
 }
+
+
+
+
 
 async function GetTxData (txid)
 { 
-     const arweave = await Init ();     
-     const data = await arweave.transactions.getData (txid, {decode: true} );
+    const arweave = await Init ();     
 
-     return data;
+    try               
+    { 
+         const data = await arweave.transactions.getData (txid, {decode: true} );  
+    }
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); tx = null;  }
+
+    return data;
 }
+
+
 
 
 async function GetTxStrData (txid)
-{
-    
-     const arweave = await Init ();
-     const data = await arweave.transactions.getData (txid, {decode: true, string: true} );
-     return data;
+{    
+    const arweave = await Init ();
+
+    try
+    { 
+        const data = await arweave.transactions.getData (txid, {decode: true, string: true} );  
+    }
+    catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxStrData (" + txid + ")"); }
+ 
+    return data;
 }
+
+
 
 
 async function GetTxRawData (txid)
 {    
     const arweave = await Init ();
-    const data = await arweave.chunks.downloadChunkedData (txid); 
+
+    try
+    { 
+        const data = await arweave.chunks.downloadChunkedData (txid); 
+    }
+    catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxRawData (" + txid + ")"); }
+    
     return data;
 }
+
+
 
 
 async function GetTXsForAddress (address, tags = [] )
 {
     const query = GQL.Query ()
     const arweave = Init ();
-    results = await GQL.RunGQLTransactionQuery (this, address, tags)     
+
+    try
+    { 
+        const results = await GQL.RunGQLTransactionQuery (this, address, tags)     
+    }
+    catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTXsForAddress (" + address + ", " + tags + ")"); }    
+    
     return results;
 }
 
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
-                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo};
+                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress};
