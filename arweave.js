@@ -24,7 +24,9 @@ var Arweave_Instance;
 
 
 // Constants
+const ENDPOINT_PENDING = "tx/pending";
 const _TAG = "Arweave";
+
 
 
 
@@ -60,8 +62,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    ); 
-    
+    );     
 }
 
 
@@ -114,6 +115,21 @@ async function GetNetworkInfo   ()
     const r = await arweave.network.getInfo (); 
     return r; 
 }
+
+async function GetMemPool ()
+{
+    const arweave = Init ();
+    try
+    {
+        const ret = await arweave.api.get (ENDPOINT_PENDING);
+        if (ret.data != null)
+            return ret.data;
+    }
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetmemPool ()"); }
+
+    return null;
+}
+
 
 
 function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
@@ -223,4 +239,4 @@ async function GetTXsForAddress (address, tags = [] )
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
-                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress};
+                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool };

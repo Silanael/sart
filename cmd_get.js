@@ -15,6 +15,7 @@ const Util     = require ('./util.js');
 const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
 const GQL      = require ('./GQL.js');
+const { PrintObj_Out } = require("./PrintObj_Out");
 
 
 
@@ -27,15 +28,20 @@ const SUBCOMMANDS =
     "pathmanifest" : Handler_RawData,    
     "arweave"      : Handler_Arweave,
     "file"         : Handler_ArFS,
+    "mempool"      : Handler_MemPool,
+    "pending"      : Handler_PendingAmount
 }
 
-const ARWEAVE_FIELDS = "network, version, release, height, current, blocks, peers, queue_length, node_state_latency";
+const ALIASES_PENDING = ["amount", "pending", "pendings", "total"];
+const ARWEAVE_FIELDS  = "network, version, release, height, current, blocks, peers, queue_length, node_state_latency";
 
 
 function Help (args)
 {
     Sys.INFO ("GET USAGE");
     Sys.INFO ("---------");
+    Sys.INFO ("");
+    Sys.INFO ("SUBCOMMANDS: tx, txtags, txdata, txrawdata, file, arweave, mempool, pending");
     Sys.INFO ("");
     Sys.INFO ("Get a file from a transaction:")
     Sys.INFO ("   get file [txid] > file.ext");
@@ -44,7 +50,10 @@ function Help (args)
     Sys.INFO ("   get file [file-id] > file.ext");
     Sys.INFO ("");
     Sys.INFO ("Get transaction in JSON format:")
-    Sys.INFO ("   get tx [txid]");
+    Sys.INFO ("   get tx [txid] > tx.json");
+    Sys.INFO ("");
+    Sys.INFO ("Get transaction tags:")
+    Sys.INFO ("   get tx [txid] tags");
     Sys.INFO ("");
     Sys.INFO ("Get transaction data:")
     Sys.INFO ("   get txdata [txid] > file.ext");
@@ -53,11 +62,10 @@ function Help (args)
     Sys.INFO ("   get txrawdata [txid] > manifest.json");
     Sys.INFO ("");
     Sys.INFO ("Get Arweave network status:")
-    Sys.INFO ("   get arweave");
-    Sys.INFO ("");
-    Sys.INFO ("Get specific Arweave network info:")
     Sys.INFO ("   get arweave [field]");
     Sys.INFO ("");
+    Sys.INFO ("Get network pending transactions:")
+    Sys.INFO ("   get pending");    
     Sys.INFO ("");
     Sys.INFO ("NOTE: Don't run with NPM, instead use:");
     Sys.INFO ("   node ./main.js get ...");
@@ -124,7 +132,7 @@ async function Handler_TX (args)
         if (field != null)
         {
             if (Util.StrCmp (field, "tags") )
-                PrintObj_Out (Util.DecodeTXTags (tx).entries )
+                PrintObj_Out (Util.DecodeTXTags (tx) )
 
             else if (tx[field] != null)
                 PrintObj_Out (tx[field]);
@@ -134,14 +142,8 @@ async function Handler_TX (args)
         }
             
         // Print the entire TX.
-        else            
-        {
-            // Replace the encoded tags with an array of decoded ones for output.
-            if (Settings.IsTXTOut () )
-            tx.tags = Util.DecodeTXTags (tx);
-
+        else                    
             PrintObj_Out (tx);        
-        }
 
     }
     else
@@ -225,41 +227,30 @@ async function Handler_ArFS (args)
 }
 
 
-
-
-
-
-// TODO: Move to Util.
-function PrintObj_Out (obj, opts = { indent: 0 } )
+async function Handler_MemPool (args, show_amount = false)
 {
-    if (obj == null)
-        return false;
-
-    switch (Settings.Config.OutputFormat)
-    {
-        case Settings.OutputFormats.JSON:
-            Sys.OUT_TXT (obj);
-            break;
-
-        // Text
-        default:
-            // Get longest field name
-            let longest_len = 0;
-            Object.entries(obj).forEach ( e => { if (e[0]?.length > longest_len) longest_len = e[0].length; }  );
-
-            // list all
-            Object.entries(obj).forEach
-            ( e => 
-            {                
-                const val_str     = e[1];        
-                Sys.OUT_TXT (e[0]?.toUpperCase()?.padEnd (longest_len, " ").padStart (opts.indent * 4, " ") + "  " + val_str);        
-            }  
-            );
-        break;
-    }
-
+    const param   = args?.PopLC ();
+    const mempool = await Arweave.GetMemPool ();
     
+    if (mempool == null)
+    {
+        Sys.ERR ("Failed to retrieve the mempool!")
+        return false;
+    }
+    
+    else if (show_amount || ALIASES_PENDING.includes (param) )
+        Sys.OUT_TXT (mempool.length);
+
+    else
+        PrintObj_Out (mempool);
+
 }
+
+async function Handler_PendingAmount ()
+{
+    return Handler_MemPool (null, true);
+}
+
 
 
 module.exports = { HandleCommand, Help }

@@ -33,45 +33,50 @@ const OutputFormats =
 
 const Config =
 {
-    LogLevel         : LogLevels.NORMAL,
-        
-    ArweaveHost      : "arweave.net",
-    ArweavePort      : 443,
-    ArweaveProto     : "https",    
-    ManualDest       : false,
-    
-    Recursive        : false,
-    DisplayAll       : false,    
-    AllowWildcards   : true,
+    LogLevel            : LogLevels.NORMAL,
+           
+    ArweaveHost         : "arweave.net",
+    ArweavePort         : 443,
+    ArweaveProto        : "https",    
+    ManualDest          : false,
+       
+    Recursive           : false,
+    DisplayAll          : false,    
+    AllowWildcards      : true,
+   
+    OutputFields        : null,
+    OutputFormat        : OutputFormats.TXT,
+    SizeDigits          : 5,
+    VarNamesUppercase   : false, 
 
-    OutputFields     : null,
-    OutputFormat     : OutputFormats.TXT,
-    SizeDigits       : 5,
-
-    Force            : false,
-
-    MetadataMaxSize  : 1073741824, // 1MB ought to be enough for anybody?
-    ContainerMode    : false,
-
+    Force               : false,
+   
+    MetadataMaxSize     : 1073741824, // 1MB ought to be enough for anybody?
+    ContainerMode       : false,
+  
 };
 
 
-function GetHostString      ()      { return Config.ArweaveProto + "://" + Config.ArweaveHost + ":" + Config.ArweavePort; }
-function GetGQLHostString   ()      { return GetHostString () + "/graphql";             }
-function IsQuiet            ()      { return Config.LogLevel <= LogLevels.QUIET;        }
-function IsMSGOutputAllowed ()      { return Config.LogLevel >  LogLevels.QUIET;        }
-function IsVerbose          ()      { return Config.LogLevel >= LogLevels.VERBOSE;      }
-function IsDebug            ()      { return Config.LogLevel >= LogLevels.DEBUG;        }
-function IsForceful         ()      { return Config.Force;                              }
-function IsHTMLOut          ()      { return Config.OutputFormat == OutputFormats.HTML; }
-function IsCSVOut           ()      { return Config.OutputFormat == OutputFormats.CSV;  }
-function IsTXTOut           ()      { return Config.OutputFormat == OutputFormats.TXT;  }
-function IsJSONOut          ()      { return Config.OutputFormat == OutputFormats.JSON; }
-function SetForce           ()      { Config.Force = true;                              }
-function SetPort            (port)  { Config.ArweavePort  = port;  ManualDest = true;   }
-function SetProto           (proto) { Config.ArweaveProto = proto; ManualDest = true;   }
-function SetDisplayAll      ()      { Config.DisplayAll   = true;;                      }
-function SetRecursive       ()      { Config.Recursive    = true;;                      }
+
+
+function GetHostString      (path = null) { return Config.ArweaveProto + "://"    
+                                          + Config.ArweaveHost + ":" + Config.ArweavePort
+                                          + ( path != null ? path : "");                      }
+function GetGQLHostString   ()            { return GetHostString () + "/graphql";             }
+function IsQuiet            ()            { return Config.LogLevel <= LogLevels.QUIET;        }
+function IsMSGOutputAllowed ()            { return Config.LogLevel >  LogLevels.QUIET;        }
+function IsVerbose          ()            { return Config.LogLevel >= LogLevels.VERBOSE;      }
+function IsDebug            ()            { return Config.LogLevel >= LogLevels.DEBUG;        }
+function IsForceful         ()            { return Config.Force;                              }
+function IsHTMLOut          ()            { return Config.OutputFormat == OutputFormats.HTML; }
+function IsCSVOut           ()            { return Config.OutputFormat == OutputFormats.CSV;  }
+function IsTXTOut           ()            { return Config.OutputFormat == OutputFormats.TXT;  }
+function IsJSONOut          ()            { return Config.OutputFormat == OutputFormats.JSON; }
+function SetForce           ()            { Config.Force = true;                              }
+function SetPort            (port)        { Config.ArweavePort  = port;  ManualDest = true;   }
+function SetProto           (proto)       { Config.ArweaveProto = proto; ManualDest = true;   }
+function SetDisplayAll      ()            { Config.DisplayAll   = true;;                      }
+function SetRecursive       ()            { Config.Recursive    = true;;                      }
 
 
 

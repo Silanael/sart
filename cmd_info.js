@@ -80,7 +80,7 @@ async function Handler_TX (info, tx)
         // Tags
         info.TagsAmount = tx.tags?.length > 0 ? tx.tags.length : 0;
         if (info.TagsAmount > 0)
-            info.Tags = Util.DecodeTXTags (tx);
+            Util.DecodeTXTags (tx, info, "TAG:");        
 
 
         // Data

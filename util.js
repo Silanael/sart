@@ -275,8 +275,24 @@ function RequireParam (param, name, src)
 
 
 
+class TXTag
+{
+    Name  = null;
+    Value = null;
 
-function DecodeTXTags (tx)
+    constructor (name, value) { this.Name = name; this.Value = value; }
+    /* Override */ toString () { return this.Name + ":" + this.Value  }
+
+    AddAsField (dest_obj, name_prefix = "")
+    { 
+        if (dest_obj != null) 
+            dest_obj[name_prefix + this.Name] = this.Value; 
+    }    
+}
+
+
+
+function DecodeTXTags (tx, dest_obj = null, prefix="")
 {
     if (tx == null)
     {
@@ -292,22 +308,23 @@ function DecodeTXTags (tx)
 
     else
     {
-        const decoded_tags =
-        { 
-            entries: {},
-            toString () 
-            { 
-                return Object.entries (this.entries)?.length + " -> " + ObjToStr (this.entries); 
-            } 
-        };
-                 
+        const decoded_tags = [];
+                         
         let tag;
+        let e;
         for (let C = 0; C < len; ++C)
         {
             tag = tx.tags[C];
-            decoded_tags.entries [tag.get ('name',  { decode: true, string: true }) ]
-                                = tag.get ('value', { decode: true, string: true });
-        }
+            e = new TXTag 
+            (
+                tag.get ('name',  { decode: true, string: true } ),
+                tag.get ('value', { decode: true, string: true } )
+            );
+
+            decoded_tags.push (e);            
+            e.AddAsField (dest_obj, prefix);
+                
+        }        
         return decoded_tags;
     }    
 }
