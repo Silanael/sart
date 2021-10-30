@@ -116,6 +116,7 @@ async function GetNetworkInfo   ()
     return r; 
 }
 
+
 async function GetMemPool ()
 {
     const arweave = Init ();
@@ -130,6 +131,12 @@ async function GetMemPool ()
     return null;
 }
 
+
+async function GetPendingTXAmount ()
+{
+    const  mempool = await GetMemPool ();
+    return mempool?.length;
+}
 
 
 function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
@@ -239,4 +246,4 @@ async function GetTXsForAddress (address, tags = [] )
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
-                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool };
+                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount };

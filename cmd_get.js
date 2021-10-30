@@ -98,12 +98,19 @@ async function Handler_Arweave (args)
     
     if (network_status != null)
     {
+
+        // Append mempool size
+        network_status["pending_tx_amount"] = await Arweave.GetPendingTXAmount ();
+
+
         // User wants a specific argument.
         if (args.HasNext () )
         {
             const property = args.PopLC ();
+
             if (network_status[property] != null)
                 Sys.OUT_TXT(network_status[property]);
+
             else
                 Sys.ERR ("Unknown Arweave-property '" + property + "'.\nPROPERTIES: " + ARWEAVE_FIELDS);
         }
@@ -200,6 +207,8 @@ async function Handler_RawData (args)
 
 
 
+
+
 // TODO: Move to ArFS.js.
 async function Handler_ArFS (args)
 {
@@ -225,6 +234,8 @@ async function Handler_ArFS (args)
     else
         Sys.ERR_FATAL ("Invalid target: '" + target + "' - not an ArFS-ID or a transaction ID.");
 }
+
+
 
 
 async function Handler_MemPool (args, show_amount = false)
