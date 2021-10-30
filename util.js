@@ -25,9 +25,9 @@ class Args
 
 
     HasNext () { return this._Argv != null && this._Pos < this._Argv.length; }
-    PopLC () { return this.Pop ()?.toLowerCase (); }
-    PopUC () { return this.Pop ()?.toUpperCase (); }
-
+    PopLC   () { return this.Pop ()?.toLowerCase ();                         }
+    PopUC   () { return this.Pop ()?.toUpperCase ();                         }
+    Peek    () { return this._Argv[this._Pos];                               }
 
     RequireAmount (amount)
     { 
@@ -37,7 +37,6 @@ class Args
             
         return this;
     }
-
     
     Pop ()
     {
@@ -51,6 +50,7 @@ class Args
             return null;
     }
 
+    
     
 }
 

@@ -155,8 +155,9 @@ async function SearchTag (tag, value)
 
 async function GetTx (txid)
 {    
-    const arweave = Init ();
-    
+    const arweave = Init ();    
+    let   tx      = null;
+
     try               { tx = await arweave.transactions.get (txid);                               }
     catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTx (" + txid + ")"); tx = null;  }
 
@@ -184,10 +185,11 @@ async function OutputTxData (txid)
 async function GetTxData (txid)
 { 
     const arweave = await Init ();     
+    let   data    = null;
 
     try               
     { 
-         const data = await arweave.transactions.getData (txid, {decode: true} );  
+         data = await arweave.transactions.getData (txid, {decode: true} );  
     }
     catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); tx = null;  }
 
@@ -200,10 +202,11 @@ async function GetTxData (txid)
 async function GetTxStrData (txid)
 {    
     const arweave = await Init ();
+    let   data    = null;
 
     try
     { 
-        const data = await arweave.transactions.getData (txid, {decode: true, string: true} );  
+        data = await arweave.transactions.getData (txid, {decode: true, string: true} );  
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxStrData (" + txid + ")"); }
  
@@ -216,10 +219,11 @@ async function GetTxStrData (txid)
 async function GetTxRawData (txid)
 {    
     const arweave = await Init ();
+    let   data    = null;
 
     try
     { 
-        const data = await arweave.chunks.downloadChunkedData (txid); 
+        data = await arweave.chunks.downloadChunkedData (txid); 
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxRawData (" + txid + ")"); }
     
@@ -231,9 +235,9 @@ async function GetTxRawData (txid)
 
 async function GetTXsForAddress (address, tags = [] )
 {
-    const query = GQL.Query ()
     const arweave = Init ();
-
+    const query   = GQL.Query ()
+    
     try
     { 
         const results = await GQL.RunGQLTransactionQuery (this, address, tags)     

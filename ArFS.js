@@ -1297,7 +1297,7 @@ async function GetMetaTXJSON (txid)
         }
     }
     else
-        Sys.ERR ("Failed to download metadata for TXID " + txid + " failed to parse into JSON.", __TAG);
+        Sys.ERR ("Failed to download metadata for TXID: " + txid, __TAG);
 
     return null;
 }
