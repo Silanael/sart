@@ -14,12 +14,15 @@ const Util         = require ('./util.js');
 const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
 const GQL          = require ('./GQL.js');
+const Package      = require ('./package.json');
 const PrintObj_Out = require("./PrintObj_Out").PrintObj_Out;
 
 
 const SUBCOMMANDS = 
 {
-    "tx": Handler_TX
+    "tx"     : Handler_TX,
+    "sart"   : Handler_SART,
+    "author" : Handler_Author
 };
 
 
@@ -70,7 +73,7 @@ async function HandleCommand (args)
     }
 
     else
-        Sys.ERR_FATAL ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
+        Sys.ERR_FATAL ("Unable to determine what '" + target + "' is.");
   
     if (info.Valid)
         PrintObj_Out (info);
@@ -136,6 +139,84 @@ async function Handler_TX (args, info, tx = null)
 
     info.Valid = true;
 }
+
+
+async function Handler_SART (args)
+{
+
+const description = 
+`
+
+SART is my take on writing a terminal tool to interact with the Arweave-network
+with built-in ArFS-compatibility written from scratch. The greatest motivation
+behind the project was to get reliable information about the state of my
+ArDrive-drives, prompted by a prolonged period during which ArDrive's software
+wouldn't display all my files. SART was primarily made to be a data-acquisition
+utility (a successor to ardrive-get-files) but will be much more than that.
+
+The project also serves as a practice for greater things to come, being
+my second JavaScript-endeavour to this date. I sought to create an utility that
+would help along with this path, proving me the data I need in the future.
+
+That said, I have quite some visions for SART as well - after this preliminary
+release, I'm going to heavily optimize the queries (currently it's slow as hell,
+no optimization done whatsoever so far - I just wanted a reliable directory
+listing), add a proper Command Interface Mode, variable output field support,
+proper output file format handlers and an add-on system to allow transaction
+handlers to be loaded from JSONs. So many plans, so little energy..
+
+This version is not meant for any serious use. I'm releasing it as a kind of
+a milestone, something I can use to verify that the data fetching is working
+as intended when I start to optimize the queries and the fetch process.
+One could say I'm also releasing it for the sake of historic preservation,
+to have something concrete and solid instead of just another commit in
+the GIT repository. Other reasons involve allowing people to use its
+functionality while I'm developing the improved version.
+Another reason is that it is well possible that the SART I've envisioned
+may never see the light of day...
+
+- Silanael
+  2021-10-31\n`;  
+
+    const info =
+    {
+        Name:         "Silanael ARweave Tool",
+        Acronym:      "SART",
+        Version:      Util.GetVersion (),
+        VersionDate:  Package.versiondate,
+        VersionName:  Package.codename,
+        Description:  description
+ 
+            
+    }
+
+    PrintObj_Out (info);
+
+}
+
+
+async function Handler_Author ()
+{
+    const info =
+    {
+        Name:         "Silanael",
+        Description:  "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
+                      + "A creator and a destroyer. A strong ally and an enemy to be reckoned with. "
+                      + "A pragmatic idealist. A fighter longing for a moment of rest..",
+        Properties:   "MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, ex-drifter",
+        Website:      "www.silanael.com",
+        "E-Mail":     "sila@silanael.com",
+        Arweave:      "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
+        ArDrive:      "a44482fd-592e-45fa-a08a-e526c31b87f1",
+        GitHub:       "https://github.com/Silanael",
+        DeviantArt:   "https://www.deviantart.com/silanael",      
+    }
+
+    PrintObj_Out (info);
+
+}
+
+
 
 
 module.exports = { HandleCommand, Help, SUBCOMMANDS }
