@@ -4,7 +4,7 @@ const Util     = require ('./util.js');
 
 
 
-function PrintObj_Out(obj, opts = { indent: 0 } ) 
+function PrintObj_Out (obj, opts = { indent: 0 } ) 
 {
 
     if (obj == null)
@@ -14,8 +14,18 @@ function PrintObj_Out(obj, opts = { indent: 0 } )
     switch (Settings.Config.OutputFormat) 
     {        
         case Settings.OutputFormats.JSON:
-            
-            Sys.OUT_TXT(obj);
+
+            const json = Util.ObjToJSON (obj);
+
+            if (json != null)
+                Sys.OUT_TXT (json);
+
+            else
+            {
+                Sys.ERR ("Unable to convert object " + obj + " to JSON - trying to print it as-is:");
+                Sys.OUT_TXT (obj);
+            }
+
             break;
 
         // Text
@@ -34,7 +44,7 @@ function PrintObj_Out(obj, opts = { indent: 0 } )
             Object.entries (obj).forEach 
             (e => 
             {   
-                const val_str = e[1].toString ();
+                const val_str = e[1] != null ? e[1].toString () : "-";
                 const var_str = !Settings.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
 
                 Sys.OUT_TXT (var_str?.padEnd(longest_len, " ").padStart(opts.indent * 4, " ") + "  " + val_str);                

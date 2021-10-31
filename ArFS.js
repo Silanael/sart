@@ -358,22 +358,24 @@ class ArFSEntity
 
 
     
-    GetIDTag             ()       { return GetIDTag (this.ArFSEntityType);                                                }
-    IsContainedIn        (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID            }
-    IsFile               ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;                                        }
-    IsFolder             ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER;                                      }
-    IsDrive              ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;                                       }
-    GetID                ()       { return this.ArFSID;                                                                   }    
-    GetName              ()       { return this.ArFSName;                                                                 }
-    GetDisplayName       ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";    }
-    GetNameAndID         ()       { return this.GetDisplayName () + " (" + this.ArFSID + ")";                             }
-    GetIDAndName         ()       { return this.ArFSID + " (" + this.GetDisplayName () + ")";                             }
-    GetSizeBytes         ()       { return null;                                                                             }    
-    HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase (); }    
-    HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;   }    
-    HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                  }    
-    IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                 }
-    IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                    }
+    GetIDTag             ()       { return GetIDTag (this.ArFSEntityType);                                                         }
+    IsContainedIn        (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID                     }
+    IsFile               ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;                                                 }
+    IsFolder             ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER;                                               }
+    IsDrive              ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;                                                }
+    GetID                ()       { return this.ArFSID;                                                                            }    
+    GetName              ()       { return this.ArFSName;                                                                          }
+    GetDisplayName       ()       { return this.ArFSName != null && this.ArFSName != "" ? this.ArFSName : "<UNNAMED>";             }
+    GetNameAndID         ()       { return this.GetDisplayName () + " (" + this.ArFSID + ")";                                      }
+    GetIDAndName         ()       { return this.ArFSID + " (" + this.GetDisplayName () + ")";                                      }
+    GetSizeBytes         ()       { return null;                                                                                   }    
+    GetArweaveNetLink    ()       { return this.IsFile () && this.HasDataTXID () ? "https://arweave.net/" + this.DataTXID : null;  }
+    HasTargetName        (name)   { return this.ArFSName != null && this.ArFSName.toLowerCase () == name?.toLowerCase ();          }    
+    HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;            }    
+    HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                           }
+    HasDataTXID          ()       { return Util.IsSet (this.DataTXID);                                                             }
+    IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                          }
+    IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                             }
 
 
 
@@ -617,7 +619,26 @@ class ArFSEntity
 
     GetListStr ()
     {
-        return this.ArFSID + " " + this.GetFlagStr () + " " + this.GetSizeStr () + " " + this.GetPathNameToRoot ();
+        switch (Settings.Config.OutputFormat)
+        {
+            case Settings.OutputFormats.CSV:
+
+                const SEP = ",";
+
+                return this.ArFSID                                                  + SEP 
+                     + (this.MetaTXID_Latest != null ? this.MetaTXID_Latest : "")   + SEP 
+                     + (this.DataTXID        != null ? this.DataTXID        : "")   + SEP 
+                     + this.GetName           ()                                    + SEP                      
+                     + this.GetPathNameToRoot ()                                    + SEP
+                     + this.GetSizeBytes      ()                                    + SEP
+                     + this.GetArweaveNetLink ()       
+                break;
+
+            // TXt
+            default:
+                return this.ArFSID + " " + this.GetFlagStr () + " " + this.GetSizeStr () + " " + this.GetPathNameToRoot ();
+        }
+        
     }
 
 

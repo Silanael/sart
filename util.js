@@ -155,6 +155,22 @@ function ObjToStr (obj, opts = { kvp_separator: ":", entry_separator: " "} )
     return str;
 }
 
+
+function ObjToJSON (obj)
+{
+    if (obj != null)
+    {
+        try               { return JSON.stringify (obj); }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Util.ObjToJSON (" + obj?.name + ")"); }
+    }
+    else
+        Sys.ERR ("Util.ObjToJSON (): obj null.");
+    
+    return null;
+}
+
+
+
 const SIZE_UNITS =
 [
     { i:"B", d: 1                },
@@ -334,4 +350,4 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON };

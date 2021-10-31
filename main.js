@@ -54,6 +54,7 @@ const Commands =
     //"getfile"     : ArFS.DownloadFile,
     //"getdata"     : Arweave.GetTxData,
     "get"         : Get,
+    "-g"          : Get,
     "test"        : Testing
 }
 
@@ -235,7 +236,9 @@ function DisplayHelp (args)
 
         Sys.INFO ("COMMANDS:");
         Sys.INFO ("");
-        Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");    
+        Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");
+        Sys.INFO ("  -g, get     [TARGET]     Get (more or less) raw data (TX-data, files etc.)");
+        Sys.INFO ("  -i, info    [TARGET]     Obtain information about target.");
         Sys.INFO ("  -v, version              Display version info.");
         Sys.INFO ("      help    [COMMAND]    Display help for a command.");
         Sys.INFO ("");
@@ -250,7 +253,7 @@ function DisplayHelp (args)
         Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
         Sys.INFO ("      --port               Arweave gateway port.");
         Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
-        //Sys.INFO ("  -f, --format             Output data format. May be 'txt' or 'html'.");
+        Sys.INFO ("  -f, --format             Output data format. Valid format: txt, json, csv");
         Sys.INFO ("");
     }
 

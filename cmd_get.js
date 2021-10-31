@@ -29,7 +29,8 @@ const SUBCOMMANDS =
     "arweave"      : Handler_Arweave,
     "file"         : Handler_ArFS,
     "mempool"      : Handler_MemPool,
-    "pending"      : Handler_PendingAmount
+    "pending"      : Handler_PendingAmount,
+    "config"       : Handler_Config
 }
 
 const ALIASES_PENDING = ["amount", "pending", "pendings", "total"];
@@ -41,7 +42,7 @@ function Help (args)
     Sys.INFO ("GET USAGE");
     Sys.INFO ("---------");
     Sys.INFO ("");
-    Sys.INFO ("SUBCOMMANDS: tx, txtags, txdata, txrawdata, file, arweave, mempool, pending");
+    Sys.INFO ("SUBCOMMANDS: tx, txtags, txdata, txrawdata, file, arweave, mempool, pending, config");
     Sys.INFO ("");
     Sys.INFO ("Get a file from a transaction:")
     Sys.INFO ("   get file [txid] > file.ext");
@@ -257,9 +258,16 @@ async function Handler_MemPool (args, show_amount = false)
 
 }
 
+
 async function Handler_PendingAmount ()
 {
     return Handler_MemPool (null, true);
+}
+
+
+async function Handler_Config ()
+{
+    PrintObj_Out (Settings.Config);
 }
 
 

@@ -1,27 +1,30 @@
 {
-  "name": "SART",
-  "version": "0.8.5a",
-  "versiondate": "2021-10-28_01",
+  "name":        "SART",
+  "version":     "0.8.5a",
+  "versiondate": "2021-10-31_01",
   "description": "Silanael ARweave Tool",
-  "main": "main.js",
-  "bin": "main.js",
+  "codename":    "Dying light",
+  "main":        "main.js",
+  "bin":         "main.js",
   "scripts": {
-    "start":   "node ./main.js",
-    "help":    "node ./main.js --help",
-    "version": "node ./main.js --version",
-    "verbose": "node ./main.js --verbose",
-    "debug":   "node ./main.js --debug",
-    "quiet":   "node ./main.js --quiet"
+    "start":     "node ./main.js",
+    "help":      "node ./main.js --help",
+    "version":   "node ./main.js --version",
+    "verbose":   "node ./main.js --verbose",
+    "debug":     "node ./main.js --debug",
+    "quiet":     "node ./main.js --quiet"
   },
   "dependencies":
   {
-     "arweave": "^1.10.18"
+     "arweave":  "^1.10.18"
   },
-  "repository": {
+  "repository": 
+  {
     "type": "git",
     "url": ".git"
   },
-  "keywords": [
+  "keywords":
+  [
     "Arweave",
     "ArDrive",
     "tool",
@@ -30,6 +33,6 @@
     "Silanael",
     "CLI"
   ],
-  "author": "Silanael",
+  "author":  "Silanael",
   "license": "GPL-2.0-modified"
 }
