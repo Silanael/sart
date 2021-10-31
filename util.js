@@ -24,16 +24,17 @@ class Args
     }
 
 
-    HasNext () { return this._Argv != null && this._Pos < this._Argv.length; }
-    PopLC   () { return this.Pop ()?.toLowerCase ();                         }
-    PopUC   () { return this.Pop ()?.toUpperCase ();                         }
-    Peek    () { return this._Argv[this._Pos];                               }
+    HasNext   () { return this._Argv != null && this._Pos < this._Argv.length; }
+    PopLC     () { return this.Pop ()?.toLowerCase ();                         }
+    PopUC     () { return this.Pop ()?.toUpperCase ();                         }
+    Peek      () { return this._Argv[this._Pos];                               }
+    GetAmount () { return this._Argv.length - this._Pos; }
 
-    RequireAmount (amount)
+    RequireAmount (amount, msg = null)
     { 
         // This should exit.
         if (this._Argv.length - this._Pos < amount)         
-            Sys.ERR_MISSING_ARG ();
+            Sys.ERR_MISSING_ARG (msg);
             
         return this;
     }

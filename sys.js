@@ -16,7 +16,7 @@ const IsPiped = !process.stdout.isTTY;
 
 
 
-function ERR_MISSING_ARG () { ERR_FATAL ("Missing argument."); }
+function ERR_MISSING_ARG (msg = null) { ERR_FATAL ("Missing argument." + msg != null ? " " + msg : ""); }
 
 
 

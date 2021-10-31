@@ -288,7 +288,7 @@ class ArFSEntity
 
 
 
-    static CREATE (arfs_id = null, entity_type = null, master = null, gql_entry = null)
+    static async CREATE (arfs_id = null, entity_type = null, master = null, gql_entry = null)
     {
 
         if (gql_entry != null)
@@ -298,7 +298,6 @@ class ArFSEntity
             entity_type         = gql_entry.GetTag (TAG_ENTITYTYPE);
         }
         
-
         switch (entity_type)
         {
             case ENTITYTYPE_FILE:
@@ -996,7 +995,7 @@ class ArFSDir extends ArFSItem
                 continue;
             }
 
-            const new_entity = ArFSEntity.CREATE (null, null, this, entry);
+            const new_entity = await ArFSEntity.CREATE (null, null, this, entry);
             
             // Failed to create.
             if (new_entity == null)

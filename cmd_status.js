@@ -33,14 +33,15 @@ function Help (args)
 {
     Sys.INFO ("STATUS USAGE");
     Sys.INFO ("------------");
-    Sys.INFO ("");
-    Sys.INFO ("SUBCOMMANDS: tx, arweave, arfs");
-    Sys.INFO ("");
-    Sys.INFO ("Show Arweave status:")
+    Sys.INFO ("");    
+    Sys.INFO ("Print Arweave status:")
     Sys.INFO ("   status arweave [property]");
     Sys.INFO ("");
-    Sys.INFO ("Show transaction status:")
-    Sys.INFO ("   status tx [txid]");    
+    Sys.INFO ("Print transaction status:")
+    Sys.INFO ("   status tx [txid]");
+    Sys.INFO ("");
+    Sys.INFO ("Print ArFS-entity status:")
+    Sys.INFO ("   status arfs [arfs-id]");    
     Sys.INFO ("");
 }
 
@@ -62,6 +63,10 @@ async function HandleCommand (args)
     // Arweave-hash, only transactions applicable.
     else if (Util.IsArweaveHash (target) )
         await Handler_TX (args, target);
+
+    // ArFS-ID
+    //else if (Util.IsArFSID (target) )
+    //    await Handler_ArFS (args, target);
     
     else
         Sys.ERR_FATAL ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
@@ -104,22 +109,62 @@ async function Handler_TX (args, txid = null)
 }
 
 
+// TODO: Implement.
 async function Handler_ArFS (args, arfs_id = null)
-{
-    /*
-    if (txid == null) txid = args.RequireAmount (1).Pop ();
+{    
+
+    if ( ! args.RequireAmount (2, "Usage: status arfs <entity-type> <arfs-id> \n(entity-type can be 'file', 'folder' or 'drive'.)") )
+        return false;
     
-    if (txid != null)
+    Sys.WARN ("THIS FEATURE IS NOT FINISHED YET!")
+    Sys.WARN ("Entities show as invalid if wrong entity-type is given.")
+    Sys.WARN ("");
+
+    const entity_type = args.Pop ();
+    if (arfs_id == null) 
+        arfs_id = args.Pop ();
+
+
+    if (!Util.IsArFSID (arfs_id) )
+        return Sys.ERR ("Invalid ArFS-ID: " + arfs_id);
+
+
+
+    const status =
     {
-        const txstatus = await Arweave.GetTXStatus (txid);
-        if (txstatus != null)
-            PrintObj_Out (txstatus);
-        else
-            Sys.ERR ("Failed to retrieve status for transaction '" + txid + "'.");
+        "ArFS-ID":     arfs_id,
+        Valid:         false,
+        MetaTXID:      null,
+        DataTXID:      null,
+    }
+
+
+    const entity = await ArFS.ArFSEntity.CREATE (arfs_id, entity_type);
+
+    if (entity != null)
+    {
+        await entity.Update ();
+        status.Valid = entity.Valid;
+
+        if (status.Valid)
+        {
+            status.MetaTXID = entity.MetaTXID_Latest;
+            status.DataTXID = entity.DataTXID;
+        }                
     }
     else
-        Sys.ERR_MISSING_ARG ();
-    */
+        Sys.ERR ("Unable to figure out how to deal with " + arfs_id + ".")
+    
+
+    // Print
+    PrintObj_Out (status);
+
+    if (Util.IsSet (status.MetaTXID) )
+        await Handler_TX (args, status.MetaTXID);
+
+    if (Util.IsSet (status.DataTXID) )
+        await Handler_TX (args, status.DataTXID);
+
 }
 
 
