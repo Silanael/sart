@@ -62,7 +62,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );     
+    );         
 }
 
 
@@ -139,6 +139,8 @@ async function GetPendingTXAmount ()
 }
 
 
+
+
 function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
 
 
@@ -152,7 +154,7 @@ async function SearchTag (tag, value)
 }
 
 
-
+// TODO: Separate this try-catch -stuff into a common function.
 async function GetTx (txid)
 {    
     const arweave = Init ();    
@@ -164,6 +166,17 @@ async function GetTx (txid)
     return tx;
 }
 
+
+async function GetTXStatus (txid)
+{
+    const arweave  = Init ();    
+    let   txstatus = null;
+
+    try               { txstatus = await arweave.transactions.getStatus (txid);                         }
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")"); tx = null;  }
+
+    return txstatus;
+}
 
 
 async function OutputTxData (txid)
@@ -250,4 +263,5 @@ async function GetTXsForAddress (address, tags = [] )
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
-                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount };
+                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
+                   GetTXStatus };

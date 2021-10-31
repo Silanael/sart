@@ -3,7 +3,7 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// cmd_list.js - 2021-10-30_01
+// cmd_info.js - 2021-10-30_01
 // Command 'info'
 //
 
@@ -27,8 +27,6 @@ function Help (args)
 {
     Sys.INFO ("INFO USAGE");
     Sys.INFO ("----------");
-    Sys.INFO ("");
-    Sys.INFO ("COMMANDS: tx");
     Sys.INFO ("");
     Sys.INFO ("Show transaction info:")
     Sys.INFO ("   info <txid>");
@@ -140,4 +138,4 @@ async function Handler_TX (args, info, tx = null)
 }
 
 
-module.exports = { HandleCommand, Help }
+module.exports = { HandleCommand, Help, SUBCOMMANDS }

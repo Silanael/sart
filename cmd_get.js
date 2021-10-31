@@ -42,8 +42,6 @@ function Help (args)
     Sys.INFO ("GET USAGE");
     Sys.INFO ("---------");
     Sys.INFO ("");
-    Sys.INFO ("SUBCOMMANDS: tx, txtags, txdata, txrawdata, file, arweave, mempool, pending, config");
-    Sys.INFO ("");
     Sys.INFO ("Get a file from a transaction:")
     Sys.INFO ("   get file [txid] > file.ext");
     Sys.INFO ("");
@@ -272,4 +270,4 @@ async function Handler_Config ()
 
 
 
-module.exports = { HandleCommand, Help }
+module.exports = { HandleCommand, Help, SUBCOMMANDS }

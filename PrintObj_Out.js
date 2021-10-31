@@ -1,10 +1,20 @@
+//
+// *****************************
+// *** Silanael ARweave Tool ***
+// *****************************
+//
+// PrintObj_Out.js - 2021-10-30_01
+// Temporary file.
+//
+
+
 const Sys      = require('./sys.js');
 const Settings = require('./settings.js');
 const Util     = require ('./util.js');
 
 
 
-function PrintObj_Out (obj, opts = { indent: 0 } ) 
+function PrintObj_Out (obj, opts = { indent: 0, txt_obj: null } ) 
 {
 
     if (obj == null)
@@ -30,6 +40,13 @@ function PrintObj_Out (obj, opts = { indent: 0 } )
 
         // Text
         default:
+
+        
+            // A crafted object for text output was given,
+            // use it instead.
+            if (opts.txt_obj != null)
+                obj = opts.txt_obj;
+
 
             // Get longest field name
             let longest_len = 0;

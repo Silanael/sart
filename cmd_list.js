@@ -16,11 +16,11 @@ const ArFS     = require ('./ArFS.js');
 const GQL      = require ('./GQL.js');
 
 
-const Targets =
+const SUBCOMMANDS =
 {    
-    "tx"          : ListTXs,
-    "drive"       : ListDrive,
-    "drives"      : ListDrives,
+    //"tx"          : ListTXs,
+    //"drive"       : ListDrive,
+    //"drives"      : ListDrives,
 }
 
 
@@ -44,7 +44,7 @@ function Help (args)
 }
 
 
-
+// TODO
 async function HandleCommand (args)
 {
     args.RequireAmount (1);
@@ -111,4 +111,4 @@ async function ListDrives (args)
 }
 
 
-module.exports = { HandleCommand, Help }
+module.exports = { HandleCommand, Help, SUBCOMMANDS }

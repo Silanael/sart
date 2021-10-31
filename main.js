@@ -22,6 +22,7 @@ const Get      = require ('./cmd_get.js');
 const Search   = require ('./cmd_search.js');
 const Console  = require ('./cmd_console.js');
 const Info     = require ('./cmd_info.js');
+const Status   = require ('./cmd_status.js');
 
 const ArweaveLib  = require ('arweave');
 
@@ -49,12 +50,16 @@ const Commands =
     "-i"          : Info,
     "list"        : List,
     "-l"          : List,
+    "get"         : Get,
+    "-g"          : Get,
+    "status"      : Status,
+    "-s"          : Status,
+    "pending"     : Status.Handler_PendingAmount,
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,
     //"getdata"     : Arweave.GetTxData,
-    "get"         : Get,
-    "-g"          : Get,
+    
     "test"        : Testing
 }
 
@@ -203,12 +208,23 @@ function DisplayHelp (args)
     if (cmd_req != null)
     {
         const handler = Commands[cmd_req];
+
         if (handler != null)
         {
             if (handler.Help != null)
                 handler.Help ();
+
             else
                 Sys.INFO ("No help available for '" + cmd_req + "'.");
+
+            // Display subcommands at the end of the handler help-message.
+            if (handler.SUBCOMMANDS != null)
+            {
+                Sys.INFO ("");
+                let str = "SUBCOMMANDS:";
+                Object.keys (handler.SUBCOMMANDS).forEach (k => str += " " + k);
+                Sys.INFO (str);
+            }
         }
         else
             Sys.ERR ("HELP: Command '" + cmd_req + "' does not exist.");
@@ -236,9 +252,10 @@ function DisplayHelp (args)
 
         Sys.INFO ("COMMANDS:");
         Sys.INFO ("");
-        Sys.INFO ("  -l, list    [TARGET]     List Arweave- or ArDrive-content.");
+        Sys.INFO ("  -l, list    [TARGET]     List /*Arweave- or*/ ArDrive-content.");
         Sys.INFO ("  -g, get     [TARGET]     Get (more or less) raw data (TX-data, files etc.)");
-        Sys.INFO ("  -i, info    [TARGET]     Obtain information about target.");
+        Sys.INFO ("  -i, info    [TARGET]     Obtain information about the target.");
+        Sys.INFO ("    , pending              Display network pending TX amount.");
         Sys.INFO ("  -v, version              Display version info.");
         Sys.INFO ("      help    [COMMAND]    Display help for a command.");
         Sys.INFO ("");

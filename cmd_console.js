@@ -3,7 +3,7 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// cmd_list.js - 2021-10-19_01
+// cmd_console.js - 2021-10-19_01
 // Command 'console'
 //
 
