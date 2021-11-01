@@ -19,6 +19,9 @@ const Listing  = require ('./Listing.js');
 
 
 // Constants
+const ARFS_VERSION        = "0.11"
+
+const TAG_ARFS            = "ArFS";
 const TAG_FILEID          = "File-Id";
 const TAG_DRIVEID         = "Drive-Id";
 const TAG_FOLDERID        = "Folder-Id";
@@ -263,6 +266,7 @@ class ArFSEntity
     ArFSID           = null;
     ArFSName         = null;
     ArFSEntityType   = null;
+    ArFSVersion      = null;
             
     OwnerAddress     = null;
 
@@ -292,11 +296,8 @@ class ArFSEntity
     {
 
         if (gql_entry != null)
-        {
-            this.BlockHeight    = gql_entry.GetBlockHeight ();
-            this.BlockTimestamp = gql_entry.GetBlockTime ();
-            entity_type         = gql_entry.GetTag (TAG_ENTITYTYPE);
-        }
+            entity_type = gql_entry.GetTag (TAG_ENTITYTYPE);
+        
         
         switch (entity_type)
         {
@@ -328,13 +329,21 @@ class ArFSEntity
         // Setup using the result from a GQL-query
         if (gql_entry != null)
         {
+            this.ArFSVersion      = gql_entry.GetTag (TAG_ARFS)
+            this.VersionCheck ();
+            if (!this.IsValid () )
+                return;
+            
             this.ArFSEntityType   = gql_entry.GetTag (TAG_ENTITYTYPE);
             this.ArFSID           = gql_entry.GetTag (GetIDTag (this.ArFSEntityType) );
             this.MetaBlock_latest = gql_entry.Block;
+            this.BlockHeight      = gql_entry.GetBlockHeight ();
+            this.BlockTimestamp   = gql_entry.GetBlockTime   ();
         }
 
         else
         {
+            this.ArFSVersion      = ARFS_VERSION;
             this.ArFSEntityType   = entity_type;
             this.ArFSID           = arfs_id;
         }
@@ -352,7 +361,25 @@ class ArFSEntity
       
     }
 
+    VersionCheck ()
+    {
+        const ver = this.ArFSVersion;
 
+        if (ver <= Settings.Config.MaxArFSVersion && ver >= Settings.Config.MinArFSVersion)
+            return true;
+        
+        else
+        {
+            Sys.VERBOSE ("Unsupported ArFS-version " + this.ArFSVersion + " on entity '" + this.ArFSID + "'.");
+
+            if (!Settings.Config.IsForceful () )
+            {
+                Sys.ERR_ONCE ("Omitting files with unsupported ArFS-version. Use --force to override.");
+                this.Valid = false;
+            }
+            return false;
+        }        
+    }
 
 
 
@@ -373,6 +400,7 @@ class ArFSEntity
     HasTargetNameRegex   (regex)  { return this.ArFSName != null && this.ArFSName.toLowerCase ().match (regex) != null;            }    
     HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                           }
     HasDataTXID          ()       { return Util.IsSet (this.DataTXID);                                                             }
+    IsValid              ()       { return this.Valid;                                                                             }
     IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                          }
     IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                             }
 
@@ -539,6 +567,19 @@ class ArFSEntity
 
                 return this.Valid;
             }
+            this.BlockHeight    = new_blockheight;
+            this.BlockTimestamp = new_timestamp;
+
+
+            // Version check
+            this.ArFSVersion = entry.GetTag (TAG_ARFS);
+
+            if (!this.VersionCheck () )
+            {
+                Sys.ERR ("The newest metadata for " + this.GetNameAndID () + " is of unsupported ArFS-version (" + this.ArFSVersion + ") - keeping old.");
+                return this.Valid;
+            }
+            
 
             this.MetaTXID_Latest  = entry.TXID;
             this.MetaBlock_latest = entry.Block;
@@ -1773,4 +1814,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile };
+module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile };

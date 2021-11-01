@@ -253,6 +253,13 @@ function GetDate (date_time_spacer_chr = ' ')
 }
 
 
+function GetAge ()
+{ 
+    const now = new Date ();
+    const y = parseInt ( (now.getTime () - new Date (1985, 3, 15).getTime () ) / 1000 / 60 / 60 / 24 / 365 );
+    return y < 41 ? y + " (in " + now.getFullYear () + ")" : y < 90 ? y + " if not deceased." : y + " - either deceased or Bloodshade.";
+}
+
 
 function GetCmdArgs (argv, cmd_pos, flags)
 {
@@ -351,4 +358,4 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, GetAge };

@@ -52,6 +52,8 @@ const Config =
     Force               : false,
    
     MetadataMaxSize     : 1073741824, // 1MB ought to be enough for anybody?
+    MinArFSVersion      : 0.11,
+    MaxArFSVersion      : 0.11,
     ContainerMode       : false,
   
 };

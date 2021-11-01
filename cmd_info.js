@@ -154,8 +154,8 @@ ArDrive-drives, prompted by a prolonged period during which ArDrive's software
 wouldn't display all my files. SART was primarily made to be a data-acquisition
 utility (a successor to ardrive-get-files) but will be much more than that.
 
-The project also serves as a practice for greater things to come, being
-my second JavaScript-endeavour to this date. I sought to create an utility that
+The project also serves as a practice for greater things to come, being my
+second JavaScript-endeavour to this date. I sought to create an utility that
 would help along with this path, proving me the data I need in the future.
 
 That said, I have quite some visions for SART as well - after this preliminary
@@ -172,6 +172,7 @@ One could say I'm also releasing it for the sake of historic preservation,
 to have something concrete and solid instead of just another commit in
 the GIT repository. Other reasons involve allowing people to use its
 functionality while I'm developing the improved version.
+
 Another reason is that it is well possible that the SART I've envisioned
 may never see the light of day...
 
@@ -182,9 +183,18 @@ may never see the light of day...
     {
         Name:         "Silanael ARweave Tool",
         Acronym:      "SART",
-        Version:      Util.GetVersion (),
+        Version:      Package.version,
         VersionDate:  Package.versiondate,
         VersionName:  Package.codename,
+        Author:       "Silanael",
+        SizeUnits:    "Binary (1K = 1024 bytes)",
+        SizeSource:   "ArFS metadata-JSON",
+        Language:     "JavaScript",
+        IDE:          "Visual Studio Code / Code OSS v1.60.2",
+        Runtime:      "Node.js v16.10.0",
+        Dev_SYS:      "Potato-01 MK3",
+        Dev_OS:       "Manjaro Linux",
+        Dev_Kernel:   "Linux 5.10.70-1-MANJARO x86_64",
         Description:  description
  
             
@@ -199,18 +209,24 @@ async function Handler_Author ()
 {
     const info =
     {
-        Name:         "Silanael",
-        Description:  "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
-                      + "A creator and a destroyer. A strong ally and an enemy to be reckoned with. "
-                      + "A pragmatic idealist. A fighter longing for a moment of rest..",
-        Properties:   "MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, ex-drifter",
-        Website:      "www.silanael.com",
-        "E-Mail":     "sila@silanael.com",
-        Arweave:      "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
-        ArDrive:      "a44482fd-592e-45fa-a08a-e526c31b87f1",
-        GitHub:       "https://github.com/Silanael",
-        DeviantArt:   "https://www.deviantart.com/silanael",      
+        Name:            "Silanael",
+        Description:     "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
+                         + "A creator and a destroyer. A strong ally and an enemy to be reckoned with. "
+                         + "A pragmatic idealist. A fighter longing for a moment of rest..",
+        Properties:      "MtF, sub, dev, preservationist, artistic_spirit, stalker, dark ambassador, ex-RPer, ex-drifter",
+        Age:             Util.GetAge (),
+        Website:         "www.silanael.com",
+        "E-Mail":        "sila@silanael.com",
+        Arweave:         "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
+        ArDrive:         "a44482fd-592e-45fa-a08a-e526c31b87f1",
+        GitHub:          "https://github.com/Silanael",
+        DeviantArt:      "https://www.deviantart.com/silanael",
+        Twitter:         "https://www.twitter.com/silanael",
+        PGP_Fingerprint: "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
+        "The question":  "If you could have anything in the world, what would it be?"      
     }
+
+    
 
     PrintObj_Out (info);
 
