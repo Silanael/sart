@@ -16,7 +16,7 @@ const IsPiped = !process.stdout.isTTY;
 
 
 
-function ERR_MISSING_ARG (msg = null) { ERR_FATAL ("Missing argument." + msg != null ? " " + msg : ""); }
+function ERR_MISSING_ARG (msg = null) { ERR_FATAL ("Missing argument." + (msg != null ? " " + msg : "") ); }
 
 
 
@@ -139,6 +139,22 @@ function ERR_CONFLICT (msg)
 }
 
 
+// Display the same error only once.
+// I'd like to use a hash for the lookup here, but there doesn't
+// seem to be a fast built-in method for doing that.
+const DISPLAYED_ERRORS = {};
+function ERR_ONCE (str, src)
+{    
+    if (!Settings.IsQuiet () && DISPLAYED_ERRORS[str] == null )
+    {
+        DISPLAYED_ERRORS [str] = true;
+        return ERR (str, src);
+    }
+
+    return false;
+}
+
+
 
 // Error message output + exit.
 function ERR_FATAL (str)
@@ -187,6 +203,7 @@ module.exports =
     ERR_OVERRIDABLE,
     ERR_CONFLICT,
     ERR_MISSING_ARG,
+    ERR_ONCE,
     ERR_FATAL,
     EXIT,
     ON_EXCEPTION,

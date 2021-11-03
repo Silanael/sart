@@ -161,7 +161,7 @@ would help along with this path, proving me the data I need in the future.
 That said, I have quite some visions for SART as well - after this preliminary
 release, I'm going to heavily optimize the queries (currently it's slow as hell,
 no optimization done whatsoever so far - I just wanted a reliable directory
-listing), add a proper Command Interface Mode, variable output field support,
+listing), add a proper Command Interface mode, variable output field support,
 proper output file format handlers and an add-on system to allow transaction
 handlers to be loaded from JSONs. So many plans, so little energy..
 
@@ -220,7 +220,9 @@ async function Handler_Author ()
         Arweave:         "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
         ArDrive:         "a44482fd-592e-45fa-a08a-e526c31b87f1",
         GitHub:          "https://github.com/Silanael",
+        DockerHub:       "https://hub.docker.com/u/silanael",
         DeviantArt:      "https://www.deviantart.com/silanael",
+        KOII:            "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
         Twitter:         "https://www.twitter.com/silanael",
         PGP_Fingerprint: "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
         "The question":  "If you could have anything in the world, what would it be?"      

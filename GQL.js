@@ -22,9 +22,11 @@ const SORT_HEIGHT_ASCENDING  = 'HEIGHT_ASC';
 const SORT_OLDEST_FIRST      = SORT_HEIGHT_ASCENDING;
 const SORT_NEWEST_FIRST      = SORT_HEIGHT_DESCENDING;
 const SORT_DEFAULT           = SORT_HEIGHT_ASCENDING;
+const VALID_SORT = [ SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING ];
 
 const __TAG                  = "GQL";
 
+function IsValidSort (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
 
 
 class Entry
@@ -47,7 +49,7 @@ class Entry
     GetTXID        ()    { return this.TXID;  }
     GetOwner       ()    { return this.Owner; }
     GetBlockHeight ()    { return this.BlockHeight; }
-    GetBlockTime   ()    { return this.BlockTime;   }
+    GetBlockTime   ()    { return this.Timestamp;   }
     HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null; }
     
     GetTag (tag)
@@ -127,7 +129,8 @@ class Query
                 edge.node?.id,
                 edge.node?.owner?.address,
                 edge.node?.block?.height,
-                edge.node?.tags
+                edge.node?.tags,
+                edge.node?.block?.timestamp
             )
         ));    
     }
@@ -162,7 +165,7 @@ class TXQuery extends Query
             config.first = GQL_MAX_RESULTS;
 
         let tag_str = "";
-        const tags_amount = config.tags.length;
+        const tags_amount = config.tags != null ? config.tags.length : 0;
         if (tags_amount > 0)
         {
             tag_str = "tags:[";
@@ -344,6 +347,6 @@ function GetGQLValueStr (value)
 
 
 
-module.exports = { RunGQLQuery, 
+module.exports = { RunGQLQuery, IsValidSort,
                    Query, TXQuery,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

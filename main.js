@@ -17,12 +17,14 @@ const Settings = require ('./settings.js');
 const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
 const Util     = require ('./util.js');
-const List     = require ('./cmd_list.js');
-const Get      = require ('./cmd_get.js');
-const Search   = require ('./cmd_search.js');
-const Console  = require ('./cmd_console.js');
 const Info     = require ('./cmd_info.js');
 const Status   = require ('./cmd_status.js');
+const List     = require ('./cmd_list.js');
+const Get      = require ('./cmd_get.js');
+//const Search   = require ('./cmd_search.js');
+//const Console  = require ('./cmd_console.js');
+const FS = require ('fs');
+
 
 const ArweaveLib  = require ('arweave');
 
@@ -285,22 +287,29 @@ function DisplayVersion (argv)
     Sys.OUT_TXT (Package.version);
 }
 
-
+const readline = require ('readline');
 async function Testing (argv)
 {
-    const arweave = ArweaveLib.init
-    (
-        {
-            host:     Settings.Config.ArweaveHost,
-            port:     Settings.Config.ArweavePort,
-            protocol: Settings.Config.ArweaveProto
-        }
-    );    
+    const rd = readline.createInterface 
+    ({
+        input: FS.createReadStream ("../input.csv"),
+        output: null,
+        console: false
+    });
     
-    const arg = argv.Pop ();
-    Sys.INFO (arg);
-    Sys.INFO (Util.GetSizeStr (arg, false, null) );    
-    Sys.INFO (Util.GetSizeStr (arg, true, 5) );
+    present = new Array (5000).fill (false);
+
+    for await (const line of rd)
+    {
+        let num = line.split (",")[0];
+        present[num] = true;
+    };
+
+    for (let C = 0; C < 5000; ++C)
+    {
+        if (present[C] == false)
+            Sys.OUT_TXT (C);
+    }
 
 }
 

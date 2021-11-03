@@ -238,16 +238,16 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
 
 
 
-function GetDate (date_time_spacer_chr = ' ')
-{ 
-    const now = new Date (); 
+function GetDate (unixtime = null, date_time_spacer_chr = ' ')
+{     
+    const t = unixtime != null ? new Date () : new Date (unixtime);
 
-    const y   = now.getFullYear ();
-    const m   = String (now.getMonth   () + 1 ) .padStart (2, '0');
-    const d   = String (now.getDate    ()     ) .padStart (2, '0');
-    const h   = String (now.getHours   ()     ) .padStart (2, '0');
-    const min = String (now.getMinutes ()     ) .padStart (2, '0');
-    const s   = String (now.getSeconds ()     ) .padStart (2, '0');
+    const y   = t.getFullYear ();
+    const m   = String (t.getMonth   () + 1 ) .padStart (2, '0');
+    const d   = String (t.getDate    ()     ) .padStart (2, '0');
+    const h   = String (t.getHours   ()     ) .padStart (2, '0');
+    const min = String (t.getMinutes ()     ) .padStart (2, '0');
+    const s   = String (t.getSeconds ()     ) .padStart (2, '0');
 
     return y + "-" + m + "-" + d + date_time_spacer_chr + h + ":" + min + ":" + s;
 }
@@ -273,7 +273,7 @@ function GetCmdArgs (argv, cmd_pos, flags)
         else
             params++;
     }    
-
+    
     return argv.slice (++cmd_pos, cmd_pos + params);    
 }
 

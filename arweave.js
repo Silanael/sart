@@ -45,7 +45,8 @@ function Init ()
             {
                 host:     Config.ArweaveHost,
                 port:     Config.ArweavePort,
-                protocol: Config.ArweaveProto
+                protocol: Config.ArweaveProto,
+                timeout:  100000
             }
         );        
     }
@@ -245,23 +246,34 @@ async function GetTxRawData (txid)
 
 
 
-
-async function GetTXsForAddress (address, tags = [] )
-{
-    const arweave = Init ();
-    const query   = GQL.Query ()
+async function GetTXs ( args = {address: null, tags: null, first: null, sort: null, cursor: null } )
+{    
+    const query   = new GQL.TXQuery (this);
     
     try
     { 
-        const results = await GQL.RunGQLTransactionQuery (this, address, tags)     
+        const success = await query.ExecuteReqOwner (args);
+        if (success)
+            return query;
+        else
+        {
+            Sys.ERR ("Failed to get transactions for address " + address + " .");
+            return null;
+        }
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTXsForAddress (" + address + ", " + tags + ")"); }    
     
-    return results;
+    return null;
+}
+
+
+async function GetTXsForAddress (address, tags = null)
+{
+    return await GetTXs ({address: address, tags: tags} );    
 }
 
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
-                   GetTXStatus };
+                   GetTXStatus, GetTXs };
