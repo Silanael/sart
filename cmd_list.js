@@ -199,10 +199,10 @@ async function ListDrive2 (args, drive_id = null)
     const query = new GQL.TXQuery (Arweave);
     await query.ExecuteReqOwner
     ({ 
-        owner: "vpMIIvsJPAwMQvSunhvtcy6j43pYmT7tSB78c5qmEjY",
+        owner: "<foo>",
         sort: GQL.SORT_HEIGHT_DESCENDING,
         tags: [ {name:"Entity-Type",    values: ["file"] } ,
-                {name:"Drive-Id", values:"10aec00d-1b33-4187-b470-74fd80e5de43" } ] 
+                {name:"Drive-Id", values:"<foo>" } ] 
     });
 
     files = {};
@@ -243,11 +243,11 @@ async function ListDrive2Multi (args, drive_id = null)
    
     const query = new GQL.TXQuery (Arweave);
     await query.ExecuteReqOwner
-    ({ 
-        owner: "vpMIIvsJPAwMQvSunhvtcy6j43pYmT7tSB78c5qmEjY",        
+    ({         
+        owner: "<foo>",        
         sort: GQL.SORT_HEIGHT_DESCENDING,
         tags: [ {name:"Entity-Type",    values: ["file"] } ,
-                {name:"Drive-Id", values:"10aec00d-1b33-4187-b470-74fd80e5de43" } ] 
+                {name:"Drive-Id", values:"<foo>" } ] 
     });
 
     files        = {};
@@ -258,8 +258,10 @@ async function ListDrive2Multi (args, drive_id = null)
 
     const start_time = new Date ().getTime ();
 
-
+    
     const len = query.GetEntriesAmount ();
+    Sys.ERR ("Fetch begin - " + len + " entries.");
+
     let e, fileid;
     for (let C = 0; C < len; ++C)
     {
@@ -268,6 +270,7 @@ async function ListDrive2Multi (args, drive_id = null)
 
         if (files[fileid] == null)
         {
+            /*
             // Flush the queue
             if (queuepos >= 50)
             {
@@ -276,9 +279,11 @@ async function ListDrive2Multi (args, drive_id = null)
                 queuepos = 0;
             }
 
-            queue[queuepos] = HandleFile (e, fileid, C, failed_files);
+            queue[queuepos] = ;
             queuepos++;
-                        
+            */
+           queue.push (HandleFile (e, fileid, C, files, failed_files) );
+           await new Promise (r => setTimeout (r, 50)); 
         }
         else
             Sys.WARN ("Omitting older entry for " + fileid);
@@ -298,7 +303,7 @@ async function ListDrive2Multi (args, drive_id = null)
 }
 
 
-async function HandleFile (e, fileid, index, failed_files)
+async function HandleFile (e, fileid, index, files, failed_files)
 {
     txid = e.GetTXID ();
 
