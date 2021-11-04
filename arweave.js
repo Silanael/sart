@@ -14,7 +14,7 @@ const Sys         = require ('./sys.js');
 const Settings    = require ('./settings.js');
 const Util        = require ('./util.js');
 const GQL         = require ('./GQL.js');
-const { debug } = require('arweave/node/lib/merkle');
+
 
 
 
@@ -63,7 +63,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );         
+    );        
 }
 
 
@@ -98,6 +98,13 @@ async function OwnerToAddress (owner)
     return await arweave.wallets.ownerToAddress (owner);
 }
 
+
+function WinstonToAR (winston_amount)
+{
+    const arweave = Init ();
+    return arweave.ar.winstonToAr (winston_amount);
+}
+function QuantityToAR (quantity) { return WinstonToAR (quantity); }
 
 
 async function DisplayArweaveInfo (args)
@@ -276,4 +283,4 @@ async function GetTXsForAddress (address, tags = null)
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
-                   GetTXStatus, GetTXs };
+                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR };

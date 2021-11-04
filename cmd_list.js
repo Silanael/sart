@@ -15,13 +15,14 @@ const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
 const GQL      = require ('./GQL.js');
 const Listing  = require ('./Listing.js');
+const Analyze  = require ('./TXAnalyze.js');
 
 
 const SUBCOMMANDS =
 {   
     "address"     : ListAddress,     
     "drive"       : ListDrive,
-    "drives"      : ListDrives,
+    "drives"      : ListDrives
 }
 
 
@@ -152,7 +153,12 @@ async function ListAddress (args, address = null)
             for (let C = 0; C < amount; ++C)
             {
                 e = query.GetEntry (C);
-                Sys.INFO (e.GetTXID() + " " + Util.GetDate (e.GetBlockTime ()) );
+                
+                const d = e.HasData      () ? "D" : "-";
+                const t = e.HasTransfer  () ? "T" : "-";
+                const r = e.HasRecipient () ? "R" : "-";
+                const flags = d+t+r;                
+                Sys.INFO (e.GetTXID () + " " + Util.GetDate (e.GetBlockTime ()) + " " + flags + " " + Analyze.AnalyzeTxEntry (e) );
             }
         }
         else
@@ -162,6 +168,7 @@ async function ListAddress (args, address = null)
         Sys.ERR ("Failed to fetch transactions for address " + address + " .");
         
 }
+
 
 
 
@@ -176,6 +183,8 @@ async function ListTXs (args, address = null)
     txs = await Arweave.GetTXsForAddress (address); 
     txs.forEach ( tx => { Sys.OUT_TXT (tx.node.id) } );
 }
+
+
 
 
 async function ListDrive (args, drive_id = null)
@@ -201,8 +210,8 @@ async function ListDrive2 (args, drive_id = null)
     ({ 
         owner: "<foo>",
         sort: GQL.SORT_HEIGHT_DESCENDING,
-        tags: [ {name:"Entity-Type",    values: ["file"] } ,
-                {name:"Drive-Id", values:"<foo>" } ] 
+        tags: [ {name:"Entity-Type", values: ["file"] } ,
+                {name:"Drive-Id",    values:"<foo>" } ] 
     });
 
     files = {};
@@ -238,16 +247,19 @@ async function ListDrive2 (args, drive_id = null)
     
 }
 
-async function ListDrive2Multi (args, drive_id = null)
+async function ListDrive2Multi (args)
 {
    
+    const owner = args.RequireAmount (2, "Arweave-address and Drive-Id required.").Pop ();
+    const drive_id = args.Pop ();
+
     const query = new GQL.TXQuery (Arweave);
     await query.ExecuteReqOwner
     ({         
-        owner: "<foo>",        
+        owner: owner,        
         sort: GQL.SORT_HEIGHT_DESCENDING,
         tags: [ {name:"Entity-Type",    values: ["file"] } ,
-                {name:"Drive-Id", values:"<foo>" } ] 
+                {name:"Drive-Id", values:drive_id } ] 
     });
 
     files        = {};
@@ -268,7 +280,10 @@ async function ListDrive2Multi (args, drive_id = null)
         e = query.GetEntry (C);
         fileid = e.GetTag ("File-Id");        
 
-        if (files[fileid] == null)
+        if (!Util.IsArFSID (fileid) )
+            Sys.ERR ("Invalid File-Id encountered: " + fileid);
+
+        else if (files[fileid] == null)
         {
             /*
             // Flush the queue
@@ -282,14 +297,21 @@ async function ListDrive2Multi (args, drive_id = null)
             queue[queuepos] = ;
             queuepos++;
             */
-           queue.push (HandleFile (e, fileid, C, files, failed_files) );
+           files[fileid] = HandleFile (e, fileid, C, files, failed_files);
+           queue.push (files[fileid]);
            await new Promise (r => setTimeout (r, 50)); 
         }
         else
             Sys.WARN ("Omitting older entry for " + fileid);
     }
 
-    await Promise.all (queue);
+    const ret_amount = queue.length;
+    for (let r = 0; r < ret_amount; r++)
+    {
+        if ( (await queue[r]).ok == false)
+            Sys.OUT_TXT ("COULD NOT RETRIEVE: TXID:" + queue[r].txid + " File-Id:" + queue[r].fileid);
+    }
+    //await Promise.all (queue);
 
     if (failed_files.length > 0)
     {
@@ -309,6 +331,16 @@ async function HandleFile (e, fileid, index, files, failed_files)
 
     let tries = 5;
 
+    const filedata = 
+    {
+        txid:   txid,
+        fileid: fileid,
+        name:   null,
+        dtxid:  null,
+        state:  null,
+        ok:     false
+    }
+
     while (tries > 0)
     {
         const meta = await Arweave.GetTxStrData (txid);
@@ -318,19 +350,19 @@ async function HandleFile (e, fileid, index, files, failed_files)
             const json = await JSON.parse (meta);
             if (json != null)
             {   
-                const data_tx_status = await Arweave.GetTXStatus (json.dataTxId);
-                if (data_tx_status != null)
-                {
-                    files[fileid] = 
-                    {
-                        name:   json.name,
-                        dtxid:  json.dataTxId,
-                        state:  data_tx_status.status == 200 ? "OK" :  data_tx_status.status == 404 ? "FAILED" : "PENDING?"
-                    }
+                filedata.name  = json.name;
+                filedata.dtxid = json.dataTxId;
 
-                    //Sys.INFO ("#" + index + "," + files[fileid].dtxid + "," + files[fileid].name + "," + files[fileid].state);
-                    Sys.ERR  ("#" + index + "," + files[fileid].dtxid + "," + files[fileid].name + "," + files[fileid].state);
-                    return true;
+                const data_tx_status = await Arweave.GetTXStatus (json.dataTxId);
+
+                if (data_tx_status != null)
+                {                                                            
+                    filedata.state = data_tx_status.status == 200 ? "OK" :  data_tx_status.status == 404 ? "FAILED" : "ERROR?";
+                    filedata.ok    = data_tx_status.status == 200;
+
+                    //Sys.ERR ("#" + index + "," + files[fileid].dtxid + "," + files[fileid].name + "," + files[fileid].state);
+                    Sys.OUT_TXT  ("#" + index + "," + filedata.dtxid + "," + filedata.name + "," + filedata.state);
+                    return filedata;
                 }
                 else
                     Sys.ERR ("Unable to get data TX status for TXID:" + txid + " - data TXID:" +  json.dataTxId);
@@ -344,11 +376,12 @@ async function HandleFile (e, fileid, index, files, failed_files)
 
         Sys.ERR ("Processing " +  fileid + "(TXID:" + txid  + ") failed, retrying..");
         
-        await new Promise (r => setTimeout (r, 3000));
+        await new Promise (r => setTimeout (r, 2000 + Math.random (1000) ));
         --tries;
     }
 
-    failed_files.push ( { "File-Id": fileid, "TXID:" : txid, "Index": index } );
+    filedata.state = "COULD NOT RETRIEVE";
+    return filedata;
 }
 
 

@@ -22,36 +22,54 @@ const SORT_HEIGHT_ASCENDING  = 'HEIGHT_ASC';
 const SORT_OLDEST_FIRST      = SORT_HEIGHT_ASCENDING;
 const SORT_NEWEST_FIRST      = SORT_HEIGHT_DESCENDING;
 const SORT_DEFAULT           = SORT_HEIGHT_ASCENDING;
-const VALID_SORT = [ SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING ];
+const VALID_SORT             = [ SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING ];
 
 const __TAG                  = "GQL";
 
-function IsValidSort (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
+function IsSortValid (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
 
 
 class Entry
 {
-    TXID         = null;
-    Owner        = null;
-    BlockHeight  = null;
-    Tags         = null;
-    Timestamp    = null;
+    TXID           = null;
+    Owner          = null;
+    BlockHeight    = null;
+    Tags           = null;
+    Timestamp      = null;
+    Fee_AR         = null;
+    Quantity_AR    = null;
+    DataSize_Bytes = null;
+    Recipient      = null;
     
-    constructor (txid, owner, block, tags, timestamp)
+    
+    constructor (edge) //txid, owner, block, tags, timestamp)
     { 
-        this.TXID        = txid;
-        this.Owner       = owner;
-        this.BlockHeight = block;
-        this.Tags        = tags != null ? tags : []; 
-        this.Timestamp   = timestamp;
+        this.TXID           = edge.node?.id,
+        this.Owner          = edge.node?.owner?.address,
+        this.BlockHeight    = edge.node?.block?.height,
+        this.Tags           = edge.node?.tags != null ? edge.node?.tags : [];
+        this.Timestamp      = edge.node?.block?.timestamp
+        this.Fee_AR         = edge.node?.fee?.ar;
+        this.Quantity_AR    = edge.node?.quantity?.ar;
+        this.DataSize_Bytes = edge.node?.data?.size;
     }
 
-    GetTXID        ()    { return this.TXID;  }
-    GetOwner       ()    { return this.Owner; }
-    GetBlockHeight ()    { return this.BlockHeight; }
-    GetBlockTime   ()    { return this.Timestamp;   }
-    HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null; }
-    
+
+    GetTXID        ()    { return this.TXID;                                              }
+    GetOwner       ()    { return this.Owner;                                             }
+    GetBlockHeight ()    { return this.BlockHeight;                                       }
+    GetBlockTime   ()    { return this.Timestamp;                                         }
+    GetFee_AR      ()    { return this.Fee_AR         != null ? this.Fee_AR          : 0; }
+    GetQTY_AR      ()    { return this.Quantity_AR    != null ? this.Quantity_AR     : 0; }
+    GetDataSize_B  ()    { return this.DataSize_Bytes != null ? this.DataSize_Bytes  : 0; }
+    GetRecipient   ()    { return this.Recipient;                                         }
+    HasFee         ()    { return this.Fee_AR         != null && this.Fee_AR         > 0; }
+    HasTransfer    ()    { return this.Quantity_AR    != null && this.Quantity_AR    > 0; }
+    HasData        ()    { return this.DataSize_Bytes != null && this.DataSize_Bytes > 0; }
+    HasRecipient   ()    { return this.Recipient != null;                                 }
+    HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null;            }
+    GetTags        ()    { return this.Tags; }
+
     GetTag (tag)
     { 
         const r = this.Tags.find (e => e.name == tag);
@@ -103,15 +121,15 @@ class Query
     }
      
     
-    GetTXID          (index)      { return this.GetEdge (index)?.node?.id;                                       }
-    GetAddress       (index)      { return this.GetEdge (index)?.node?.owner?.address;                           }
-    GetBlockHeight   (index)      { return this.GetEdge (index)?.node?.block?.height;                            }
-    GetTags          (index)      { return this.GetEdge (index)?.node?.tags;                                     }    
-    HasTag           (index, tag) { return this.GetTag  (index, tag) != undefined;                               }
-    GetEdge          (index)      { return this.Edges != null ? this.Edges[index] : null;                        }
-    GetEdges         ()           { return this.Edges                                                            }
-    GetEntriesAmount ()           { return this.EntriesAmount;                                                   }
-    GetEntry         (index)      { return this.Entries[index];                                                  }
+    GetTXID          (index)      { return this.GetEdge (index)?.node?.id;                 }
+    GetAddress       (index)      { return this.GetEdge (index)?.node?.owner?.address;     }
+    GetBlockHeight   (index)      { return this.GetEdge (index)?.node?.block?.height;      }
+    GetTags          (index)      { return this.GetEdge (index)?.node?.tags;               }    
+    HasTag           (index, tag) { return this.GetTag  (index, tag) != undefined;         }
+    GetEdge          (index)      { return this.Edges != null ? this.Edges[index] : null;  }
+    GetEdges         ()           { return this.Edges                                      }
+    GetEntriesAmount ()           { return this.EntriesAmount;                             }
+    GetEntry         (index)      { return this.Entries[index];                            }
     
 
     GetTag (index, tag)
@@ -124,14 +142,7 @@ class Query
     {
         this.Edges.forEach (edge => this.Entries.push
         (
-            new Entry 
-            (
-                edge.node?.id,
-                edge.node?.owner?.address,
-                edge.node?.block?.height,
-                edge.node?.tags,
-                edge.node?.block?.timestamp
-            )
+            new Entry (edge)            
         ));    
     }
 
@@ -191,9 +202,13 @@ class TXQuery extends Query
                 node
                 {              
                   id,
-                  owner {address},
-                  block {id,height,timestamp},
-                  tags  {name, value}            
+                  owner    { address },
+                  block    { id,height,timestamp },
+                  tags     { name, value },
+                  fee      { ar },
+                  quantity { ar },
+                  data     { size, type },
+                  recipient
                 }
               }
             }
@@ -347,6 +362,6 @@ function GetGQLValueStr (value)
 
 
 
-module.exports = { RunGQLQuery, IsValidSort,
+module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
                    Query, TXQuery,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

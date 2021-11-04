@@ -22,7 +22,7 @@ const SUBCOMMANDS =
 {
     "tx"     : Handler_TX,
     "sart"   : Handler_SART,
-    "author" : Handler_Author
+    "author" : Handler_Author,
 };
 
 
@@ -81,6 +81,7 @@ async function HandleCommand (args)
 
 
 
+
 async function Handler_TX (args, info, tx = null)
 {
 
@@ -102,6 +103,16 @@ async function Handler_TX (args, info, tx = null)
     info.Type     = "Transaction";
     info.TXFormat = tx.format;
     info.TXID     = tx.id;
+
+    // Check that we can understand this version.
+    if (tx.format > Settings.Config.MaxTXFormat)        
+    {
+        Sys.ERR ("Transaction format '" + tx.format + "' unsupported. Use --force to override.");
+        if (! Settings.IsForceful () )
+            return info;
+    }
+    
+
     info.Address  = await Arweave.OwnerToAddress (tx.owner);             
     info.LastTX   = tx.last_tx;
     
@@ -127,9 +138,11 @@ async function Handler_TX (args, info, tx = null)
     // Monetary transfer
     if (tx.quantity > 0)
     {            
-        info.TransferFrom      = info.Address;
-        info.TransferTo        = info.Target;
-        info.TransferAmount_AR = tx.quantity;
+        info.TransferFrom     = info.Address;
+        info.TransferTo       = info.Target;
+        info.TransferQTY      = tx.quantity;
+        info.TransferQTY_AR   = Arweave.QuantityToAR (tx.quantity);
+
         if (info.Target == null || info.Target == "")
         {
             Sys.ERR ("Transaction " + target + " has quantity set, but no target!");
@@ -139,6 +152,38 @@ async function Handler_TX (args, info, tx = null)
 
     info.Valid = true;
 }
+
+
+
+
+async function Handler_Author ()
+{
+    const info =
+    {
+        Name:            "Silanael",
+        Description:     "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
+                         + "A creator and a destroyer. A strong ally and an enemy to be reckoned with. "
+                         + "A pragmatic idealist. A fighter longing for a moment of rest..",
+        Properties:      "MtF, sub, dev, preservationist, artistic_spirit, stalker, dark ambassador, ex-RPer, ex-drifter",
+        Age:             Util.GetAge (),
+        Website:         "www.silanael.com",
+        "E-Mail":        "sila@silanael.com",
+        Arweave:         "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
+        ArDrive:         "a44482fd-592e-45fa-a08a-e526c31b87f1",
+        GitHub:          "https://github.com/Silanael",
+        DockerHub:       "https://hub.docker.com/u/silanael",
+        DeviantArt:      "https://www.deviantart.com/silanael",
+        KOII:            "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
+        Twitter:         "https://www.twitter.com/silanael",
+        PGP_Fingerprint: "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
+        "The question":  "If you could have anything in the world, what would it be?"      
+    }
+
+    PrintObj_Out (info);
+}
+
+
+
 
 
 async function Handler_SART (args)
@@ -195,44 +240,13 @@ may never see the light of day...
         Dev_SYS:      "Potato-01 MK3",
         Dev_OS:       "Manjaro Linux",
         Dev_Kernel:   "Linux 5.10.70-1-MANJARO x86_64",
-        Description:  description
- 
-            
+        Description:  description        
     }
 
     PrintObj_Out (info);
 
 }
 
-
-async function Handler_Author ()
-{
-    const info =
-    {
-        Name:            "Silanael",
-        Description:     "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
-                         + "A creator and a destroyer. A strong ally and an enemy to be reckoned with. "
-                         + "A pragmatic idealist. A fighter longing for a moment of rest..",
-        Properties:      "MtF, sub, dev, preservationist, artistic_spirit, stalker, dark ambassador, ex-RPer, ex-drifter",
-        Age:             Util.GetAge (),
-        Website:         "www.silanael.com",
-        "E-Mail":        "sila@silanael.com",
-        Arweave:         "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
-        ArDrive:         "a44482fd-592e-45fa-a08a-e526c31b87f1",
-        GitHub:          "https://github.com/Silanael",
-        DockerHub:       "https://hub.docker.com/u/silanael",
-        DeviantArt:      "https://www.deviantart.com/silanael",
-        KOII:            "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
-        Twitter:         "https://www.twitter.com/silanael",
-        PGP_Fingerprint: "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
-        "The question":  "If you could have anything in the world, what would it be?"      
-    }
-
-    
-
-    PrintObj_Out (info);
-
-}
 
 
 

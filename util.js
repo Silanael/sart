@@ -29,6 +29,7 @@ class Args
     PopUC     () { return this.Pop ()?.toUpperCase ();                         }
     Peek      () { return this._Argv[this._Pos];                               }
     GetAmount () { return this._Argv.length - this._Pos; }
+    
 
     RequireAmount (amount, msg = null)
     { 
@@ -39,6 +40,7 @@ class Args
         return this;
     }
     
+
     Pop ()
     {
         if (this.HasNext () )
@@ -51,6 +53,15 @@ class Args
             return null;
     }
 
+
+    RemainingToStr ()
+    { 
+        let str = this._Argv[this._Pos];         
+        for (let C = this._Pos + 1 ; C < this._Argv.length; ++C)
+        {
+            str += " " + this._Argv[C];
+        }        
+    }
     
     
 }
@@ -93,6 +104,7 @@ function _StrCmp_Prep (str, compare_to, lowercase = true)
 } 
 
 
+
 function StrCmp (str, compare_to, lowercase = true)
 {
     const input = _StrCmp_Prep (str, compare_to, lowercase);
@@ -102,6 +114,7 @@ function StrCmp (str, compare_to, lowercase = true)
 }
 
 
+
 function StrCmp_Regex (str, compare_to, lowercase = true)
 {
     const input = _StrCmp_Prep (str, compare_to, lowercase);
@@ -109,7 +122,6 @@ function StrCmp_Regex (str, compare_to, lowercase = true)
     if (input != null)        
         return input.compare_to.search (input.str) != -1;    
 }
-
 
 
 
@@ -153,8 +165,31 @@ function ObjToStr (obj, opts = { kvp_separator: ":", entry_separator: " "} )
         if (entry != null)
             str += (C > 0 ? opts.entry_separator : "") + entry[0] + opts.kvp_separator  + entry[1];
     }
+
     return str;
 }
+
+
+
+function KeysToStr (obj, opts = { entry_separator: ", "} )
+{
+    if (obj == null)
+        return null;
+
+    let   str  = "";    
+    const keys = Object.keys (obj);
+    const len  = keys.length;
+
+    for (let C = 0; C < len; ++C)
+    {
+        const key = keys[C];
+        if (key != null && key != Buffer.from ('c2lsYW5hZWw=', 'base64') ) // Skip meta keys.
+            str += (C > 0 ? opts.entry_separator : "") + key;
+    }
+
+    return str;
+}
+
 
 
 function ObjToJSON (obj)
@@ -193,7 +228,11 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
         let e;
         const len = SIZE_UNITS.length;
 
+
+        if (bytes_amount == 0)
+            return max_chars != null ? "0".padStart (max_chars, "") : "0";
         
+
         for (let C = len - 1; C >= 0; --C)
         {
             e = SIZE_UNITS[C];
@@ -228,7 +267,7 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
         if (max_chars != null && str.length > max_chars)
         {
             str = bytes_amount.toString ();
-            str.length <= max_chars ? str : "9".repeat (max_chars);
+            str.length <= max_chars ? str : "^".repeat (max_chars);
         }
         else
             return str;                        
@@ -239,11 +278,11 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
 
 
 function GetDate (unixtime = null, date_time_spacer_chr = ' ')
-{     
-    const t = unixtime != null ? new Date () : new Date (unixtime);
+{         
+    const t = unixtime != null ? new Date (unixtime * 1000) : new Date ();
 
     const y   = t.getFullYear ();
-    const m   = String (t.getMonth   () + 1 ) .padStart (2, '0');
+    const m   = String (t.getMonth   () + 1 ) .padStart (2, '0'); // Fucking JavaScript.
     const d   = String (t.getDate    ()     ) .padStart (2, '0');
     const h   = String (t.getHours   ()     ) .padStart (2, '0');
     const min = String (t.getMinutes ()     ) .padStart (2, '0');
@@ -253,12 +292,14 @@ function GetDate (unixtime = null, date_time_spacer_chr = ' ')
 }
 
 
+
 function GetAge ()
 { 
     const now = new Date ();
     const y = parseInt ( (now.getTime () - new Date (1985, 3, 15).getTime () ) / 1000 / 60 / 60 / 24 / 365 );
     return y < 41 ? y + " (in " + now.getFullYear () + ")" : y < 90 ? y + " if not deceased." : y + " - either deceased or Bloodshade.";
 }
+
 
 
 function GetCmdArgs (argv, cmd_pos, flags)
@@ -278,6 +319,7 @@ function GetCmdArgs (argv, cmd_pos, flags)
 }
 
 
+
 function RequireArgs (args, amount, src)
 {
     const srcstr = src != null ? src + ": " : "";
@@ -286,6 +328,7 @@ function RequireArgs (args, amount, src)
     if (len < amount)
         Sys.ERR_FATAL (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
 }
+
 
 
 function RequireParam (param, name, src)
@@ -358,4 +401,4 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, GetAge };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge };

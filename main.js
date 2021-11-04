@@ -223,9 +223,9 @@ function DisplayHelp (args)
             if (handler.SUBCOMMANDS != null)
             {
                 Sys.INFO ("");
-                let str = "SUBCOMMANDS:";
-                Object.keys (handler.SUBCOMMANDS).forEach (k => str += " " + k);
-                Sys.INFO (str);
+                //let str = "SUBCOMMANDS:";
+                //Object.keys (handler.SUBCOMMANDS).forEach (k => str += " " + k);
+                Sys.INFO ("SUBCOMMANDS: " + Util.KeysToStr (handler.SUBCOMMANDS) );
             }
         }
         else
@@ -256,7 +256,8 @@ function DisplayHelp (args)
         Sys.INFO ("");
         Sys.INFO ("  -l, list    [TARGET]     List /*Arweave- or*/ ArDrive-content.");
         Sys.INFO ("  -g, get     [TARGET]     Get (more or less) raw data (TX-data, files etc.)");
-        Sys.INFO ("  -i, info    [TARGET]     Obtain information about the target.");
+        Sys.INFO ("  -i, info    [TARGET]     Obtain detailed information about the target.");
+        Sys.INFO ("  -s, status  [TARGET]     Obtain the current status of the target.");
         Sys.INFO ("    , pending              Display network pending TX amount.");
         Sys.INFO ("  -v, version              Display version info.");
         Sys.INFO ("      help    [COMMAND]    Display help for a command.");
@@ -267,7 +268,7 @@ function DisplayHelp (args)
         Sys.INFO ("  -V, --verbose            Display extended runtime info.");
         Sys.INFO ("      --debug              Display extensive runtime info.");
         Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.).");
-        Sys.INFO ("  -r, --recursive          Do a recursive listing (drive listing default).");
+        Sys.INFO ("  -r, --recursive          Do a recursive listing (drive listing is by default).");
         Sys.INFO ("      --force              Disable abort on some fatal errors.");
         Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
         Sys.INFO ("      --port               Arweave gateway port.");
@@ -287,30 +288,9 @@ function DisplayVersion (argv)
     Sys.OUT_TXT (Package.version);
 }
 
-const readline = require ('readline');
+
 async function Testing (argv)
-{
-    const rd = readline.createInterface 
-    ({
-        input: FS.createReadStream ("../input.csv"),
-        output: null,
-        console: false
-    });
-    
-    present = new Array (5000).fill (false);
-
-    for await (const line of rd)
-    {
-        let num = line.split (",")[0];
-        present[num] = true;
-    };
-
-    for (let C = 0; C < 5000; ++C)
-    {
-        if (present[C] == false)
-            Sys.OUT_TXT (C);
-    }
-
+{  
 }
 
 
