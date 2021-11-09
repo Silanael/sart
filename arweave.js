@@ -14,7 +14,7 @@ const Sys         = require ('./sys.js');
 const Settings    = require ('./settings.js');
 const Util        = require ('./util.js');
 const GQL         = require ('./GQL.js');
-
+const Tag         = GQL.Tag;
 
 
 
@@ -24,6 +24,10 @@ var Arweave_Instance;
 
 
 // Constants
+const TXSTATUS_OK       = 200;
+const TXSTATUS_PENDING  = 202;
+const TXSTATUS_NOTFOUND = 404;
+
 const ENDPOINT_PENDING = "tx/pending";
 const _TAG = "Arweave";
 
@@ -38,7 +42,7 @@ function Init ()
     if (Arweave_Instance == undefined)
     {
         const Config = Settings.Config;
-        Sys.VERBOSE ("Connecting to " + Settings.GetHostString () + "...")
+        Sys.INFO ("Connecting to " + Settings.GetHostString () + "...")
 
         Arweave_Instance = ArweaveLib.init
         (
@@ -175,6 +179,19 @@ async function GetTx (txid)
 }
 
 
+async function GetLatestTxWithTags (tags, address = null, opts = { ret_if_notfound: null } )
+{
+    if (tags?.length > 0)
+    {
+        const query = new GQL.LatestQuery (this);
+        const entry = await query.Execute (tags, address);
+        return entry != null ? entry : opts?.ret_if_notfound;
+    }
+    return opts?.ret_if_notfound;
+}
+
+
+
 async function GetTXStatus (txid)
 {
     const arweave  = Init ();    
@@ -283,4 +300,5 @@ async function GetTXsForAddress (address, tags = null)
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
-                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR };
+                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Tag,
+                   TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING };

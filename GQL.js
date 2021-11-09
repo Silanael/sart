@@ -14,6 +14,7 @@ const Util     = require ('./util.js');
 
 
 
+
 // Constants
 const GQL_MAX_RESULTS        = 100;
 
@@ -24,9 +25,36 @@ const SORT_NEWEST_FIRST      = SORT_HEIGHT_DESCENDING;
 const SORT_DEFAULT           = SORT_HEIGHT_ASCENDING;
 const VALID_SORT             = [ SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING ];
 
+const HTTP_STATUS_OK         = 200;
+
 const __TAG                  = "GQL";
 
 function IsSortValid (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
+
+
+class Tag
+{
+    name  = null;
+    value = null;
+
+    constructor (tagname, tagvalue)
+    {
+        this.name  = tagname;
+        this.value = tagvalue;        
+    }
+
+    static QUERYTAG (tagname, value)
+    {                
+        return new Tag (tagname, value);
+    }
+
+    static QUERYTAG (tagname, value = [])
+    {                
+        return new Tag (tagname, value);
+    }
+}
+
+
 
 
 class Entry
@@ -44,14 +72,17 @@ class Entry
     
     constructor (edge) //txid, owner, block, tags, timestamp)
     { 
-        this.TXID           = edge.node?.id,
-        this.Owner          = edge.node?.owner?.address,
-        this.BlockHeight    = edge.node?.block?.height,
-        this.Tags           = edge.node?.tags != null ? edge.node?.tags : [];
-        this.Timestamp      = edge.node?.block?.timestamp
-        this.Fee_AR         = edge.node?.fee?.ar;
-        this.Quantity_AR    = edge.node?.quantity?.ar;
-        this.DataSize_Bytes = edge.node?.data?.size;
+        if (edge != null)
+        {
+            this.TXID           = edge.node?.id,
+            this.Owner          = edge.node?.owner?.address,
+            this.BlockHeight    = edge.node?.block?.height,
+            this.Tags           = edge.node?.tags != null ? edge.node?.tags : [];
+            this.Timestamp      = edge.node?.block?.timestamp
+            this.Fee_AR         = edge.node?.fee?.ar;
+            this.Quantity_AR    = edge.node?.quantity?.ar;
+            this.DataSize_Bytes = edge.node?.data?.size;
+        }
     }
 
 
@@ -74,6 +105,16 @@ class Entry
     { 
         const r = this.Tags.find (e => e.name == tag);
         return r != null ? r.value : null;
+    }
+
+    WithTag (name, value)
+    {
+        if (this.Tags == null) 
+            this.Tags = [];
+
+        this.Tags.push (new Tag (name, value) );
+        
+        return this; 
     }
 }
 
@@ -113,9 +154,9 @@ class Query
         Sys.DEBUG (Query);
  
         const arweave = this.Arweave.Init ();                
-        this.Results = await RunGQLQuery (Arweave, this.Query)
-        
-        this.Edges = this.Results.data.data.transactions.edges;
+        this.Results  = await RunGQLQuery (this.Arweave, this.Query)
+                     
+        this.Edges         = this.Results.data.data.transactions.edges;
         this.EntriesAmount = this.Edges.length;
         this._ParseEntries ();
     }
@@ -130,6 +171,7 @@ class Query
     GetEdges         ()           { return this.Edges                                      }
     GetEntriesAmount ()           { return this.EntriesAmount;                             }
     GetEntry         (index)      { return this.Entries[index];                            }
+    DidQuerySucceed  ()           { return this.Results?.status == HTTP_STATUS_OK;         }
     
 
     GetTag (index, tag)
@@ -138,6 +180,7 @@ class Query
         return r != undefined ? r.value : undefined;
     }
 
+    
     _ParseEntries ()
     {
         this.Edges.forEach (edge => this.Entries.push
@@ -180,7 +223,7 @@ class TXQuery extends Query
         if (tags_amount > 0)
         {
             tag_str = "tags:[";
-            config.tags.forEach ( tag => {tag_str += `{ name:"${tag.name}", values:[${GetGQLValueStr (tag.values)}]},` } ); 
+            config.tags.forEach ( tag => {tag_str += `{ name:"${tag.name}", values:[${GetGQLValueStr (tag.value)}]},` } ); 
             tag_str += "],";
         }
 
@@ -314,6 +357,79 @@ class TXQuery extends Query
 }
 
 
+class DriveOwnerQuery extends TXQuery
+{
+   
+   /* Override */ async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
+   {
+       Sys.ERR ("ExecuteReqOwner not applicable to this query type.", this);
+       return false;        
+   }
+   
+
+   /** Retrieve drive's owner address. */
+   async Execute (drive_id)
+   {       
+        await super.ExecuteOnce
+        (
+            TXQuery.CreateTxQuery 
+            ({                     
+                    first:  1,                     
+                    sort:   SORT_OLDEST_FIRST,
+                    tags:   
+                    [ 
+                        Tag.QUERYTAG ("Entity-Type",  "drive"),
+                        Tag.QUERYTAG ("Drive-Id",     drive_id),                        
+                    ],                     
+                    
+            })
+        );
+
+        if (this.GetEntriesAmount () == 1)
+        {
+            const owner = this.GetEntry (0)?.GetOwner ();
+            Sys.VERBOSE ("Fetched drive owner: " + owner,  drive_id);
+            return owner;
+        }
+
+        else
+        {
+            Sys.ERR ("Failed to retrieve owner for Drive-ID: " + drive_id);
+            return null;
+        }
+   }
+}
+
+
+
+class LatestQuery extends TXQuery
+{
+   
+   /** Retrieve drive's owner address. */
+   async Execute (tags = [], address = null)
+   {       
+        await super.ExecuteOnce
+        (
+            TXQuery.CreateTxQuery 
+            ({                     
+                    first:  1,
+                    owner:  address,                     
+                    sort:   SORT_NEWEST_FIRST,
+                    tags:   tags,                                        
+            })
+        );
+
+        if (this.GetEntriesAmount () == 1)        
+            return this.GetEntry (0);
+
+        else
+        {
+            Sys.VERBOSE ("Could not find a transaction for tags: " + Util.ObjToStr (tags) );
+            return null;
+        }
+   }
+}
+
 
 
 
@@ -341,7 +457,7 @@ async function RunGQLQuery (Arweave, query_str)
 function GetGQLValueStr (value)
 {     
     if (Array.isArray (value) )
-    {
+    {        
         let str = "";
         const len = value.length;
         for (let C = 0; C < len; ++C)
@@ -351,6 +467,7 @@ function GetGQLValueStr (value)
             else
                 str += `"${value[C]}"`;
         }
+        
         return str;
     }
     else
@@ -363,5 +480,5 @@ function GetGQLValueStr (value)
 
 
 module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
-                   Query, TXQuery,
+                   Query, TXQuery, DriveOwnerQuery, LatestQuery, Entry, Tag,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

@@ -6,21 +6,34 @@
 // settings.js - 2021-10-17 -> 2021-10-26_01
 //
 
-//const Util             = require("./util.js");
-
 
 // Whether to allow the program to access the system,
 // restricting fopen and SYS if set to false.
 const SystemAccess = true;
 
 
+
 const LogLevels =
 {
     QUIET   : 0,
-    NORMAL  : 1,
-    VERBOSE : 2,
-    DEBUG   : 3
+    NOMSG   : 1,
+    MSG     : 2,
+    VERBOSE : 3,
+    DEBUG   : 4
 };
+
+
+const OutputDests =
+{
+    NONE    : 0,
+    STDOUT  : 1,
+    STDERR  : 2,
+    FILE    : 4,
+
+    BOTH    : 3    
+};
+
+
 
 const OutputFormats =
 {
@@ -31,9 +44,13 @@ const OutputFormats =
     JSON    : "json",
 }
 
+
+
 const Config =
 {
-    LogLevel            : LogLevels.NORMAL,
+    LogLevel            : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
+    MsgOut              : OutputDests.STDOUT,
+    ErrOut              : OutputDests.STDERR,
            
     ArweaveHost         : "arweave.net",
     ArweavePort         : 443,
@@ -47,7 +64,8 @@ const Config =
     OutputFields        : null,
     OutputFormat        : OutputFormats.TXT,
     SizeDigits          : 5,
-    VarNamesUppercase   : false, 
+    VarNamesUppercase   : false,
+    ANSIAllowed         : true,
 
     Force               : false,
    
@@ -62,24 +80,31 @@ const Config =
 
 
 
-function GetHostString      (path = null) { return Config.ArweaveProto + "://"    
-                                          + Config.ArweaveHost + ":" + Config.ArweavePort
-                                          + ( path != null ? path : "");                      }
-function GetGQLHostString   ()            { return GetHostString () + "/graphql";             }
-function IsQuiet            ()            { return Config.LogLevel <= LogLevels.QUIET;        }
-function IsMSGOutputAllowed ()            { return Config.LogLevel >  LogLevels.QUIET;        }
-function IsVerbose          ()            { return Config.LogLevel >= LogLevels.VERBOSE;      }
-function IsDebug            ()            { return Config.LogLevel >= LogLevels.DEBUG;        }
-function IsForceful         ()            { return Config.Force;                              }
-function IsHTMLOut          ()            { return Config.OutputFormat == OutputFormats.HTML; }
-function IsCSVOut           ()            { return Config.OutputFormat == OutputFormats.CSV;  }
-function IsTXTOut           ()            { return Config.OutputFormat == OutputFormats.TXT;  }
-function IsJSONOut          ()            { return Config.OutputFormat == OutputFormats.JSON; }
-function SetForce           ()            { Config.Force = true;                              }
-function SetPort            (port)        { Config.ArweavePort  = port;  ManualDest = true;   }
-function SetProto           (proto)       { Config.ArweaveProto = proto; ManualDest = true;   }
-function SetDisplayAll      ()            { Config.DisplayAll   = true;;                      }
-function SetRecursive       ()            { Config.Recursive    = true;;                      }
+function GetHostString      (path = null) { return Config.ArweaveProto + "://" 
+                                                 + Config.ArweaveHost  + ":" 
+                                                 + Config.ArweavePort
+                                                 + ( path != null ? path : "");                                }
+function GetGQLHostString   ()            { return GetHostString () + "/graphql";                              }
+function IsQuiet            ()            { return Config.LogLevel <= LogLevels.QUIET;                         }
+function IsMSGOutputAllowed ()            { return Config.LogLevel >  LogLevels.QUIET;                         }
+function IsNoMsg            ()            { return Config.LogLevel <= LogLevels.NOMSG   || Config.MsgOut <= 0; }
+function IsMsg              ()            { return Config.LogLevel >= LogLevels.MSG     && Config.MsgOut  > 0; }
+function IsVerbose          ()            { return Config.LogLevel >= LogLevels.VERBOSE && Config.MsgOut  > 0; }
+function IsDebug            ()            { return Config.LogLevel >= LogLevels.DEBUG   && Config.MsgOut  > 0; }
+function IsMsgSTDOUT        ()            { return (Config.MsgOut & OutputDests.STDOUT) != 0;                  }
+function IsMsgSTDERR        ()            { return (Config.MsgOut & OutputDests.STDERR) != 0;                  }
+function IsErrSTDOUT        ()            { return (Config.ErrOut & OutputDests.STDOUT) != 0;                  }
+function IsErrSTDERR        ()            { return (Config.ErrOut & OutputDests.STDERR) != 0;                  }
+function IsForceful         ()            { return Config.Force;                                               }
+function IsHTMLOut          ()            { return Config.OutputFormat == OutputFormats.HTML;                  }
+function IsCSVOut           ()            { return Config.OutputFormat == OutputFormats.CSV;                   }
+function IsTXTOut           ()            { return Config.OutputFormat == OutputFormats.TXT;                   }
+function IsJSONOut          ()            { return Config.OutputFormat == OutputFormats.JSON;                  }
+function SetForce           ()            { Config.Force = true;                                               }
+function SetPort            (port)        { Config.ArweavePort  = port;  ManualDest = true;                    }
+function SetProto           (proto)       { Config.ArweaveProto = proto; ManualDest = true;                    }
+function SetDisplayAll      ()            { Config.DisplayAll   = true;;                                       }
+function SetRecursive       ()            { Config.Recursive    = true;;                                       }
 
 
 
@@ -133,6 +158,11 @@ function SetFormat (format)
     //    ERR_FATAL ("Invalid output format: " + format);
 }
 
+function SetMsg    ()    { Config.LogLevel = LogLevels.MSG;   }
+function SetNoMsg  ()    { Config.LogLevel = LogLevels.NOMSG; }
+function SetMsgOut (out) { Config.MsgOut = out; }
+function SetErrOut (out) { Config.ErrOut = out; }
+
 
 
 function SetVerbose ()
@@ -165,12 +195,17 @@ module.exports =
     Config,
     LogLevels,
     OutputFormats,
+    OutputDests,
     GetHostString,
     GetGQLHostString,
-    IsQuiet,
     IsMSGOutputAllowed,
+    IsQuiet,    
+    IsNoMsg,
+    IsMsg,    
     IsVerbose,
     IsDebug,
+    IsMsgSTDERR, IsMsgSTDOUT,
+    IsErrSTDERR, IsErrSTDOUT,
     IsForceful,
     IsHTMLOut,
     IsCSVOut,
@@ -180,11 +215,15 @@ module.exports =
     SetPort,
     SetProto,
     SetFormat,
+    SetNoMsg,
+    SetMsg,
     SetVerbose,
     SetQuiet,
     SetDebug,
     SetForce,
     SetDisplayAll,
-    SetRecursive
+    SetRecursive,
+    SetMsgOut,
+    SetErrOut,
 };
 

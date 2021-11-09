@@ -9,6 +9,7 @@
 const Util     = require ('./util.js');
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
+const ZLib     = require('zlib');
 
 
 
@@ -37,8 +38,12 @@ class Pattern
         if (tx_tags_decoded == null)
             tx_tags_decoded = Util.DecodeTXTags (tx);
 
-        if (tx_tags_decoded == null || tx_tags_decoded.length <= 0)
+
+        if (tx_tags_decoded == null)
+        {
+            Sys.DEBUG (tx);
             return Sys.ERR_ONCE ("Transaction provided has no tags!");
+        }
     
 
         let found = false;
@@ -84,6 +89,13 @@ class Pattern
         return this;
     }
 
+    WithRequirementExact (name_regex, value)
+    {
+        this.RequiredTags.push ( {name: name_regex, value: ("^" + value + "$") } );
+        return this;
+    }
+
+
     WithDescription (description)
     {
         this.Description = description;
@@ -92,10 +104,49 @@ class Pattern
 
     GetRequirementsAmount () { return this.RequiredTags.length; }
     GetDescription        () { return this.Description != null ?  this.Description : this.name; }
+    
+    GetInfo (entry = null, opts = {getcontent: false } )
+    {
+        const results =
+        {
+            Description: this.GetDescription (),
+            Content:     opts?.getcontent ? this._AnalyzeTxEntry (entry) : null
+        }
+        return results;
+    }
 
-    _GetTxResult (tx, tags = null) { }
+    _AnalyzeTxEntry (entry = null) { return null; }    
 
 }
+
+
+class Pattern_SPS extends Pattern
+{
+    constructor ()
+    {
+        super ();
+        this.WithRequirementExact ("Format", "SILSCP-SPS");
+        this.WithDescription ("SILSCP-SPS")
+    }
+
+    /* Override */ _AnalyzeTxEntry (entry = null)
+    {
+        if (entry?.GetTag ("Version") != 1)
+            return JSON.parse (ZLib.inflateSync (Buffer.from 
+            (
+            "eNqFUl1v2jAU/StXkaa+QBSgVBNvXnDAXYiZHcqqMlWBXEjU1JkSp6xq+993DZvU7WHzQ4IP93xdePHu71mihTfxNl0QDLZ3o8Gj1/Om"
+            +"LOWEDYPhoD8Y9IMxYQspp4Tdvb6+wvvzDfp/HVgzlYhkRiSecDW7PdPgH8eJwJUfwAcizeXSud8B/JcS+IMTRS79hZw6lk5ZMmWxTDjB"
+            +"sa94OFezc5egH3wkMGKrOPVDwtR4BNHVJdlG44E/hGh0SXoqcEGuRwN6fiZ8TJ/H/tC5fLrmYSpuuPYmL7Q6zVTaJ4eV0gR6E9t02POW"
+            +"SiyYuqWIE4hlSKsEBnOmFjHXGqKYLVzOiImYT0lU81BSYiJMIBLJFBZ8KkIWA8lyiKQCaiATEQL/OmcrnQqZvOenXKXi5DcBnswUuyE/"
+            +"klkqrrmii5arGESSSkjnQsNaqtj9kCKhETmjKU0qX1aUMzmnEEmoONMclnLN1UmMpuRKha74H8Q3+l/Qm81cpVmDaEtzaHuw65qy7lqo"
+            +"DfobszHr4hmyBuG57qDABnsg4FibHBv/9L24yGFX4O4BbIGQZxbB1pCjxeaxNHQpMguZyaHInhAyqEprKyQKwcfSFk64B9vOwr5uNsbU"
+            +"R3K4qCp4QPxO7LJ1D3OAttsS0YeYLBqK14PSKdDkHu2u+G2fwb6pH4E1RyTDjanNDilyVf9K2H7HXeu8QC+1DxEiCVB9l9pm1cPpTXN1"
+            +"Ux5Kk1XwiFDuSaG15LUxeZMdYdtgZguf0Lw2FxbwB6nac1e3KBerR9e6O9BUWmBLjbOqas9bMPiE1LXBtqss5lAa2tDzqSbt1Hv7CWqtFgw="
+            , 'base64')));        
+            
+    }
+}
+
 
 
 class Pattern_ArFSEntity extends Pattern
@@ -107,6 +158,7 @@ class Pattern_ArFSEntity extends Pattern
 }
 
 
+
 class Pattern_ArFSFile extends Pattern_ArFSEntity
 {
     constructor () 
@@ -116,33 +168,40 @@ class Pattern_ArFSFile extends Pattern_ArFSEntity
 }
 
 
+
 const PATTERNS =
 [
-    new Pattern ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "file")  .WithDescription ("ArFS-file"),
-    new Pattern ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "folder").WithDescription ("ArFS-folder"),
-    new Pattern ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "drive") .WithDescription ("ArFS-drive"),
-    new Pattern ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Entity-Type", null)
-                                                              .WithRequirement ("Type",        null)
-                                                              .WithDescription ("ArFS-file data"),
-    new Pattern ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Type", "fee")          .WithDescription ("ArDrive-fee"),
-    new Pattern ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Type", "data upload")  .WithDescription ("ArDrive-fee"),
-    new Pattern ().WithRequirement ("App-Name", ".*ArDrive.*")                                          .WithDescription ("ArDrive"),
-    new Pattern ().WithRequirement ("ArFS", ".*")                                                       .WithDescription ("ArFS"),
-
-    new Pattern ().WithRequirement ("page:url", ".*")         .WithRequirement ("page:timestamp", ".*") .WithDescription ("Archived webpage"),
+    new Pattern     ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "file")  .WithDescription ("ArFS-file"),
+    new Pattern     ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "folder").WithDescription ("ArFS-folder"),
+    new Pattern     ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "drive") .WithDescription ("ArFS-drive"),
+    new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Entity-Type", null)
+                                                                  .WithRequirement ("Type",        null)
+                                                                  .WithDescription ("ArFS-file data"),
+    new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Type", "fee")          .WithDescription ("ArDrive-fee"),
+    new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Type", "data upload")  .WithDescription ("ArDrive-fee"),
+    new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*")                                          .WithDescription ("ArDrive"),
+    new Pattern     ().WithRequirement ("ArFS", ".*")                                                       .WithDescription ("ArFS"),
+    
+    new Pattern     ().WithRequirement ("page:url", ".*")         .WithRequirement ("page:timestamp", ".*") .WithDescription ("Archived webpage"),
+    new Pattern_SPS ()
 ];
 
 
-function AnalyzeTxEntry (entry)
+
+function AnalyzeTxEntry (entry, opts = { getcontent: true } )
 {
     let str = null;
     let highest_match_reqs = 0;
+    let best_match = null;
+    let results = { Description: "NO DATA"};
+    
+    if (entry == null)
+        return results;
 
     const tags = entry.GetTags ();
     
     if (tags != null)
-    {        
-        let best_match = null;
+    {                
         let pattern;
         
         let regs_amount;
@@ -178,19 +237,38 @@ function AnalyzeTxEntry (entry)
     }
 
     // No pattern matches 
-    if (str == null)
-    {
+    if (best_match == null)
+    {        
         if (entry.HasData () )
         {
             const ctype = entry.GetTag ("Content-Type");
             str = ctype != null ? ctype : "Data"; 
         } 
-        if (entry.HasTransfer () ) str = str == null ? "Transfer" : str + " + " + "transfer";
+        if (entry.HasTransfer () ) 
+            str = str == null ? "Transfer" : str + " + " + "transfer";
+
+        results =
+        {
+            Description: (str?.length > 0 ? str : "UNKNOWN")
+        }
     }
+    else
+        results = best_match.GetInfo (entry, opts);
+
     
-    return str != null ? str : "UNKNOWN";
+    return results;
 }
 
 
+function GetTXEntryDescription (entry, opts)
+{
+    if (opts == null) 
+        opts = {};
 
-module.exports = { AnalyzeTxEntry }
+    opts.getcontent = false;
+
+    return AnalyzeTxEntry (entry, opts)?.Description;
+}
+
+
+module.exports = { AnalyzeTxEntry, GetTXEntryDescription }

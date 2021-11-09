@@ -14,7 +14,7 @@ const Util         = require ('./util.js');
 const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
 const GQL          = require ('./GQL.js');
-const PrintObj_Out = require("./PrintObj_Out").PrintObj_Out;
+
 
 
 const SUBCOMMANDS = 
@@ -49,7 +49,7 @@ function Help (args)
 // TODO: Make a class containing a generic implementation of this.
 async function HandleCommand (args)
 {
-    const target  = args.RequireAmount (1).Pop ();    
+    const target  = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).Pop ();    
     const handler = SUBCOMMANDS[target.toLowerCase () ];
 
     // Invoke handler if found
@@ -101,7 +101,7 @@ async function Handler_TX (args, txid = null)
         else
             Sys.ERR ("Failed to retrieve status for transaction '" + txid + "'.");
 
-        PrintObj_Out (txstatus, { txt_obj: status} );
+        Sys.OUT_OBJ (txstatus, { txt_obj: status} );
     }
     else
         Sys.ERR_MISSING_ARG ();
@@ -157,7 +157,7 @@ async function Handler_ArFS (args, arfs_id = null)
     
 
     // Print
-    PrintObj_Out (status);
+    Sys.OUT_OBJ (status);
 
     if (Util.IsSet (status.MetaTXID) )
         await Handler_TX (args, status.MetaTXID);
@@ -192,7 +192,7 @@ async function Handler_Arweave (args)
         }
         // List all
         else
-            PrintObj_Out (network_status);
+            Sys.OUT_OBJ (network_status);
         
     }
     else

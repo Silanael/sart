@@ -8,8 +8,11 @@
 //
 
 // Imports
-const Sys      = require ("./sys");
+const Path     = require ('path');
+
+const Sys      = require ("./sys.js");
 const Package  = require ("./package.json");
+
 
 
 const CHR_LF = "\n";
@@ -80,15 +83,20 @@ function PopArg (args)
 
 
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
-function IsFlag        (arg, flags)   { return flags[arg] != null; }
-function IsFlagWithArg (arg, flags)   { return flags[arg]?.A; }
-function IsSet         (value)        { return value != null && value.length > 0; }
-function IsArweaveHash (str)          { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
-function IsArFSID      (str)          { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
-function GetUNIXTime   ()             { return new Date ().getTime (); }
-function GetVersion    ()             { return Package.version; }
-function GetVersionStr ()             { return "v" + Package.version + " (" + Package.versiondate + ")"; }
-
+function IsFlag         (arg, flags)   { return flags[arg] != null; }
+function IsFlagWithArg  (arg, flags)   { return flags[arg]?.A; }
+function IsSet          (value)        { return value != null && value.length > 0; }
+function IsArweaveHash  (str)          { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
+function IsArFSID       (str)          { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
+function GetUNIXTime    ()             { return new Date ().getTime (); }
+function GetVersion     ()             { return Package.version; }
+function GetVersionStr  ()             { return "v" + Package.version + " (" + Package.versiondate + ")"; }
+function StripExtension (filename)     { return filename != null ? Path.parse (filename)?.name : null; }
+function IsTTY          ()             { return process.stdout.isTTY; }
+function IsOutputPiped  ()             { return !this.IsTTY (); }
+function IsFlagSet      (flags, mask)  { return (flags & mask) != 0; }
+ 
+async function Delay    (ms)           { await new Promise (r => setTimeout (r, ms) ); }
 
 
 function _StrCmp_Prep (str, compare_to, lowercase = true)
@@ -205,6 +213,47 @@ function ObjToJSON (obj)
     return null;
 }
 
+
+function StrToFlags (str, flagtable, opts = {chr_separator: ",", lcase: false, ucase: true, ret_no_matches: null } )
+{
+    if (str       == null) return opts.ret_no_matches != null ? opts.ret_no_matches : 0; //{ Sys.ERR ("String null.",    "Util.StrToFlags"); return 0; }
+    if (flagtable == null) return opts.ret_no_matches != null ? opts.ret_no_matches : 0; //{ Sys.ERR ("Flagtable null.", "Util.StrToFlags"); return 0; }
+    
+    if      (opts.lcase) str = str.toLowerCase ();
+    else if (opts.ucase) str = str.toUpperCase ();
+
+    const flagstrings = opts.chr_separator != null ? str.split (opts.chr_separator) : [str];
+
+    let flags = 0;
+    let matches = false;
+    
+    for (const s of flagstrings)
+    {        
+        if (flagtable[s] != null)
+        {
+            flags |= flagtable[s];
+            matches = true;
+        }
+        //else
+            //Sys.ERR ("Unknown flag: " + s, "Util.StrToFlags");
+    }
+
+    return matches == true ? flags : opts.ret_no_matches != null ? opts.ret_no_matches : flags;
+}
+
+
+function TXStatusCodeToStr (statuscode)
+{
+    switch (statuscode)
+    {
+        case 200: return "OK";
+        case 202: return "PENDING";
+        case 404: return "FAILED";
+        default:  return statuscode;
+    }
+}
+
+function IsTxOKByCode (statuscode) {return statuscode == 200; }
 
 
 const SIZE_UNITS =
@@ -399,6 +448,6 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
 
 
 module.exports = { Args,
-                   IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, 
-                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg,
+                   IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
+                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge };

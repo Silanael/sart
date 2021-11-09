@@ -14,7 +14,7 @@ const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
 const GQL      = require ('./GQL.js');
 const Listing  = require ('./Listing.js');
-
+const Tag      = GQL.Tag;
 
 
 
@@ -142,6 +142,7 @@ class ArFSURL
     IsFullDrive  () { return this.Mode == URLMODES["drive"];                                             }
     IsRootFolder () { return this.Mode == URLMODES["path"] && (this.Target == "/" || this.Target == ""); }
     IsPath       () { return this.Mode == URLMODES["path"] &&  this.Target != "/" && this.Target != "";  }
+    GetDriveID   () { return this.DriveID;                                                               }
 
 
     Parse (url)
@@ -385,7 +386,7 @@ class ArFSEntity
 
     
     GetIDTag             ()       { return GetIDTag (this.ArFSEntityType);                                                         }
-    IsContainedIn        (entity) { return this.ParentFolderId != null && this.ParentFolderId == entity.ArFSID                     }
+    IsContainedIn        (entity) { return this.ParentFolderId != null && entity != null && this.ParentFolderId == entity?.GetID (); }
     IsFile               ()       { return this.ArFSEntityType == ENTITYTYPE_FILE;                                                 }
     IsFolder             ()       { return this.ArFSEntityType == ENTITYTYPE_FOLDER;                                               }
     IsDrive              ()       { return this.ArFSEntityType == ENTITYTYPE_DRIVE;                                                }
@@ -401,8 +402,8 @@ class ArFSEntity
     HasTargetNameWildCard(name_w ){ return Util.StrCmp_Wildcard (name_w, this.ArFSName);                                           }
     HasDataTXID          ()       { return Util.IsSet (this.DataTXID);                                                             }
     IsValid              ()       { return this.Valid;                                                                             }
-    IsNewerThan          (entity) { return entity == null || entity.BlockTimestamp > this.BlockTimestamp;                          }
-    IsNewerThanTimestamp (time)   { return time > this.BlockTimestamp;                                                             }
+    IsThisNewerThan          (entity) { return entity == null || this.BlockTimestamp > entity.BlockTimestamp;                          }
+    IsThisNewerThanTimestamp (time)   { return this.BlockTimestamp > time;                                                             }
 
 
 
@@ -492,8 +493,8 @@ class ArFSEntity
             sort: GQL.SORT_OLDEST_FIRST,
             tags: 
             [ 
-                { name:id_tag,        values:this.ArFSID         },
-                { name:"Entity-Type", values:this.ArFSEntityType } 
+                Tag.QUERYTAG (id_tag, this.ArFSID),
+                Tag.QUERYTAG (TAG_ENTITYTYPE, this.ArFSEntityType)                
             ]
         });
 
@@ -534,8 +535,8 @@ class ArFSEntity
             owner: entity_owner,
             tags: 
             [ 
-                { name:id_tag,     values:this.ArFSID         },
-                { name:TAG_ENTITYTYPE, values:this.ArFSEntityType } 
+                Tag.QUERYTAG (id_tag,         this.ArFSID),
+                Tag.QUERYTAG (TAG_ENTITYTYPE, this.ArFSEntityType),                
             ]            
         };
     
@@ -896,8 +897,8 @@ class ArFSDrive extends ArFSEntity
                     owner: this.OwnerAddress,
                     tags:
                     [
-                        { name: "Drive-Id",    values:this.GetID ()        },
-                        { name: "Entity-Type", values:ENTITYTYPES_INFOLDER },
+                        Tag.QUERYTAG (TAG_DRIVEID,    this.GetID () ),
+                        Tag.QUERYTAG (TAG_ENTITYTYPE, ENTITYTYPES_INFOLDER),                        
                     ]
                 });
         
@@ -1011,8 +1012,8 @@ class ArFSDir extends ArFSItem
             owner: owner_addr,
             tags: 
             [ 
-                { name:"Parent-Folder-Id", values:this.ArFSID           },
-                { name:"Entity-Type",      values:ENTITYTYPES_INFOLDER  },                
+                Tag.QUERYTAG (TAG_PARENTFOLDERID, this.GetID () ),
+                Tag.QUERYTAG (TAG_ENTITYTYPE,     ENTITYTYPES_INFOLDER),                
             ]
         });
 
@@ -1030,7 +1031,7 @@ class ArFSDir extends ArFSItem
             const id    = entry.GetTag       (GetIDTag (type));
             const btime = entry.GetBlockTime ();
             
-            if (this.OwnerDrive != null && this.OwnerDrive.GetEntityByID (id)?.IsNewerThanTimestamp (btime) )
+            if (this.OwnerDrive != null && this.OwnerDrive.GetEntityByID (id)?.IsThisNewerThanTimestamp (btime) )
             {
                 Sys.VERBOSE ("Encountered an old transaction for " + id + " (TXID:" + entry.GetTXID () + ") - ignoring.");
                 continue;
@@ -1049,12 +1050,12 @@ class ArFSDir extends ArFSItem
             ++processed;        
         }
         
-        Sys.VERBOSE (processed + " / " + len + " entries added." + this.ArFSID);
+        Sys.VERBOSE (processed + " / " + len + " entries added." + this.ArFSID);        
     }
 
 
     async UpdateContainedEntities (args = { recursive : false, list : false, Listing: null }, folderids_visited = {} )
-    {   
+    {           
         if (args.Listing == null)
             args.Listing = new Listing.Listing ();
 
@@ -1083,8 +1084,8 @@ class ArFSDir extends ArFSItem
             // The entity has moved away from this directory.
             if (!entity.IsContainedIn (this) )
             {
-                delete this.Entities[entity.ArFSID];
-                Sys.VERBOSE ("Removed " + entity + " from " + this.name + " as it was moved.");
+                delete this.Entities[entity.GetID () ];                
+                Sys.VERBOSE ("Removed " + entity?.GetNameAndID () + " from " + this.GetNameAndID () + " as it was moved.");
             }
 
             // A valid entity
@@ -1126,7 +1127,7 @@ class ArFSDir extends ArFSItem
                 }
                 
             }
-        }
+        }        
     }
 
 
@@ -1326,6 +1327,19 @@ class ArFSFile extends ArFSItem
 
 
 
+async function GetDriveOwner (drive_id)
+{
+    if (Util.IsArFSID (drive_id) )
+    {
+        const query = new GQL.DriveOwnerQuery (Arweave);
+        const owner = await query.Execute (drive_id);
+        
+        return owner;
+    }
+    else
+        Sys.ERR ("Not a Drive ID: " + drive_id, "ArFS:GetDriveOwner");
+}
+
 
 
 
@@ -1375,8 +1389,8 @@ async function FindDriveOwner (drive_id)
         "first"  : 1, 
         "owner"  : undefined, 
         "sort"   : GQL.SORT_OLDEST_FIRST ,
-        "tags"   :[ { name: TAG_DRIVEID,    values:drive_id },
-                    { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
+        "tags"   :[ Tag.QUERYTAG (TAG_DRIVEID, drive_id),
+                    Tag.QUERYTAG (TAG_ENTITYTYPE, ENTITYTYPE_DRIVE) ], 
     } );
 
     let entry = null;
@@ -1475,6 +1489,9 @@ async function DownloadFile (args)
 }
 
 
+
+
+
 async function ListDrives (address)
 {
     
@@ -1486,7 +1503,7 @@ async function ListDrives (address)
         "first"  : undefined,
         "owner"  : address, 
         "sort"   : GQL.SORT_NEWEST_FIRST ,
-        "tags"   :[ { name: TAG_ENTITYTYPE, values:ENTITYTYPE_DRIVE } ], 
+        "tags"   :[ Tag.QUERYTAG (TAG_ENTITYTYPE, ENTITYTYPE_DRIVE) ], 
     } );
     
     
@@ -1752,7 +1769,7 @@ async function ListDriveFiles (drive_id)
 
 
             // Check that the data-field of the metadata tx is of reasonable size.
-            if (file.Metadata_Size > Settings.Config.MetadataMaxSize)
+            if (file.Metadata_Size > Settings.Config.MaxArFSMetadataSize)
             {
                 Sys.ERR ("Unusually large data field: " + file.Metadata_Size + "B", prefix);
                 if (!Settings.IsForceful () )
@@ -1814,4 +1831,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile };
+module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, DownloadFile, GetDriveOwner };

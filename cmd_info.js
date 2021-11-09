@@ -15,7 +15,7 @@ const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
 const GQL          = require ('./GQL.js');
 const Package      = require ('./package.json');
-const PrintObj_Out = require("./PrintObj_Out").PrintObj_Out;
+
 
 
 const SUBCOMMANDS = 
@@ -76,7 +76,7 @@ async function HandleCommand (args)
         Sys.ERR_FATAL ("Unable to determine what '" + target + "' is.");
   
     if (info.Valid)
-        PrintObj_Out (info);
+        Sys.OUT_OBJ (info);
 }
 
 
@@ -87,7 +87,7 @@ async function Handler_TX (args, info, tx = null)
 
     if (tx == null)
     {
-        const txid = args.RequireAmount (1).Pop ();
+        const txid = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).Pop ();
         Sys.VERBOSE ("INFO: Processing TXID: " + txid);
 
         if (Util.IsArweaveHash (txid) )
@@ -160,26 +160,28 @@ async function Handler_Author ()
 {
     const info =
     {
-        Name:            "Silanael",
-        Description:     "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
-                         + "A creator and a destroyer. A strong ally and an enemy to be reckoned with. "
-                         + "A pragmatic idealist. A fighter longing for a moment of rest..",
-        Properties:      "MtF, sub, dev, preservationist, artistic_spirit, stalker, dark ambassador, ex-RPer, ex-drifter",
-        Age:             Util.GetAge (),
-        Website:         "www.silanael.com",
-        "E-Mail":        "sila@silanael.com",
-        Arweave:         "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
-        ArDrive:         "a44482fd-592e-45fa-a08a-e526c31b87f1",
-        GitHub:          "https://github.com/Silanael",
-        DockerHub:       "https://hub.docker.com/u/silanael",
-        DeviantArt:      "https://www.deviantart.com/silanael",
-        KOII:            "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
-        Twitter:         "https://www.twitter.com/silanael",
-        PGP_Fingerprint: "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
-        "The question":  "If you could have anything in the world, what would it be?"      
+        "__ANSI":          "\033[31m",
+        Name:              "Silanael",
+        Description:       "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
+                           + "A creator and a destroyer. A powerful ally and an enemy to be reckoned with. "
+                           + "A pragmatic idealist. A dark ambassador. A ghost imprisoned in the past.. "
+                           + "A fighter longing for a moment of rest..",
+        Properties:        "MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, stalker, ex-drifter",
+        Age:               Util.GetAge (),        
+        Website:           "www.silanael.com",
+        "E-mail":          "sila@silanael.com",
+        "PGP-fingerprint": "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
+        Arweave:           "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
+        ArDrive:           "a44482fd-592e-45fa-a08a-e526c31b87f1",
+        GitHub:            "https://github.com/Silanael",
+        DockerHub:         "https://hub.docker.com/u/silanael",
+        DeviantArt:        "https://www.deviantart.com/silanael",
+        KOII:              "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
+        Twitter:           "https://www.twitter.com/silanael",        
+        "The Question":    "If you could have anything in the world, what would it be?"      
     }
 
-    PrintObj_Out (info);
+    Sys.OUT_OBJ (info);
 }
 
 
@@ -243,7 +245,7 @@ may never see the light of day...
         Description:  description        
     }
 
-    PrintObj_Out (info);
+    Sys.OUT_OBJ (info);
 
 }
 

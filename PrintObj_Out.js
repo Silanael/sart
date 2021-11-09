@@ -3,18 +3,26 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// PrintObj_Out.js - 2021-10-30_01
+// Sys.OUT_OBJ.js - 2021-10-30_01
 // Temporary file.
 //
 
 
-const Sys      = require('./sys.js');
 const Settings = require('./settings.js');
 const Util     = require ('./util.js');
 
+const FIELD_RECURSIVE    = "__SART-RECURSIVE"
+const FIELD_ANSI         = "__ANSI";
+const FIELD_VALUE_SPACER = 2;
 
 
-function PrintObj_Out (obj, opts = { indent: 0, txt_obj: null } ) 
+function SetRecursive (obj)
+{
+    obj[FIELD_RECURSIVE] = true;
+}
+
+
+function Print (obj, opts = { indent: 0, txt_obj: null}, fn_txt, fn_txt_raw, fn_err ) 
 {
 
     if (obj == null)
@@ -24,18 +32,17 @@ function PrintObj_Out (obj, opts = { indent: 0, txt_obj: null } )
     switch (Settings.Config.OutputFormat) 
     {        
         case Settings.OutputFormats.JSON:
-
-            const json = Util.ObjToJSON (obj);
-
-            if (json != null)
-                Sys.OUT_TXT (json);
-
+            
+            if (obj != null)
+            {
+                try               {  fn_txt (JSON.stringify (obj) ); }
+                catch (exception) { Sys.ON_EXCEPTION (exception, "Util.ObjToJSON (" + obj?.name + ")"); }
+            }
             else
             {
-                Sys.ERR ("Unable to convert object " + obj + " to JSON - trying to print it as-is:");
-                Sys.OUT_TXT (obj);
-            }
-
+                fn_err ("Unable to convert object " + obj + " to JSON - trying to print it as-is:");
+                fn_txt (obj);
+            }            
             break;
 
         // Text
@@ -60,11 +67,35 @@ function PrintObj_Out (obj, opts = { indent: 0, txt_obj: null } )
             // list all
             Object.entries (obj).forEach 
             (e => 
-            {   
-                const val_str = e[1] != null ? e[1].toString () : "-";
+            {       
                 const var_str = !Settings.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
 
-                Sys.OUT_TXT (var_str?.padEnd(longest_len, " ").padStart(opts.indent * 4, " ") + "  " + val_str);                
+                const field = e[0];
+                const val   = e[1];
+                
+                // Special control field
+                if (field.startsWith ("__") )
+                {
+                    if (field == FIELD_ANSI)
+                        if (Settings.Config.ANSIAllowed == true) 
+                            fn_txt_raw (val);                    
+                }
+
+                // Value is an object that's set to recursive display
+                else if (val != null && val[FIELD_RECURSIVE] == true)
+                {
+                    fn_txt ( (var_str).padStart(opts.indent) + " ".repeat (FIELD_VALUE_SPACER) + "-----" );
+                    Print (e[1], { indent: opts.indent + longest_len + FIELD_VALUE_SPACER }, fn_txt, fn_txt_raw, fn_err )
+                }
+
+                // Display the field-value pair.
+                else
+                {
+                    const val_str = val != null ? val.toString () : "-";
+                    
+                    fn_txt (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
+                            + " ".repeat (FIELD_VALUE_SPACER) + val_str);
+                }
             }
             );
             break;
@@ -73,4 +104,4 @@ function PrintObj_Out (obj, opts = { indent: 0, txt_obj: null } )
 
 }
 
-exports.PrintObj_Out = PrintObj_Out;
+module.exports = { Print, SetRecursive };

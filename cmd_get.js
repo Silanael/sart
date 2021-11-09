@@ -15,7 +15,7 @@ const Util     = require ('./util.js');
 const Arweave  = require ('./arweave.js');
 const ArFS     = require ('./ArFS.js');
 const GQL      = require ('./GQL.js');
-const { PrintObj_Out } = require("./PrintObj_Out");
+
 
 
 
@@ -75,7 +75,7 @@ function Help (args)
 
 async function HandleCommand (args)
 {
-    const subcmd  = args.RequireAmount (1).PopLC ();    
+    const subcmd  = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).PopLC ();    
     const handler = SUBCOMMANDS[subcmd];
 
 
@@ -115,7 +115,7 @@ async function Handler_Arweave (args)
         }
         // List all
         else
-            PrintObj_Out (network_status);
+            Sys.OUT_OBJ (network_status);
         
     }
     else
@@ -138,10 +138,10 @@ async function Handler_TX (args)
         if (field != null)
         {
             if (Util.StrCmp (field, "tags") )
-                PrintObj_Out (Util.DecodeTXTags (tx) )
+                Sys.OUT_OBJ (Util.DecodeTXTags (tx) )
 
             else if (tx[field] != null)
-                PrintObj_Out (tx[field]);
+                Sys.OUT_OBJ (tx[field]);
 
             else
                 Sys.ERR ("TX: Unknown field '" + field + "'.");
@@ -149,7 +149,7 @@ async function Handler_TX (args)
             
         // Print the entire TX.
         else                    
-            PrintObj_Out (tx);        
+            Sys.OUT_OBJ (tx);        
 
     }
     else
@@ -171,7 +171,7 @@ async function Handler_TXTags (args)
             Sys.ERR ("No tags obtained from transaction " + txid + " !");
 
         else
-            PrintObj_Out (Util.DecodeTXTags (tx).entries )
+            Sys.OUT_OBJ (Util.DecodeTXTags (tx).entries )
 
     }
     else
@@ -252,7 +252,7 @@ async function Handler_MemPool (args, show_amount = false)
         Sys.OUT_TXT (mempool.length);
 
     else
-        PrintObj_Out (mempool);
+        Sys.OUT_OBJ (mempool);
 
 }
 
@@ -265,7 +265,7 @@ async function Handler_PendingAmount ()
 
 async function Handler_Config ()
 {
-    PrintObj_Out (Settings.Config);
+    Sys.OUT_OBJ (Settings.Config);
 }
 
 
