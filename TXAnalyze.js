@@ -119,6 +119,16 @@ class Pattern
 
 }
 
+class Pattern_PathManifest extends Pattern
+{
+    constructor ()
+    {
+        super ();
+        this.WithRequirementExact ("Content-Type", "application/x.arweave-manifest+json");
+        this.WithDescription ("Path manifest");
+    }
+    
+}
 
 class Pattern_SPS extends Pattern
 {
@@ -183,7 +193,8 @@ const PATTERNS =
     new Pattern     ().WithRequirement ("ArFS", ".*")                                                       .WithDescription ("ArFS"),
     
     new Pattern     ().WithRequirement ("page:url", ".*")         .WithRequirement ("page:timestamp", ".*") .WithDescription ("Archived webpage"),
-    new Pattern_SPS ()
+    new Pattern_SPS (),
+    new Pattern_PathManifest ()
 ];
 
 

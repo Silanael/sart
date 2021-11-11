@@ -97,9 +97,12 @@ class Entry
     HasFee         ()    { return this.Fee_AR         != null && this.Fee_AR         > 0; }
     HasTransfer    ()    { return this.Quantity_AR    != null && this.Quantity_AR    > 0; }
     HasData        ()    { return this.DataSize_Bytes != null && this.DataSize_Bytes > 0; }
-    HasRecipient   ()    { return this.Recipient != null;                                 }
+    HasRecipient   ()    { return this.Recipient != null;                                 }    
     HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null;            }
+    IsMined        ()    { return this.BlockHeight != null && this.BlockHeight >= 0;      }
     GetTags        ()    { return this.Tags; }
+
+  
 
     GetTag (tag)
     { 
@@ -116,6 +119,26 @@ class Entry
         
         return this; 
     }
+
+    static GetEntriesByTag (entries, tag, value = null)
+    {
+        const ret = [];
+        if (entries != null)
+        {
+            for (const e of entries)
+            {
+                if (value == null)
+                {
+                    if (e.HasTag (tag) ) 
+                        ret.push (e);        
+                }
+                else if (e.GetTag (tag) == value)
+                    ret.push (e);                
+            }
+        }
+        return ret;
+    }
+
 }
 
 
@@ -156,8 +179,8 @@ class Query
         const arweave = this.Arweave.Init ();                
         this.Results  = await RunGQLQuery (this.Arweave, this.Query)
                      
-        this.Edges         = this.Results.data.data.transactions.edges;
-        this.EntriesAmount = this.Edges.length;
+        this.Edges         = this.Results?.data?.data.transactions.edges;
+        this.EntriesAmount = this.Edges != null ? this.Edges.length : 0;
         this._ParseEntries ();
     }
      
@@ -173,6 +196,11 @@ class Query
     GetEntry         (index)      { return this.Entries[index];                            }
     DidQuerySucceed  ()           { return this.Results?.status == HTTP_STATUS_OK;         }
     
+    GetEntriesByTag (tag, value = null)
+    {        
+        return this.Entries != null ? Entry.GetEntriesByTag (this.Entries, tag, value) : [];        
+    }
+
 
     GetTag (index, tag)
     { 
@@ -315,9 +343,8 @@ class TXQuery extends Query
            
            if (pass_edges == undefined)
            {
-               Sys.ERR ("Something went wrong with a query.");
-               Sys.DEBUG (results);
-               process.exit ();
+               Sys.ERR ("Something went wrong with the query, at pass #" + pass_num);
+               Sys.DEBUG (results);               
                break;
            }
 
@@ -327,8 +354,11 @@ class TXQuery extends Query
            if (pass_entries > 0)
            {
                cursor = pass_edges.at(-1).cursor;
-               edges  = edges.concat (pass_edges)      
-               Sys.DEBUG ("Pass #" + pass_num + ": " + pass_entries + " entries.", __TAG);       
+               edges  = edges.concat (pass_edges)
+
+               Sys[pass_num <= 0 ? "DEBUG" : "VERBOSE"]("TX fetch pass #" + String(pass_num).padStart (4, "0") + ": " 
+                    + pass_entries + " transactions received (" + total_entries + " total).", __TAG);       
+
                ++pass_num;
            }       
            else
@@ -347,7 +377,7 @@ class TXQuery extends Query
        this._ParseEntries ();
 
 
-       Sys.DEBUG ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", __TAG)   
+       Sys.INFO ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", __TAG)   
        
        
        return this.EntriesAmount >= desired_amount;

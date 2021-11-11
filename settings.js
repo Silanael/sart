@@ -48,32 +48,35 @@ const OutputFormats =
 
 const Config =
 {
-    LogLevel            : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
-    MsgOut              : OutputDests.STDOUT,
-    ErrOut              : OutputDests.STDERR,
-           
-    ArweaveHost         : "arweave.net",
-    ArweavePort         : 443,
-    ArweaveProto        : "https",    
-    ManualDest          : false,
-       
-    Recursive           : false,
-    DisplayAll          : false,    
-    AllowWildcards      : true,
-   
-    OutputFields        : null,
-    OutputFormat        : OutputFormats.TXT,
-    SizeDigits          : 5,
-    VarNamesUppercase   : false,
-    ANSIAllowed         : true,
+    
+    LogLevel             : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
+    MsgOut               : OutputDests.STDOUT,
+    ErrOut               : OutputDests.STDERR,
+            
+    ArweaveHost          : "arweave.net",
+    ArweavePort          : 443,
+    ArweaveProto         : "https",    
+    ManualDest           : false,
+        
+    Recursive            : false,
+    DisplayAll           : false,    
+    AllowWildcards       : true,
+    ConcurrentDelay_ms   : 50,
+    
+    OutputFields         : null,
+    OutputFormat         : OutputFormats.TXT,
+    SizeDigits           : 5,
+    VarNamesUppercase    : false,
+    ANSIAllowed          : true,
+    CSVReplacePeriodWith : "#!#",
 
-    Force               : false,
-   
-    MaxArFSMetadataSize : 1073741824, // 1MB ought to be enough for anybody?
-    MaxTXFormat         : 2,
-    MinArFSVersion      : 0.11,
-    MaxArFSVersion      : 0.11,
-    ContainerMode       : false,
+    Force                : false,
+    
+    MaxArFSMetadataSize  : 1073741824, // 1MB ought to be enough for anybody?
+    MaxTXFormat          : 2,
+    MinArFSVersion       : 0.11,
+    MaxArFSVersion       : 0.11,
+    ContainerMode        : false,
   
 };
 
@@ -99,6 +102,7 @@ function IsForceful         ()            { return Config.Force;                
 function IsHTMLOut          ()            { return Config.OutputFormat == OutputFormats.HTML;                  }
 function IsCSVOut           ()            { return Config.OutputFormat == OutputFormats.CSV;                   }
 function IsTXTOut           ()            { return Config.OutputFormat == OutputFormats.TXT;                   }
+function IsANSIAllowed      ()            { return Config.ANSIAllowed == true;                                 }
 function IsJSONOut          ()            { return Config.OutputFormat == OutputFormats.JSON;                  }
 function SetForce           ()            { Config.Force = true;                                               }
 function SetPort            (port)        { Config.ArweavePort  = port;  ManualDest = true;                    }
@@ -211,6 +215,7 @@ module.exports =
     IsCSVOut,
     IsTXTOut,
     IsJSONOut,
+    IsANSIAllowed,
     SetHost,
     SetPort,
     SetProto,

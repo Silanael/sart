@@ -17,6 +17,7 @@ const GQL          = require ('./GQL.js');
 const Package      = require ('./package.json');
 const Status       = require ('./cmd_status.js');
 const Analyze      = require ('./TXAnalyze.js');
+const { Entry } = require('./GQL.js');
 const Tag          = GQL.Tag;
 
 
@@ -24,27 +25,36 @@ const LISTMODE_SUMMARY = "SUMMARY";
 const LISTMODE_HEALTHY = "HEALTHY";
 const LISTMODE_FAILED  = "FAILED";
 const LISTMODE_NUMERIC = "NUMERIC";
+const LISTMODE_MISSING = "MISSING";
+const LISTMODE_ALL     = "ALL";
 
-const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_NUMERIC ];
+const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_ALL, LISTMODE_NUMERIC ];
 
 
 const F_LISTMODE_SUMMARY = 1,
       F_LISTMODE_HEALTHY = 2,
       F_LISTMODE_FAILED  = 4,
       F_LISTMODE_NUMERIC = 8,
+      F_LISTMODE_MISSING = 16,
 
-      MASK_LISTS = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_NUMERIC;
+      MASK_LISTS = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_NUMERIC | F_LISTMODE_MISSING;
+      MASK_ALL   = F_LISTMODE_SUMMARY | F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING;
       
+
 
 const LISTMODES_FLAGTABLE =
 {
-    "STATUS"           : F_LISTMODE_SUMMARY,
+    [LISTMODE_ALL]     : MASK_ALL,
+    "STATUS"           : F_LISTMODE_SUMMARY,    
     [LISTMODE_SUMMARY] : F_LISTMODE_SUMMARY,
     [LISTMODE_HEALTHY] : F_LISTMODE_HEALTHY,
     [LISTMODE_FAILED]  : F_LISTMODE_FAILED,
+    [LISTMODE_MISSING] : F_LISTMODE_MISSING,
     [LISTMODE_NUMERIC] : F_LISTMODE_NUMERIC,
+    
 };
     
+
 
 const SUBCOMMANDS = 
 {
@@ -52,6 +62,9 @@ const SUBCOMMANDS =
 };
 
 
+const ANSI_ERROR   = "\033[31m";
+const ANSI_PENDING = "\033[33m";
+const ANSI_CLEAR   = "\033[0m";
 
 
 
@@ -66,11 +79,23 @@ function Help (args)
     Sys.INFO ("Verify upload success:")
     Sys.INFO ("   verify files <Drive-ID> [OUTPUT]");
     Sys.INFO ("");
-    Sys.INFO ("'OUTPUT' can be any combination of the following flags:");
-    Sys.INFO ("   summary,healthy,failed,all,full");
+    Sys.INFO ("'OUTPUT' is optional and can be any combination of following:");
+    Sys.INFO ("   summary,healthy,failed,numeric");
     Sys.INFO ("");
-    Sys.INFO ("AN EXAMPLE:")
+    Sys.INFO ("Optional parameter: 'EXTENSION ext' - filter processed files by extension.");
+    Sys.INFO ("");
+    Sys.INFO ("Numeric output is designed to be used with numbered filenames,")
+    Sys.INFO ("listing healthy, failed, pending and missing files.")
+    Sys.INFO ("'RANGE first-last' is an optional parameter for this mode.");
+    Sys.INFO ("If omitted, the range is autodetected.");
+
+    Sys.INFO ("EXTENSION is case-sensitive.");
+    Sys.INFO ("");
+    Sys.INFO ("EXAMPLES:")
     Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 summary,failed");
+    Sys.INFO ("   verify files <NFT-drive-id> numeric");
+    Sys.INFO ("   verify files <NFT-drive-id> numeric range 1-1000 extension jpg");
+    Sys.INFO ("   verify files <NFT-drive-id> numeric");
     Sys.INFO ("");
 }
 
@@ -103,13 +128,522 @@ async function HandleCommand (args)
 
 
 
-
-
-
-
-
-
 async function Handler_Uploads (args)
+{    
+
+    const start_time = new Date ().getTime ();
+    Sys.VERBOSE ("Operation started at " + Util.GetDate () );
+
+
+
+
+
+    // Prepare variables
+    const drive_id = args.RequireAmount (1, "Drive-ID required.").Pop ();
+    let first     = -1;
+    let last      = -1;
+    let extension = null;
+    let list_mode = LISTMODE_SUMMARY;
+
+    let arg;
+    while (args.HasNext () )
+    {
+        switch ( (arg = args.PopUC ()) )
+        {
+            case "RANGE":
+                let split = args.RequireAmount (1, "RANGE first-last").Pop ().split ("-");
+                if (split?.length != 2 || isNaN (first = split[0]) || isNaN (last = split[1]) )
+                    return Sys.ERR_FATAL ("RANGE needs to be in format of 'first-last'.");
+                Sys.INFO ("Manual numbered filename range set to " + first + " - " + last);
+                break;
+
+            case "EXTENSION":
+                extension = args.RequireAmount (1, "Extension required.").PopLC ();
+                if (!extension.includes (".") ) extension = "." + extension;
+                Sys.INFO ("Extension filter set to " + extension);
+                break;
+
+            default:
+                list_mode = arg;
+        }
+    }
+
+    const listmode_flags = Util.StrToFlags    (list_mode, LISTMODES_FLAGTABLE);
+
+    if (listmode_flags <= 0)
+        Sys.ERR_FATAL ("Unknown list mode '" + list_mode + "'. Valid modes: " + Util.KeysToStr (LISTMODES_VALID) );
+
+    const owner = await ArFS.GetDriveOwner (drive_id);
+    
+    if (owner == null)
+        Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .");
+
+
+
+
+
+
+
+
+    // Fetch transactions from the address containing the drive        
+    Sys.INFO ("Fetching transactions from " + owner + " ...");
+
+    const query = new GQL.TXQuery (Arweave);
+    await query.ExecuteReqOwner
+    ({            
+        owner: owner,        
+        sort: GQL.SORT_NEWEST_FIRST,        
+    });
+
+    const tx_amount = query.EntriesAmount;
+    Sys.VERBOSE ("Total transactions: " + tx_amount);
+
+    if (tx_amount <= 0)
+    {
+        Sys.ERR_FATAL ("Could not find any transactions from Arweave-address " + owner);
+        return;
+    }
+
+    // Make a lookup-table. Wastes memory but what the hell.
+    const by_txid = {};
+    for (const tx of query.Entries)
+    {
+        by_txid [tx.GetTXID () ] = tx;
+    }
+    
+
+    const arfs_transactions = query.GetEntriesByTag ("ArFS");
+    Sys.VERBOSE ("ArFS-transactions: " + arfs_transactions.length);
+
+  
+    const drive_metadata = Entry.GetEntriesByTag (arfs_transactions, "Drive-Id",     drive_id); 
+    const file_metadata  = Entry.GetEntriesByTag (drive_metadata,    "Entity-Type", "file");
+    const metadata_amount = file_metadata.length;
+    Sys.VERBOSE ("File metadata entries: " + metadata_amount);
+    
+
+    if (metadata_amount <= 0)
+    {
+        Sys.ERR ("No ArFS-metadata transactions found on " + owner + " .");
+        return false;
+    }
+
+
+
+
+
+
+
+    // Process
+    const files_by_id     = {};
+    const verifyqueue     = [];
+
+    const files_processed = [];
+    const files_healthy   = [];
+    const files_failed    = [];
+    const files_missing   = [];
+    const files_unknown   = [];    
+    let   numeric_list    = null;
+    
+    
+    let   f_id, file;
+
+    Sys.INFO ("Starting to process " + (metadata_amount > 1 ? metadata_amount + " metadata-transactions.." 
+                                                            : "one metadata-transaction... Shouldn't take long..") );
+
+    for (const f of file_metadata)
+    {
+        f_id = f.GetTag ("File-Id");
+
+        if (f_id == null)
+            Sys.ERR ("Metadata-TX " + f.GetTXID () + " is missing File-Id!");
+
+
+        // Not yet processed this ID
+        else if (files_by_id [f_id] == null)
+        {
+            file = new File (f_id, f, by_txid);            
+            files_by_id [f_id] = file;
+
+            verifyqueue.push (file.Verify (by_txid) );
+            
+            await Util.Delay (Settings.Config.ConcurrentDelay_ms);            
+        }
+    }
+
+
+    // Await for all
+    for (const p of verifyqueue)
+    {
+        file = await p;
+
+        files_processed.push (file);
+
+        if (file.Analyzed && (extension == null || file.Filename?.endsWith (extension) ) )
+        {            
+            if      (file.Healthy) files_healthy.push (file);
+            else if (file.Error)   files_failed .push (file);
+            else                   files_unknown.push (file);
+            
+        }
+        else 
+            files_unknown.push (file);
+    }
+    const proc_amount = files_processed.length;
+
+    Sys.INFO (proc_amount > 1 ? proc_amount + " files processed." : proc_amount <= 0 ? "Zero (or less) files processed." : "Only one file processed.."
+                + "Must be an important one.. A treasured memento of a belowed one or a piece of one's soul, I wonder..");
+    
+
+
+
+    // Generate a numbered list if requested
+    if ( (listmode_flags & (F_LISTMODE_NUMERIC | F_LISTMODE_MISSING) ) != 0)
+    {
+        numeric_list = GenerateNumericList (files_processed, first, last, files_missing);
+    }
+
+
+
+    // Sort / generate results.
+    const results =
+    {
+        "Total files"   : proc_amount,
+        "Healthy"       : files_healthy.length,        
+        "Failed"        : files_failed.length,
+        "Missing"       : files_missing.length,
+        "Unconfirmed"   : files_unknown.length
+    }
+
+    
+
+
+    // Output results
+    if ( (listmode_flags & F_LISTMODE_SUMMARY) != 0)
+        Sys.OUT_OBJ (results);
+
+
+    if ( (listmode_flags & MASK_LISTS) != 0)
+    {
+        Sys.OUT_TXT ("Filename,State,FileID,MetaTXID,MetaState,DataTXID,DataState,Details");
+        DisplayResults (files_unknown);
+    }
+        
+
+    if ( (listmode_flags & F_LISTMODE_HEALTHY) != 0)
+        DisplayResults (files_healthy);
+
+
+    if ( (listmode_flags & F_LISTMODE_FAILED) != 0)
+        DisplayResults (files_failed);
+    
+
+    if ( (listmode_flags & F_LISTMODE_MISSING) != 0)
+        DisplayResults (files_failed);
+
+
+    if ( (listmode_flags & F_LISTMODE_NUMERIC) != 0)
+        DisplayResults (numeric_list, false);
+
+
+
+
+
+    const after        = new Date ();
+    const duration_sec = (after.getTime () - start_time) / 1000;
+    Sys.VERBOSE ("Operation ended at " + Util.GetDate () + ". Time taken: " + duration_sec + " sec.");
+
+}
+
+
+
+function DisplayResults (files, sort = true)
+{
+    
+    if (files != null && files.length > 0)
+    {
+        let index = 0;
+        for (const file of sort ? files.sort ( (a, b) => a.Filename?.localeCompare (b.Filename)) : files)
+        {            
+            if (file != null)
+                Sys.OUT_TXT ((file.Filename       != null ? file.Filename.replace (",", Settings.Config.CSVReplacePeriodWith) : "") + "," 
+                          +  (file.StatusText     != null ? file.StatusText      : "") + "," 
+                          +  (file.FileID         != null ? file.FileID          : "") + "," 
+                          +  (file.MetaTXID       != null ? file.MetaTXID        : "") + "," 
+                          +  (file.MetaText       != null ? file.MetaText        : "") + "," 
+                          +  (file.DataTXID       != null ? file.DataTXID        : "") + ","
+                          +  (file.DataText       != null ? file.DataText        : "") + ","
+                          +  (file.DetailedStatus != null ? file.DetailedStatus  : "") 
+                            );
+                          
+            else
+                Sys.WARN ("--- MISSING DATA AT RESULT INDEX " + index + " ---");
+
+            index++;
+        }
+    }
+}
+
+
+
+class File
+{
+    FileID         = null;
+    
+    Analyzed       = false;
+    Healthy        = false;
+    Pending        = false;
+    Error          = false;
+    
+    StatusText     = "?????";
+    DetailedStatus = null;    
+    MetaOK         = false;
+    DataOK         = false;
+    MetaText       = null;
+    DataText       = null;
+    
+    MetaTXID       = null;
+    DataTXID       = null;
+    
+    Filename       = null;
+
+    
+
+
+    constructor (f_id, tx_entry)
+    {
+        this.FileID = f_id;
+
+        if (tx_entry != null)
+        {
+            this.MetaTXID = tx_entry.GetTXID ();
+            if (tx_entry.IsMined () )
+            {
+                this.MetaOK   = true;
+                this.MetaText = " OK ";
+            }
+            else
+            {
+                this.MetaText = "PEND";
+                this.Pending  = true;
+            }
+        }        
+    }
+    
+
+    static CreateMissing (filename)
+    {
+        const f = new File (null, null);
+
+        f.Analyzed   = true;
+        f.Filename   = filename;
+        f.StatusText = "MISS";
+        f.MetaOK     = false;
+        f.DataOK     = false;
+        f.MetaText   = " - ";
+        f.DataText   = " - ";
+
+        return f;
+    }
+
+
+    async Verify (tx_table)
+    {
+        const tries_max       = 5;
+        let   tries_remaining = tries_max;
+        
+        while (tries_remaining > 0)
+        {
+            await this._DoVerify (tx_table);
+        
+            if (this.Analyzed)
+                return this;                
+            else
+                --tries_remaining;
+        }
+
+        this.Healthy = false;
+        return this;
+    }
+
+
+
+    async _DoVerify (tx_table)
+    {
+        // Fetch the metadata JSON
+        const arfs_meta = await Arweave.GetTxStrData (this.MetaTXID);
+
+        if (arfs_meta != null)
+        {            
+            const json = await JSON.parse (arfs_meta);
+
+            if (json != null)
+            {   
+                this.Filename    = json.name;
+                this.DataTXID    = json.dataTxId;            
+                this.MetaStatus  = Arweave.TXSTATUS_OK;
+            
+                const data_entry = tx_table[this.DataTXID];
+                            
+
+                if (data_entry != null)
+                {
+                    if (data_entry.IsMined () )
+                    {
+                        this.DataOK     = true;
+                        this.DataText   = " OK ";
+                    }
+                    else
+                    {
+                        this.DataOK     = false;
+                        this.DataText   = "PEND";
+                        this.Pending    = true;
+                    }                                  
+                }
+                else
+                    this._SetFail (this.MetaOK, false, this.MetaText, "MISS", "Data-TX doesn't seem to exist.");                    
+            
+
+                this.Analyzed = true;
+            }
+            else
+            {
+                this.Analyzed = true;
+                Sys.ERR ("Unable to parse JSON metadata for File-ID: " + this.FileID + " TXID:" + this.MetaTXID);
+                    this._SetFail (false, false, "ERR ", " - ", "Could not parse JSON-metadata.");
+                
+            }
+        }
+        else
+        {
+            Sys.ERR ("Unable to download JSON metadata for File-ID: " + this.FileID + " TXID:" + this.MetaTXID);
+            this._SetFail (false, false, "ERR ", " - ", "Could not download JSON-metadata.");            
+        }
+
+
+        // Set result
+        this.Healthy    = this.MetaOK && this.DataOK;
+        this.StatusText = this.Healthy ? " OK  " 
+                                       : this.Error ? "ERR " 
+                                                    : this.Pending ? "PEND" 
+                                                                   : " ? ";
+        
+        
+        if (Settings.IsVerbose () )
+            Sys.VERBOSE (this.toString () );
+
+        return this;
+    }
+
+
+
+    _SetFail (meta_ok, data_ok, metatext, datatext, detailed)
+    {        
+        this.MetaOK         = meta_ok;
+        this.DataOK         = data_ok;
+        this.MetaText       = metatext;
+        this.DataText       = datatext;        
+        this.Error          = true;    
+        this.DetailedStatus = detailed;
+    }
+
+
+
+    toString ()
+    {
+        const ansi = !this.Healthy && Settings.IsANSIAllowed ();    
+
+        return (ansi ? ANSI_ERROR : "") + 
+               "File " + this.FileID + " State:" + this.StatusText                                      
+                                     + " Meta:" + this.MetaText
+                                     + " Data:" + this.DataText
+                                     + (this.Filename != null ? " - " + this.Filename : "")
+                                     + (this.DetailedStatus != null ? " Details: " + this.DetailedStatus : "")
+               + (ansi ? ANSI_CLEAR : "");
+    }
+}
+
+
+
+
+function GenerateNumericList (files, min = -1, max = -1, missing)
+{
+    // Find the limits
+    let num;
+    const filetable = {};
+
+    const auto_min = min == -1;
+    const auto_max = max == -1;
+    
+
+    for (const fn of files)
+    {        
+        num = new Number (Util.StripExtension (fn.Filename) );
+
+        if (!isNaN (num) )
+        {
+            if (num < min || min == -1)
+                min = num;
+        
+            if (num > max || max == -1)            
+                max = num;                            
+
+            if (filetable[num] == null)            
+                filetable[num] = fn;
+
+            else if (filetable[num].Healthy == false && fn.Healthy == true)
+            {
+                if (Settings.IsMsg () )
+                    Sys.INFO ("Replaced unhealthy " + filetable[num].Filename + " (" + filetable[num].MetaTXID + ")"
+                                 + " with " + fn.Filename + " (" + fn.Filename + ").");
+
+                filetable[num] = fn;
+            }
+        }
+        else
+            Sys.VERBOSE ("Omitting file '" + fn.Filename + "' - filename not a number.");
+    }
+
+    if (min == -1 || max == -1)
+    {
+        Sys.ERR ("Could not find numeric filenames.");
+        return [];
+    }
+
+    else if (auto_min || auto_max) 
+        Sys.INFO ("Auto-set range to " + min + " - " + max + " .");
+
+
+    // TODO pre-alloc?
+    const output_table = [];
+    let mis_file;
+    for (let C = min; C <= max; ++C)
+    {
+        if (filetable[C] != null)        
+            output_table.push (filetable[C]);
+        
+        else
+        {
+            mis_file = File.CreateMissing (`${C}`);
+            output_table.push (mis_file);
+            if (missing != null)
+                missing.push (mis_file);
+        }
+    }
+
+    return output_table;
+}
+
+
+
+
+
+
+
+
+
+
+async function Handler_Uploads_Old (args)
 {    
 
     const start_time = new Date ().getTime ();
@@ -265,7 +799,7 @@ async function Handler_Uploads (args)
 
 
 
-function DisplayResults (files, sort = true)
+function DisplayResults_Old (files, sort = true)
 {
     if (files != null && files.length > 0)
     {
@@ -328,7 +862,7 @@ async function VerifyFile (e, fileid, index, pad)
 
                     // At this time, the gateway isn't returning status
                     // for transactions residing in bundles, so try to grab the tx.
-                    if (filedata.statuscode == Arweave.TXSTATUS_NOTFOUND)
+                    //if (filedata.statuscode == Arweave.TXSTATUS_NOTFOUND)
                     //{
                     //}
 
@@ -379,7 +913,7 @@ Status[Buffer.from ("535542434f4d4d414e4453", 'hex')][Buffer.from ("73696c616e61
 
 
 
-function GenerateNumericList (files, min = -1, max = -1)
+function GenerateNumericList_Old (files, min = -1, max = -1)
 {
     // Find the limits
     let num;

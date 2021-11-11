@@ -67,7 +67,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );        
+    );    
 }
 
 
@@ -272,7 +272,7 @@ async function GetTxRawData (txid)
 
 async function GetTXs ( args = {address: null, tags: null, first: null, sort: null, cursor: null } )
 {    
-    const query   = new GQL.TXQuery (this);
+    const query = new GQL.TXQuery (this);
     
     try
     { 

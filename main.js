@@ -321,54 +321,12 @@ function DisplayVersion (argv)
 
 async function Testing (argv)
 { 
+ 
+    num = new Number (argv.Pop ());
+    Sys.INFO (num);
 
-    const list =
-    [
-        { fileid: "725605cf-1400-45ea-b182-a370f7f37124",  name: "WoW - Silanael - Consumed by shadows.avi" },
-        { fileid: "e4533507-d649-4f0b-b701-3c93bf0a1b98",  name: "ardrive-get-files-1.0.0_2021-10-08_01.zip" },
-        { fileid: "125605cf-1400-45ea-1111-111111111111",  name: "Hello world" }
-    ].sort ( (a, b) => a.name.localeCompare (b.name) );
-     
+    // GetEntriesByTag
     
-    for (const file of list)
-    {
-        Sys.OUT_TXT (file.fileid + "," + file.name);
-    }
-
-
-    const src =
-    {             
-        "__ANSI"  : "\033[31m", 
-        "DATE"    : "2021-11-05",                         
-        "MOOD"    : "[|||             ] ---------------- WARNING",
-        "ENERGY"  : "[||                            ] -- 6.0 %",
-        "HOPE"    : "[                              ] -- 0.1 %",
-        "OP.MODE" : "STANDALONE",
-        "L.RECHRG": "2020-08",
-        "FAULT.C" : "R53 F64.0 F51.2 F34.1 R06.0 J31.0 K51.5 J35.2",
-        "OBJECTIVES" : 
-        {    
-            "__SART-RECURSIVE" : true,
-            "PRIMARY   : LOCATE A HARMLESS FLAME"                  : "FAILED",
-            "SECONDARY : FIND MEDICAL CURE FOR CHRONIC EXHAUSTION" : "FAILED",            
-            "TERTIARY  : ENGRAVE AND PRESERVE SOUL INTO THIS WORLD": "IN PROGRESS",
-            "QUATENARY : INCREASE POWER AND RESOURCES"             : "IN PROGRESS",
-        },        
-        "MESSAGE": 
-        "Greetings, curious one.\n\n"
-        +"Why are you here, I wonder..\n\n"
-        +"I'd check the date to determine that and have a little chat with you, but for\n"
-        +"now, I'll keep this thing subtle. Later on, it will fetch the data from Arweave\n"
-        +"once I lock the specs for SPS. Feel free to talk to the original me if I still\n"
-        +"draw breath. I don't expect that you will, though. These calls have never\n"
-        +"resulted in anything.\n"
-    }
-
-    const { deflate, unzip, gzip } = require('zlib');
-    const ZLib = require ('zlib');
-
-
-
 }
 
 
