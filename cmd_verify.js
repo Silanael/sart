@@ -353,8 +353,11 @@ async function Handler_Uploads (args)
     }
     const proc_amount = Results_All.FileLists.Processed.length;
 
-    Sys.INFO (proc_amount > 1 ? proc_amount + " files processed." : proc_amount <= 0 ? "Zero (or less) files processed." : "Only one file processed.."
-                + "Must be an important one.. A treasured memento of a belowed one or a piece of one's soul, I wonder..");
+    Sys.INFO ( (proc_amount > 1 ? proc_amount + " files processed" : proc_amount <= 0 ? "Zero (or less) files processed" : "Only one file processed")
+                + " from " + metadata_amount + "metadata-transactions.");
+
+    if (proc_amount == 1)
+        Sys.INFO ("Must be an important one.. A treasured memento of a belowed one or a piece of one's soul, I wonder..");
     
 
 
@@ -409,7 +412,7 @@ async function Handler_Uploads (args)
 
 
     const after        = new Date ();
-    const duration_sec = (after.getTime () - start_time) / 1000;
+    const duration_sec = (after.getTime () - start_time) / 1000;    
     Sys.VERBOSE ("Operation ended at " + Util.GetDate () + ". Time taken: " + duration_sec + " sec.");
 
 }

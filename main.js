@@ -24,7 +24,7 @@ const Get      = require ('./cmd_get.js');
 const Verify   = require ('./cmd_verify.js');
 const Analyze  = require ('./TXAnalyze.js');
 //const Search   = require ('./cmd_search.js');
-//const Console  = require ('./cmd_console.js');
+const Console  = require ('./cmd_console.js');
 
 
 
@@ -62,6 +62,7 @@ const Commands =
     "-s"          : Status,
     "verify"      : Verify,
     "pending"     : Status.Handler_PendingAmount,
+    "console"     : Console,
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,
@@ -109,12 +110,8 @@ const Flags =
 
 
 
-function Main (argv)
+async function Main (argv)
 {
-
-    // Set an exception handler
-    process.on ("uncaughtException", Sys.ErrorHandler);
-    
 
     const argc           = argv.length;
     let   command_found  = false;
@@ -145,10 +142,10 @@ function Main (argv)
                 const command_params = new Util.Args (Util.GetCmdArgs (argv, C, Flags) );
 
                 if (cmd.HandleCommand != null)
-                    cmd.HandleCommand (command_params);
+                    await cmd.HandleCommand (command_params);
 
                 else
-                    cmd (command_params);
+                    await cmd (command_params);
             }
            
             else
@@ -161,7 +158,7 @@ function Main (argv)
     }
 
     if (!command_found)
-        DisplayHelp ();
+        await Console.HandleCommand ();
 
 }
 
@@ -306,8 +303,7 @@ function DisplayHelp (args)
         Sys.INFO ("  -f, --format             Output data format. Valid formats: txt, json, csv");
         Sys.INFO ("");
     }
-
-    Sys.EXIT (0);    
+ 
 }
 
 
@@ -337,5 +333,10 @@ async function Testing (argv)
 module.exports = { Settings };
 
 
+// Set an exception handler
+process.on ("uncaughtException", Sys.ErrorHandler);
+    
+
 // Entrypoint
+Console.SetMain (Main);
 Main (process.argv);
