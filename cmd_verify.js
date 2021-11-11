@@ -21,37 +21,41 @@ const { Entry } = require('./GQL.js');
 const Tag          = GQL.Tag;
 
 
-const LISTMODE_SUMMARY = "SUMMARY";
-const LISTMODE_HEALTHY = "HEALTHY";
-const LISTMODE_FAILED  = "FAILED";
-const LISTMODE_NUMERIC = "NUMERIC";
-const LISTMODE_MISSING = "MISSING";
-const LISTMODE_ALL     = "ALL";
+const LISTMODE_SUMMARY   = "SUMMARY";
+const LISTMODE_ALL       = "ALL";
+const LISTMODE_HEALTHY   = "HEALTHY";
+const LISTMODE_FAILED    = "FAILED";
+const LISTMODE_MISSING   = "MISSING";
+const LISTMODE_ALL_SEP   = "ALL-SEPARATE";
 
-const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_ALL, LISTMODE_NUMERIC ];
+const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_ALL, LISTMODE_ALL_SEP ];
 
 
-const F_LISTMODE_SUMMARY = 1,
-      F_LISTMODE_HEALTHY = 2,
-      F_LISTMODE_FAILED  = 4,
-      F_LISTMODE_NUMERIC = 8,
-      F_LISTMODE_MISSING = 16,
+const F_LISTMODE_SUMMARY   = 1,
+      F_LISTMODE_ALL       = 2,
+      F_LISTMODE_HEALTHY   = 4,
+      F_LISTMODE_FAILED    = 8,      
+      F_LISTMODE_MISSING   = 16,
+      F_NUMERIC            = 32,
+      
+      F_LISTMODE_ALL_SEP   = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING,
 
-      MASK_LISTS = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_NUMERIC | F_LISTMODE_MISSING;
-      MASK_ALL   = F_LISTMODE_SUMMARY | F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING;
+      MASK_LISTS           = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING | F_LISTMODE_ALL;
+      
       
 
 
 const LISTMODES_FLAGTABLE =
-{
-    [LISTMODE_ALL]     : MASK_ALL,
-    "STATUS"           : F_LISTMODE_SUMMARY,    
-    [LISTMODE_SUMMARY] : F_LISTMODE_SUMMARY,
-    [LISTMODE_HEALTHY] : F_LISTMODE_HEALTHY,
-    [LISTMODE_FAILED]  : F_LISTMODE_FAILED,
-    [LISTMODE_MISSING] : F_LISTMODE_MISSING,
-    [LISTMODE_NUMERIC] : F_LISTMODE_NUMERIC,
-    
+{ 
+    [LISTMODE_SUMMARY]   : F_LISTMODE_SUMMARY,
+    [LISTMODE_ALL]       : F_LISTMODE_ALL,
+    [LISTMODE_HEALTHY]   : F_LISTMODE_HEALTHY,    
+    [LISTMODE_FAILED]    : F_LISTMODE_FAILED,
+    [LISTMODE_MISSING]   : F_LISTMODE_MISSING,
+    [LISTMODE_ALL_SEP]   : F_LISTMODE_ALL_SEP,
+    "STATUS"             : F_LISTMODE_SUMMARY,
+    "NUMERIC"            : F_NUMERIC,
+        
 };
     
 
@@ -102,6 +106,47 @@ function Help (args)
 
 
 
+class Results
+{
+    FileLists = 
+    {
+        Processed : [],
+        Healthy   : [],
+        Failed    : [],
+        Missing   : [],
+        Unknown   : [],        
+    };
+
+    Numeric = null;
+
+    Summary = {};
+
+
+    Add (file, filter_ext)
+    {
+        this.FileLists.Processed.push (file);
+        
+        if (file.Analyzed && (filter_ext == null || file.Filename?.endsWith (filter_ext) ) )
+        {            
+            if      (file.Healthy) this.FileLists.Healthy.push (file);
+            else if (file.Error)   this.FileLists.Failed .push (file);
+            else                   this.FileLists.Unknown.push (file);
+            
+        }
+        else 
+            this.FileLists.Unknown.push (file);        
+    }
+
+    CreateSummary ()
+    {
+        for (const e of Object.entries (this.FileLists) )
+        {
+            if (e[1] != null)
+                this.Summary[e[0]] = e[1].length;
+        }
+    }
+}
+
 
 
 
@@ -128,6 +173,8 @@ async function HandleCommand (args)
 
 
 
+
+
 async function Handler_Uploads (args)
 {    
 
@@ -137,19 +184,23 @@ async function Handler_Uploads (args)
 
 
 
-
     // Prepare variables
-    const drive_id = args.RequireAmount (1, "Drive-ID required.").Pop ();
-    let first     = -1;
-    let last      = -1;
-    let extension = null;
-    let list_mode = LISTMODE_SUMMARY;
-
+    const drive_id    = args.RequireAmount (1, "Drive-ID required.").Pop ();
+    let numeric_mode = false;
+    let list_mode    = null;    
+    let first        = -1;
+    let last         = -1;
+    let extension    = null;
+    
     let arg;
     while (args.HasNext () )
     {
         switch ( (arg = args.PopUC ()) )
         {
+            case "NUMERIC":
+                numeric_mode = true;
+                break;
+
             case "RANGE":
                 let split = args.RequireAmount (1, "RANGE first-last").Pop ().split ("-");
                 if (split?.length != 2 || isNaN (first = split[0]) || isNaN (last = split[1]) )
@@ -163,16 +214,38 @@ async function Handler_Uploads (args)
                 Sys.INFO ("Extension filter set to " + extension);
                 break;
 
+        
             default:
                 list_mode = arg;
         }
     }
 
+    // Autoset listmode
+    if (list_mode == null)
+    {
+        list_mode = numeric_mode ? LISTMODE_ALL : LISTMODE_SUMMARY;
+        Sys.VERBOSE ("Autoset list mode to '" + list_mode + "'.");
+    }
+
+    // Extract flags
     const listmode_flags = Util.StrToFlags    (list_mode, LISTMODES_FLAGTABLE);
 
     if (listmode_flags <= 0)
         Sys.ERR_FATAL ("Unknown list mode '" + list_mode + "'. Valid modes: " + Util.KeysToStr (LISTMODES_VALID) );
 
+    // Allow numeric mode to be enabled in the flags as well.
+    if ( (listmode_flags & F_NUMERIC) != 0)
+        numeric_mode = true;
+
+
+    // See if we need numeric mode
+    if (!numeric_mode && ( (listmode_flags & F_LISTMODE_MISSING) != 0 || (first != -1 || last != -1) )   )
+    {
+        numeric_mode = true;
+        Sys.VERBOSE ("Autoset numeric mode on.");
+    }
+
+    // Extract drive owner
     const owner = await ArFS.GetDriveOwner (drive_id);
     
     if (owner == null)
@@ -235,21 +308,20 @@ async function Handler_Uploads (args)
 
 
     // Process
-    const files_by_id     = {};
-    const verifyqueue     = [];
+    const files_by_id      = {};
+    const verifyqueue      = [];
 
-    const files_processed = [];
-    const files_healthy   = [];
-    const files_failed    = [];
-    const files_missing   = [];
-    const files_unknown   = [];    
-    let   numeric_list    = null;
+    const Results_All      = new Results ();
+    let   Results_Numeric;
+    let   results          = Results_All;   
+
     
     
-    let   f_id, file;
 
     Sys.INFO ("Starting to process " + (metadata_amount > 1 ? metadata_amount + " metadata-transactions.." 
                                                             : "one metadata-transaction... Shouldn't take long..") );
+
+    let f_id, file;
 
     for (const f of file_metadata)
     {
@@ -277,19 +349,9 @@ async function Handler_Uploads (args)
     {
         file = await p;
 
-        files_processed.push (file);
-
-        if (file.Analyzed && (extension == null || file.Filename?.endsWith (extension) ) )
-        {            
-            if      (file.Healthy) files_healthy.push (file);
-            else if (file.Error)   files_failed .push (file);
-            else                   files_unknown.push (file);
-            
-        }
-        else 
-            files_unknown.push (file);
+        Results_All.Add (file);        
     }
-    const proc_amount = files_processed.length;
+    const proc_amount = Results_All.FileLists.Processed.length;
 
     Sys.INFO (proc_amount > 1 ? proc_amount + " files processed." : proc_amount <= 0 ? "Zero (or less) files processed." : "Only one file processed.."
                 + "Must be an important one.. A treasured memento of a belowed one or a piece of one's soul, I wonder..");
@@ -298,52 +360,49 @@ async function Handler_Uploads (args)
 
 
     // Generate a numbered list if requested
-    if ( (listmode_flags & (F_LISTMODE_NUMERIC | F_LISTMODE_MISSING) ) != 0)
+    if (numeric_mode)
     {
-        numeric_list = GenerateNumericList (files_processed, first, last, files_missing);
+        Results_Numeric = GenerateNumericList (Results_All, first, last, extension); 
+        results         = Results_Numeric;
     }
 
 
 
-    // Sort / generate results.
-    const results =
-    {
-        "Total files"   : proc_amount,
-        "Healthy"       : files_healthy.length,        
-        "Failed"        : files_failed.length,
-        "Missing"       : files_missing.length,
-        "Unconfirmed"   : files_unknown.length
-    }
+    // Generate a summary
+    results.CreateSummary ();
+    
 
     
 
 
     // Output results
     if ( (listmode_flags & F_LISTMODE_SUMMARY) != 0)
-        Sys.OUT_OBJ (results);
+        Sys.OUT_OBJ (results.Summary);
 
 
     if ( (listmode_flags & MASK_LISTS) != 0)
     {
         Sys.OUT_TXT ("Filename,State,FileID,MetaTXID,MetaState,DataTXID,DataState,Details");
-        DisplayResults (files_unknown);
+        DisplayResults (results.FileLists.Unknown);
     }
         
+    if ( (listmode_flags & F_LISTMODE_ALL) != 0)
+        DisplayResults (results.FileLists.Processed, true);
+
 
     if ( (listmode_flags & F_LISTMODE_HEALTHY) != 0)
-        DisplayResults (files_healthy);
+        DisplayResults (results.FileLists.Healthy);
 
 
     if ( (listmode_flags & F_LISTMODE_FAILED) != 0)
-        DisplayResults (files_failed);
+        DisplayResults (results.FileLists.Failed);
     
 
     if ( (listmode_flags & F_LISTMODE_MISSING) != 0)
-        DisplayResults (files_failed);
+        DisplayResults (results.FileLists.Numeric);
 
 
-    if ( (listmode_flags & F_LISTMODE_NUMERIC) != 0)
-        DisplayResults (numeric_list, false);
+ 
 
 
 
@@ -429,7 +488,9 @@ class File
             }
         }        
     }
+
     
+
 
     static CreateMissing (filename)
     {
@@ -566,17 +627,21 @@ class File
 
 
 
-function GenerateNumericList (files, min = -1, max = -1, missing)
+function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
 {
-    // Find the limits
-    let num;
+    const results   = new Results ();
+    results.Numeric = [];
+
+
+    // Find the limits.
+    let   num;
     const filetable = {};
 
-    const auto_min = min == -1;
-    const auto_max = max == -1;
+    const auto_min  = min == -1;
+    const auto_max  = max == -1;
     
-
-    for (const fn of files)
+    
+    for (const fn of all_results.FileLists.Processed)
     {        
         num = new Number (Util.StripExtension (fn.Filename) );
 
@@ -607,31 +672,27 @@ function GenerateNumericList (files, min = -1, max = -1, missing)
     if (min == -1 || max == -1)
     {
         Sys.ERR ("Could not find numeric filenames.");
-        return [];
+        return results;
     }
 
     else if (auto_min || auto_max) 
         Sys.INFO ("Auto-set range to " + min + " - " + max + " .");
 
 
-    // TODO pre-alloc?
-    const output_table = [];
-    let mis_file;
+    let file;
+
+    // TODO pre-alloc?  
     for (let C = min; C <= max; ++C)
     {
-        if (filetable[C] != null)        
-            output_table.push (filetable[C]);
+        file = filetable[C] != null ? filetable[C] : File.CreateMissing (`${C}`);
         
-        else
-        {
-            mis_file = File.CreateMissing (`${C}`);
-            output_table.push (mis_file);
-            if (missing != null)
-                missing.push (mis_file);
-        }
+        results.Numeric.push (file);
+        results.Add (file, filter_ext);
     }
 
-    return output_table;
+    results.Summary["Range"] = min + "-" + max;
+
+    return results;
 }
 
 
