@@ -283,8 +283,8 @@ function ERR_FATAL (str, src)
 
 
 function EXIT (code)
-{
-    process.exit (code);
+{    
+    process.exit (!isNaN (code) ? code : 0);
 }
 
 
@@ -328,4 +328,4 @@ module.exports =
     EXIT,
     ON_EXCEPTION,
     ErrorHandler,
-};
+};EXIT

@@ -90,13 +90,23 @@ function IsArweaveHash  (str)          { return str != null && str.length == 43 
 function IsArFSID       (str)          { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 function GetUNIXTime    ()             { return new Date ().getTime (); }
 function GetVersion     ()             { return Package.version; }
-function GetVersionStr  ()             { return "v" + Package.version + " (" + Package.versiondate + ")"; }
+function GetVersionStr  ()             { return "v" + Package.version + " [" + Package.versiondate + "]"; }
 function StripExtension (filename)     { return filename != null ? Path.parse (filename)?.name : null; }
 function IsTTY          ()             { return process.stdout.isTTY; }
 function IsOutputPiped  ()             { return !this.IsTTY (); }
 function IsFlagSet      (flags, mask)  { return (flags & mask) != 0; }
  
 async function Delay    (ms)           { await new Promise (r => setTimeout (r, ms) ); }
+
+
+function ContainsString (str, strings, case_insensitive = true)
+{
+    if (case_insensitive)
+        return strings.find ( (v) => v.toLowerCase () == str.toLowerCase () ) != null;
+
+    else
+        return strings.find ( (v) => v == str) != null;
+}
 
 
 function _StrCmp_Prep (str, compare_to, lowercase = true)
@@ -449,5 +459,5 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
 
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
-                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay,
+                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge };

@@ -32,6 +32,7 @@ const ANSI_UNSAFE = "\033[31;1m";
 let Running = false;
 let Main;
 
+
 async function HandleCommand (args)
 {    
     Sys.VERBOSE ("Entering the Command Interface.")
@@ -54,13 +55,20 @@ async function HandleCommand (args)
 
     for await (const line of input)
     {        
-        // This is a bit of a hack prior to moving 
-        // the command parsing logic to its own module.
         let argv = line.split (" ");        
-        argv.unshift ("bar");
-        argv.unshift ("foo");
         
-        await Main (argv);
+        if (Util.ContainsString (">", argv) )
+            Sys.ERR ("Redirecting into a file from the console not yet supported.");
+
+        else
+        {
+            // This is a bit of a hack prior to moving 
+            // the command parsing logic to its own module.            
+            argv.unshift ("bar");
+            argv.unshift ("foo");
+        
+            await Main (argv);
+        }
 
         PrintPrompt ();
     }

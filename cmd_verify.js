@@ -17,7 +17,7 @@ const GQL          = require ('./GQL.js');
 const Package      = require ('./package.json');
 const Status       = require ('./cmd_status.js');
 const Analyze      = require ('./TXAnalyze.js');
-const { Entry } = require('./GQL.js');
+const { Entry }    = require('./GQL.js');
 const Tag          = GQL.Tag;
 
 
@@ -26,9 +26,10 @@ const LISTMODE_ALL       = "ALL";
 const LISTMODE_HEALTHY   = "HEALTHY";
 const LISTMODE_FAILED    = "FAILED";
 const LISTMODE_MISSING   = "MISSING";
+const LISTMODE_UNKNOWN   = "UNKNOWN";
 const LISTMODE_ALL_SEP   = "ALL-SEPARATE";
 
-const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_ALL, LISTMODE_ALL_SEP ];
+const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_UNKNOWN, LISTMODE_ALL, LISTMODE_ALL_SEP ];
 
 
 const F_LISTMODE_SUMMARY   = 1,
@@ -36,11 +37,11 @@ const F_LISTMODE_SUMMARY   = 1,
       F_LISTMODE_HEALTHY   = 4,
       F_LISTMODE_FAILED    = 8,      
       F_LISTMODE_MISSING   = 16,
-      F_NUMERIC            = 32,
+      F_LISTMODE_UNKNOWN   = 32,
+      F_NUMERIC            = 64,
       
-      F_LISTMODE_ALL_SEP   = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING,
-
-      MASK_LISTS           = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING | F_LISTMODE_ALL;
+      F_LISTMODE_ALL_SEP   = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING | F_LISTMODE_UNKNOWN,
+      MASK_LISTS           = F_LISTMODE_ALL_SEP | F_LISTMODE_ALL;
       
       
 
@@ -52,12 +53,22 @@ const LISTMODES_FLAGTABLE =
     [LISTMODE_HEALTHY]   : F_LISTMODE_HEALTHY,    
     [LISTMODE_FAILED]    : F_LISTMODE_FAILED,
     [LISTMODE_MISSING]   : F_LISTMODE_MISSING,
+    [LISTMODE_UNKNOWN]   : F_LISTMODE_UNKNOWN,
     [LISTMODE_ALL_SEP]   : F_LISTMODE_ALL_SEP,
     "STATUS"             : F_LISTMODE_SUMMARY,
     "NUMERIC"            : F_NUMERIC,
         
 };
-    
+
+
+const LISTMODES_TO_FIELDS_MAP = 
+{    
+    [F_LISTMODE_ALL    ]   : "Processed",
+    [F_LISTMODE_HEALTHY]   : "Healthy",
+    [F_LISTMODE_FAILED ]   : "Failed",     
+    [F_LISTMODE_MISSING]   : "Missing",  
+}
+const FIELD_UNKNOWN        = "Unknown";
 
 
 const SUBCOMMANDS = 
@@ -223,12 +234,13 @@ async function Handler_Uploads (args)
     // Autoset listmode
     if (list_mode == null)
     {
-        list_mode = numeric_mode ? LISTMODE_ALL : LISTMODE_SUMMARY;
+        list_mode = numeric_mode ? Settings.Config.VerifyDefaultFlags_Num : Settings.Config.VerifyDefaultFlags;
         Sys.VERBOSE ("Autoset list mode to '" + list_mode + "'.");
     }
 
     // Extract flags
     const listmode_flags = Util.StrToFlags    (list_mode, LISTMODES_FLAGTABLE);
+    Sys.DEBUG ("List mode -flags: " + listmode_flags);
 
     if (listmode_flags <= 0)
         Sys.ERR_FATAL ("Unknown list mode '" + list_mode + "'. Valid modes: " + Util.KeysToStr (LISTMODES_VALID) );
@@ -353,8 +365,8 @@ async function Handler_Uploads (args)
     }
     const proc_amount = Results_All.FileLists.Processed.length;
 
-    Sys.INFO ( (proc_amount > 1 ? proc_amount + " files processed" : proc_amount <= 0 ? "Zero (or less) files processed" : "Only one file processed")
-                + " from " + metadata_amount + "metadata-transactions.");
+    Sys.INFO ( (proc_amount > 1 ? proc_amount + " files processed" : proc_amount <= 0 ? "Zero (or less) files processed" : "Only one file processed") );
+                
 
     if (proc_amount == 1)
         Sys.INFO ("Must be an important one.. A treasured memento of a belowed one or a piece of one's soul, I wonder..");
@@ -376,36 +388,31 @@ async function Handler_Uploads (args)
     
 
     
-
-
     // Output results
     if ( (listmode_flags & F_LISTMODE_SUMMARY) != 0)
         Sys.OUT_OBJ (results.Summary);
 
-
-    if ( (listmode_flags & MASK_LISTS) != 0)
+    
+    let captions_displayed = false;
+    for (const f of Object.entries (LISTMODES_TO_FIELDS_MAP) )
     {
-        Sys.OUT_TXT ("Filename,State,FileID,MetaTXID,MetaState,DataTXID,DataState,Details");
-        DisplayResults (results.FileLists.Unknown);
-    }
+        const mask  = f[0];
+        const field = f[1];
         
-    if ( (listmode_flags & F_LISTMODE_ALL) != 0)
-        DisplayResults (results.FileLists.Processed, true);
-
-
-    if ( (listmode_flags & F_LISTMODE_HEALTHY) != 0)
-        DisplayResults (results.FileLists.Healthy);
-
-
-    if ( (listmode_flags & F_LISTMODE_FAILED) != 0)
-        DisplayResults (results.FileLists.Failed);
+        if ( (listmode_flags & mask) != 0 && results.FileLists[field]?.length > 0)
+        {
+            if (!captions_displayed)
+            {
+                Sys.OUT_TXT ("Filename,State,FileID,MetaTXID,MetaState,DataTXID,DataState,Details");
+                captions_displayed = true;
+            }
+            DisplayResults (results.FileLists[field] );
+        }
+        
+    }
     
 
-    if ( (listmode_flags & F_LISTMODE_MISSING) != 0)
-        DisplayResults (results.FileLists.Numeric);
 
-
- 
 
 
 
@@ -521,11 +528,16 @@ class File
             await this._DoVerify (tx_table);
         
             if (this.Analyzed)
-                return this;                
+                return this;
+
             else
+            {            
                 --tries_remaining;
+                await Util.Delay (1000);
+            }
         }
 
+        Sys.ERR ("Could not analyze file " + this.FileID + " in " + tries_max + " attempts. Giving up.");
         this.Healthy = false;
         return this;
     }
@@ -545,7 +557,8 @@ class File
             {   
                 this.Filename    = json.name;
                 this.DataTXID    = json.dataTxId;            
-                this.MetaStatus  = Arweave.TXSTATUS_OK;
+                this.MetaOK      = true;
+                this.MetaText    = " OK ";
             
                 const data_entry = tx_table[this.DataTXID];
                             
@@ -555,7 +568,7 @@ class File
                     if (data_entry.IsMined () )
                     {
                         this.DataOK     = true;
-                        this.DataText   = " OK ";
+                        this.DataText   = " OK ";                        
                     }
                     else
                     {
@@ -591,7 +604,9 @@ class File
                                        : this.Error ? "ERR " 
                                                     : this.Pending ? "PEND" 
                                                                    : " ? ";
-        
+        if (this.Healthy)
+            this.DetailedStatus = null;
+
         
         if (Settings.IsVerbose () )
             Sys.VERBOSE (this.toString () );

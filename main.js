@@ -63,6 +63,8 @@ const Commands =
     "verify"      : Verify,
     "pending"     : Status.Handler_PendingAmount,
     "console"     : Console,
+    "exit"        : Sys.EXIT,
+    "quit"        : Sys.EXIT,
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,

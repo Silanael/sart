@@ -49,34 +49,37 @@ const OutputFormats =
 const Config =
 {
     
-    LogLevel             : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
-    MsgOut               : OutputDests.STDOUT,
-    ErrOut               : OutputDests.STDERR,
-            
-    ArweaveHost          : "arweave.net",
-    ArweavePort          : 443,
-    ArweaveProto         : "https",    
-    ManualDest           : false,
-        
-    Recursive            : false,
-    DisplayAll           : false,    
-    AllowWildcards       : true,
-    ConcurrentDelay_ms   : 50,
-    
-    OutputFields         : null,
-    OutputFormat         : OutputFormats.TXT,
-    SizeDigits           : 5,
-    VarNamesUppercase    : false,
-    ANSIAllowed          : true,
-    CSVReplacePeriodWith : "#!#",
+    LogLevel               : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
+    MsgOut                 : OutputDests.STDOUT,
+    ErrOut                 : OutputDests.STDERR,
+              
+    ArweaveHost            : "arweave.net",
+    ArweavePort            : 443,
+    ArweaveProto           : "https",    
+    ManualDest             : false,
+          
+    Recursive              : false,
+    DisplayAll             : false,    
+    AllowWildcards         : true,
+    ConcurrentDelay_ms     : 50,
+      
+    OutputFields           : null,
+    OutputFormat           : OutputFormats.TXT,
+    SizeDigits             : 5,
+    VarNamesUppercase      : false,
+    ANSIAllowed            : true,
+    CSVReplacePeriodWith   : "#!#",
 
-    Force                : false,
-    
-    MaxArFSMetadataSize  : 1073741824, // 1MB ought to be enough for anybody?
-    MaxTXFormat          : 2,
-    MinArFSVersion       : 0.11,
-    MaxArFSVersion       : 0.11,
-    ContainerMode        : false,
+    VerifyDefaultFlags     : "SUMMARY,FAILED,UNKNOWN",
+    VerifyDefaultFlags_Num : "SUMMARY,ALL",
+
+    Force                  : false,
+      
+    MaxArFSMetadataSize    : 1073741824, // 1MB ought to be enough for anybody?
+    MaxTXFormat            : 2,
+    MinArFSVersion         : 0.11,
+    MaxArFSVersion         : 0.11,
+    ContainerMode          : false,
   
 };
 
