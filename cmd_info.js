@@ -43,7 +43,10 @@ function Help (args)
 
 async function HandleCommand (args)
 {
-    const target = args.RequireAmount (1).Pop ();
+    if ( ! args.RequireAmount (1, "Target required.") )
+        return false;
+
+    const target = args.Pop ();
 
     const info =
     {
@@ -73,7 +76,7 @@ async function HandleCommand (args)
     }
 
     else
-        Sys.ERR_FATAL ("Unable to determine what '" + target + "' is.");
+        return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is.");
   
     if (info.Valid)
         Sys.OUT_OBJ (info);
@@ -87,16 +90,21 @@ async function Handler_TX (args, info, tx = null)
 
     if (tx == null)
     {
-        const txid = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).Pop ();
+        if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
+            return false;
+
+        const txid = args.Pop ();
         Sys.VERBOSE ("INFO: Processing TXID: " + txid);
+
 
         if (Util.IsArweaveHash (txid) )
             tx = await Arweave.GetTx (txid);
+
         else
-            Sys.ERR_FATAL ("Not a valid transaction id: " + txid);
+            return Sys.ERR_ABORT ("Not a valid transaction id: " + txid);
 
         if (tx == null)
-            Sys.ERR_FATAL ("Failed to retrieve transaction '" + txid + "'.");
+            return Sys.ERR_ABORT ("Failed to retrieve transaction '" + txid + "'.");
     }
 
     
@@ -151,6 +159,7 @@ async function Handler_TX (args, info, tx = null)
     }        
 
     info.Valid = true;
+    return true;
 }
 
 

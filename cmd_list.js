@@ -31,6 +31,9 @@ function Help (args)
     Sys.INFO ("LIST USAGE");
     Sys.INFO ("----------");
     Sys.INFO ("");
+    Sys.INFO ("List transactions:")
+    Sys.INFO ("   list <address>");
+    Sys.INFO ("");
     Sys.INFO ("List drive content:")
     Sys.INFO ("   list <drive-id>");
     Sys.INFO ("");
@@ -49,35 +52,35 @@ function Help (args)
 // TODO
 async function HandleCommand (args)
 {
-    args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) );
+    if ( ! args.RequireAmount (1, "Target required. May be a TXID or an ArFS Drive-ID."))
+        return false;
 
+    
     const target = args.Pop ();
     let arfs_url = null;
     
 
-    if (target == "gen")
-        await ListDrive2Multi (args, null);
-
     // Arweave-hash   
-    else if (Util.IsArweaveHash (target)  )
+    if (Util.IsArweaveHash (target)  )
         await ListAddress (args, target)
 
 
     // Check if target is an ArFS-URL    
     else if ( (arfs_url = new ArFS.ArFSURL (target))?.IsValid () )
         await ListARFS (args, arfs_url)
-    
-
-   
+     
 }
 
 
 async function ListAddress (args, address = null)
 {
+    
     if (address == null)
     {
-        const fn_tag = "LIST ADDRESS";
-        address = Util.RequireArgs (args, 1, fn_tag).Pop ();
+        if ( ! args.RequireAmount (1, "ListAddress: Arweave-address required.") )
+            return false;  
+        
+        address = args.Pop ();
     }
 
     const query_args =
@@ -96,11 +99,18 @@ async function ListAddress (args, address = null)
         {            
             case "amount":
             case "first":
-                query_args.first = args.RequireAmount (1).Pop ();
+                if ( ! args.RequireAmount (1, "FIRST/AMOUNT: Number of entries required."))
+                    return false;
+
+                query_args.first = args.Pop ();
                 break;
 
             case "sort":
-                const sort = args.RequireAmount (1).PopLC ();
+                if ( ! args.RequireAmount (1, "Valid values: asc/ascending/oldest, desc/descending/newest."))
+                    return false;
+
+                const sort = args.PopLC ();
+
                 switch (sort)
                 {
                     case asc:
@@ -117,37 +127,47 @@ async function ListAddress (args, address = null)
 
                     default:                    
                         query_args.sort = sort;
-                        if (!QGL.IsValidSort (sort))
-                            Sys.ERR_OVERRIDABLE ("Unknown sort argument: " + sort);
+                        if (!QGL.IsValidSort (sort) && ! Sys.ERR_OVERRIDABLE ("Unknown sort argument: '" + sort + "'. Use the --force to proceed anyway.") )
+                            return false;                            
 
                 }
 
             case "last":
             case "latest":
             case "newest":
-                query_args.first = args.RequireAmount (1).Pop ();
+                if ( ! args.RequireAmount (1, "Number of entries is required."))
+                    return false;
+                query_args.first = args.Pop ();
                 query_args.sort = GQL.SORT_NEWEST_FIRST;
+                
                 break;
 
-            case "oldest":            
-                query_args.first = args.RequireAmount (1).Pop ();
+            case "oldest":
+                if ( ! args.RequireAmount (1, "Number of entries is required."))
+                    return false;
+                query_args.first = args.Pop ();
                 query_args.sort = GQL.SORT_OLDEST_FIRST;
                 break;
 
             default:
-                Sys.ERR_FATAL ("Unknown argument '" + arg + "'.");
+                return Sys.ERR_ABORT ("Unknown argument '" + arg + "'.");
         }
         
     }
 
+    Sys.VERBOSE ("Getting transactions.. ");
+    Sys.DEBUG ("With query args:");
+    Sys.DEBUG (query_args);
+
     const query = await Arweave.GetTXs (query_args);
 
+    
 
-    // Print the results if any.
-    const amount = query.GetEntriesAmount ();
+    // Print the results if any.    
     let e;
     if (query != null) 
     {
+        const amount = query.GetEntriesAmount ();
         if (amount > 0)
         {
             for (let C = 0; C < amount; ++C)
@@ -164,9 +184,11 @@ async function ListAddress (args, address = null)
         else
             Sys.INFO ("Address " + address + " has no transactions.");
     }
-    else
-        Sys.ERR ("Failed to fetch transactions for address " + address + " .");
-        
+    else    
+        return false;
+    
+    
+    return true;
 }
 
 
@@ -176,8 +198,9 @@ async function ListTXs (args, address = null)
 {
     if (address == null)
     {
-        const fn_tag = "LIST TX";
-        address = Util.RequireArgs (args, 1, fn_tag).Pop ();
+        if ( ! args.RequireAmount (1, "ListTXs: Transaction ID (TXID) required.") )
+            return false;        
+        address = Util.Pop ();
     }
 
     txs = await Arweave.GetTXsForAddress (address); 
@@ -191,8 +214,12 @@ async function ListDrive (args, drive_id = null)
 {
     if (drive_id != null)
     {
-        const fn_tag = "LIST DRIVE";
-        drive_id = Util.RequireArgs (args, 1, fn_tag).Pop ();
+        if ( ! RequireAmount (1, "ListTXs: Transaction ID (TXID) required.") )
+            return false;  
+        if (! RequireArgs (args, 1, "Drive-ID required.") )
+            return false;
+        
+        drive_id = args.Pop ();
     }
 
     const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
@@ -255,8 +282,10 @@ async function ListARFS (args, arfs_url = null)
 {    
     if (arfs_url == null)
     {
-        const fn_tag = "LIST DRIVE";
-        arfs_url = new ArFS.ArFSURL (args.RequireAmount (1, "ArFS-path").Pop () );
+        if ( ! args.RequireAmount (1, "ArFS-path required, ie. arfs://<drive-id>/path/Images") )
+            return false;  
+        
+        arfs_url = new ArFS.ArFSURL (args.Pop () );
     }
     
     const drive = new ArFS.ArFSDrive (arfs_url.GetDriveID () );

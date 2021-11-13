@@ -11,6 +11,7 @@
 // restricting fopen and SYS if set to false.
 const SystemAccess = true;
 
+const ConsoleActive = false;
 
 
 const LogLevels =
@@ -105,7 +106,7 @@ function IsForceful         ()            { return Config.Force;                
 function IsHTMLOut          ()            { return Config.OutputFormat == OutputFormats.HTML;                  }
 function IsCSVOut           ()            { return Config.OutputFormat == OutputFormats.CSV;                   }
 function IsTXTOut           ()            { return Config.OutputFormat == OutputFormats.TXT;                   }
-function IsANSIAllowed      ()            { return Config.ANSIAllowed == true;                                 }
+function IsANSIAllowed      ()            { return Config.ANSIAllowed  == true;                                }
 function IsJSONOut          ()            { return Config.OutputFormat == OutputFormats.JSON;                  }
 function SetForce           ()            { Config.Force = true;                                               }
 function SetPort            (port)        { Config.ArweavePort  = port;  ManualDest = true;                    }
@@ -203,6 +204,7 @@ module.exports =
     LogLevels,
     OutputFormats,
     OutputDests,
+    ConsoleActive, 
     GetHostString,
     GetGQLHostString,
     IsMSGOutputAllowed,

@@ -75,7 +75,10 @@ function Help (args)
 
 async function HandleCommand (args)
 {
-    const subcmd  = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).PopLC ();    
+    if (! RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ) )
+        return false;
+
+    const subcmd  = args.PopLC ();    
     const handler = SUBCOMMANDS[subcmd];
 
 
@@ -85,7 +88,7 @@ async function HandleCommand (args)
         await handler (args);
     }
     else
-        Sys.ERR_FATAL ("GET: Unknown sub-command '" + subcmd + "'.");
+        return Sys.ERR_ABORT ("GET: Unknown sub-command '" + subcmd + "'.");
 
 }
 
@@ -127,7 +130,10 @@ async function Handler_Arweave (args)
 
 async function Handler_TX (args)
 {
-    const txid = args.RequireAmount (1).Pop ();
+    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+        return false;
+
+    const txid  = args.Pop ();
     const field = args.Pop ();
 
     if (Util.IsArweaveHash (txid) )
@@ -153,14 +159,17 @@ async function Handler_TX (args)
 
     }
     else
-        Sys.ERR_FATAL ("Invalid argument: '" + txid + "' - not a transaction ID.");
+        return Sys.ERR_ABORT ("Invalid argument: '" + txid + "' - not a transaction ID.");
 }
 
 
 
 async function Handler_TXTags (args)
 {
-    const txid = args.RequireAmount (1).Pop ();
+    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+        return false;
+
+    const txid = args.Pop ();
 
     if (Util.IsArweaveHash (txid) )
     {
@@ -175,19 +184,23 @@ async function Handler_TXTags (args)
 
     }
     else
-        Sys.ERR_FATAL ("Invalid argument: '" + txid + "' - not a transaction ID.");
+        return Sys.ERR_ABORT ("Invalid argument: '" + txid + "' - not a transaction ID.");
 
 }
 
 
 async function Handler_Data (args)
 {
-    const txid = args.RequireAmount (1).Pop ();
+    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+        return false;
+
+    const txid = args.Pop ();
 
     if (Util.IsArweaveHash (txid) )
         Sys.OUT_BIN (await Arweave.GetTxData (txid) );
+
     else
-        Sys.ERR_FATAL ("Invalid argument: '" + txid + "' - not a transaction ID.");
+        return Sys.ERR_ABORT ("Invalid argument: '" + txid + "' - not a transaction ID.");
 }
 
 
@@ -196,12 +209,16 @@ async function Handler_Data (args)
 
 async function Handler_RawData (args)
 {
-    const txid = args.RequireAmount (1).Pop ();
+    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+        return false;
+
+    const txid = args.Pop ();
 
     if (Util.IsArweaveHash (txid) )
         Sys.OUT_BIN (await Arweave.GetTxRawData (txid) );
+
     else
-        Sys.ERR_FATAL ("Invalid argument: '" + txid + "' - not a transaction ID.");
+        return Sys.ERR_ABORT ("Invalid argument: '" + txid + "' - not a transaction ID.");
 }
 
 
@@ -211,7 +228,10 @@ async function Handler_RawData (args)
 // TODO: Move to ArFS.js.
 async function Handler_ArFS (args)
 {
-    const target = args.RequireAmount (1).Pop ();
+    if ( ! RequireAmount (1, "An ArFS-ID or an transaction ID (TXID) required.") )
+        return false;
+
+    const target = args.Pop ();
 
     if (Util.IsArFSID (target) )
     {
@@ -222,7 +242,7 @@ async function Handler_ArFS (args)
             await file.Download ();
 
         else
-            Sys.ERR_FATAL ("Download failed: Target " + target + " doesn't exist, isn't a file or failed to fetch.");
+            return Sys.ERR_ABORT ("Download failed: Target " + target + " doesn't exist, isn't a file or failed to fetch.");
     }
 
     else if (Util.IsArweaveHash (target) )
@@ -231,7 +251,7 @@ async function Handler_ArFS (args)
         Sys.OUT_BIN (await Arweave.GetTxData (target) );
     }
     else
-        Sys.ERR_FATAL ("Invalid target: '" + target + "' - not an ArFS-ID or a transaction ID.");
+        return Sys.ERR_ABORT ("Invalid target: '" + target + "' - not an ArFS-ID or a transaction ID.");
 }
 
 

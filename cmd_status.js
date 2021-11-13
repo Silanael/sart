@@ -49,39 +49,48 @@ function Help (args)
 // TODO: Make a class containing a generic implementation of this.
 async function HandleCommand (args)
 {
-    const target  = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).Pop ();    
+    if ( ! args.RequireAmount (1, "Arweave-status or subcommand required. Valid ones: " + Util.KeysToStr (SUBCOMMANDS) ) )
+        return false; 
+
+    const target  = args.Pop ();    
     const handler = SUBCOMMANDS[target.toLowerCase () ];
 
     // Invoke handler if found
     if (handler != null)
     {
         Sys.VERBOSE ("STATUS: Invoking subcommand-handler for '" + target + "'...");
-        await handler (args);
+        const ret = handler (args);
+        return ret;
     }
 
 
     // Arweave-hash, only transactions applicable.
     else if (Util.IsArweaveHash (target) )
-        await Handler_TX (args, target);
+    {
+        const ret = await Handler_TX (args, target);
+        return ret;
+    }
 
     // ArFS-ID
     //else if (Util.IsArFSID (target) )
     //    await Handler_ArFS (args, target);
     
     else
-        Sys.ERR_FATAL ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
+        return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
   
+    return false;
 }
 
 
 
 async function Handler_TX (args, txid = null)
 {
-
-    if (txid == null) txid = args.RequireAmount (1).Pop ();
+        
+    if (txid == null)
+        txid = args.Pop ();
     
     if (txid != null)
-    {
+    {        
         const status   = { TXID: txid };        
         const txstatus = await Arweave.GetTXStatus (txid);
 
@@ -102,9 +111,10 @@ async function Handler_TX (args, txid = null)
             Sys.ERR ("Failed to retrieve status for transaction '" + txid + "'.");
 
         Sys.OUT_OBJ (txstatus, { txt_obj: status} );
+        return true;
     }
     else
-        Sys.ERR_MISSING_ARG ();
+        return Sys.ERR_MISSING_ARG ("Transaction ID (TXID) required.");
 
 }
 

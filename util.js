@@ -37,8 +37,11 @@ class Args
     RequireAmount (amount, msg = null)
     { 
         // This should exit.
-        if (this._Argv.length - this._Pos < amount)         
+        if (this._Argv.length - this._Pos < amount)
+        {
             Sys.ERR_MISSING_ARG (msg);
+            return null;
+        }
             
         return this;
     }
@@ -99,8 +102,11 @@ function IsFlagSet      (flags, mask)  { return (flags & mask) != 0; }
 async function Delay    (ms)           { await new Promise (r => setTimeout (r, ms) ); }
 
 
-function ContainsString (str, strings, case_insensitive = true)
+function ContainsString (str, strings, case_insensitive = true, trim = true)
 {
+    if (trim)
+        str = str.trim ();
+        
     if (case_insensitive)
         return strings.find ( (v) => v.toLowerCase () == str.toLowerCase () ) != null;
 
@@ -384,8 +390,12 @@ function RequireArgs (args, amount, src)
     const srcstr = src != null ? src + ": " : "";
         
     const len = args.length;
+
     if (len < amount)
-        Sys.ERR_FATAL (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
+        return Sys.ERR_ABORT (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
+
+    else
+        return true;
 }
 
 
@@ -395,8 +405,10 @@ function RequireParam (param, name, src)
     const srcstr = src != null ? src + ": " : "";
 
     if (param == undefined)
-        Sys.ERR_FATAL (srcstr + "Missing parameter: " + name);
+        return Sys.ERR_ABORT (srcstr + "Missing parameter: " + name);
 
+    else
+        return true;
 }
 
 

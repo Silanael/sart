@@ -29,7 +29,7 @@ const TXSTATUS_PENDING  = 202;
 const TXSTATUS_NOTFOUND = 404;
 
 const ENDPOINT_PENDING = "tx/pending";
-const _TAG = "Arweave";
+const _TAG             = "Arweave";
 
 
 
@@ -37,12 +37,12 @@ const _TAG = "Arweave";
 
 
 
-function Init ()
+async function Init (nofail = false)
 {
-    if (Arweave_Instance == undefined)
+    if (Arweave_Instance == null)
     {
         const Config = Settings.Config;
-        Sys.INFO ("Connecting to " + Settings.GetHostString () + "...")
+        Sys.VERBOSE ("Settings connection params to " + Settings.GetHostString () + " .")
 
         Arweave_Instance = ArweaveLib.init
         (
@@ -52,9 +52,36 @@ function Init ()
                 protocol: Config.ArweaveProto,
                 timeout:  100000
             }
-        );        
+        );    
+        // Test the connection.
+        const info = await GetNetworkInfo ();
+        
+        if (info != null)
+        {
+            Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) );
+            return Arweave_Instance;
+        }
+
+        return nofail == true ? Arweave_Instance : null;    
     }
     return Arweave_Instance;
+}
+
+
+function GetHostStr (arweave)
+{
+    if (arweave != null)
+    {
+        try
+        {
+            const conf = arweave.api.getConfig ();
+            return conf.protocol + "://" + conf.host + ":" + conf.port;
+        }
+        catch (exception) { Sys.ON_EXCEPTION (exception); }
+    }
+    else return "HOST NOT SET";
+
+    return null;    
 }
 
 
@@ -67,29 +94,26 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );    
+    );        
 }
+
 
 
 // HTTP POST request. Currently using 
 async function Post (host_str, data_obj)
 {
-    if (data_obj != null)
-    {
-        const arweave = Init ();
+    const arweave = await Init ();
 
+    if (arweave != null && data_obj != null)
+    {        
         try
         {
             const ret = await arweave.api.post (host_str, data_obj );
             return ret;
         }
-        catch (exception)
+        catch (exception) 
         {
-            Sys.DEBUG ("Exception at arweave.js Post () - Exception:");
-            Sys.DEBUG (exception);
-            Sys.DEBUG ("Exception at arweave.js Post () - Input obj:");
-            Sys.DEBUG (data_obj);
-            Sys.ERR_FATAL ("HTTP POST to " + host_str + " failed!");
+            Sys.ON_EXCEPTION (exception, "Arweave.Post", host_str);            
         }        
     }
     return null;
@@ -98,47 +122,64 @@ async function Post (host_str, data_obj)
 
 async function OwnerToAddress (owner)
 {
-    const arweave = Init ();
-    return await arweave.wallets.ownerToAddress (owner);
+    const arweave = await Init ();
+    return arweave != null ? await arweave.wallets.ownerToAddress (owner) : null;
 }
 
 
 function WinstonToAR (winston_amount)
 {
-    const arweave = Init ();
-    return arweave.ar.winstonToAr (winston_amount);
+    const arweave  = Init (true);
+    return arweave != null ? arweave.ar.winstonToAr (winston_amount) : null;
 }
+
 function QuantityToAR (quantity) { return WinstonToAR (quantity); }
 
 
-async function DisplayArweaveInfo (args)
+
+async function DisplayArweaveInfo ()
 {
-    const arweave = Init ();
+    const arweave = await Init ();
 
-    Sys.VERBOSE ("Fetching network information..");
-    Sys.OUT_TXT (await arweave.network.getInfo () );
+    if (arweave != null)
+    {
+        Sys.VERBOSE ("Fetching network information..");
 
+        try               { Sys.OUT_TXT (await arweave.network.getInfo () ); }
+        catch (Exception) { Sys.ON_EXCEPTION (Exception, GetHostStr (arweave) );   }
+    }
 }
 
 
-async function GetNetworkInfo   ()
+async function GetNetworkInfo ()
 { 
-    const arweave = Init (); 
-    const r = await arweave.network.getInfo (); 
-    return r; 
+    const arweave = await Init (); 
+    if (arweave != null)
+    {
+        try 
+        {
+            const r = await arweave.network.getInfo (); 
+            return r; 
+        }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetNetworkInfo", GetHostStr (arweave) ); }
+    }
+    return null;
 }
 
 
 async function GetMemPool ()
 {
-    const arweave = Init ();
-    try
+    const arweave = await Init ();
+    if (arweave != null)
     {
-        const ret = await arweave.api.get (ENDPOINT_PENDING);
-        if (ret.data != null)
-            return ret.data;
+        try
+        {
+            const ret = await arweave.api.get (ENDPOINT_PENDING);
+            if (ret.data != null)
+                return ret.data;
+        }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetmemPool", GetHostStr (arweave) ); }
     }
-    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetmemPool ()"); }
 
     return null;
 }
@@ -156,10 +197,10 @@ async function GetPendingTXAmount ()
 function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
 
 
-
+// Don't use.
 async function SearchTag (tag, value)
 {
-    const arweave = Init ();
+    const arweave = await Init ();
 
     Sys.VERBOSE ("Searching for tag:'" + tag + "'='" + value + "':");
     const files = await arweave.transactions.search (tag, value);    
@@ -169,14 +210,17 @@ async function SearchTag (tag, value)
 // TODO: Separate this try-catch -stuff into a common function.
 async function GetTx (txid)
 {    
-    const arweave = Init ();    
-    let   tx      = null;
+    const arweave = await Init ();    
+    
+    if (arweave != null)
+    {
+        try               { let tx = await arweave.transactions.get (txid); return tx; }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTx (" + txid + ")"); tx = null;  }
+    }
 
-    try               { tx = await arweave.transactions.get (txid);                               }
-    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTx (" + txid + ")"); tx = null;  }
-
-    return tx;
+    return null;
 }
+
 
 
 async function GetLatestTxWithTags (tags, address = null, opts = { ret_if_notfound: null } )
@@ -194,13 +238,12 @@ async function GetLatestTxWithTags (tags, address = null, opts = { ret_if_notfou
 
 async function GetTXStatus (txid)
 {
-    const arweave  = Init ();    
-    let   txstatus = null;
+    const arweave  = await Init ();    
+    
+    try               { let txstatus = await arweave.transactions.getStatus (txid); return txstatus; }
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")", GetHostStr (arweave) ); tx = null;  }
 
-    try               { txstatus = await arweave.transactions.getStatus (txid);                         }
-    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")"); tx = null;  }
-
-    return txstatus;
+    return null;
 }
 
 
@@ -223,15 +266,13 @@ async function OutputTxData (txid)
 async function GetTxData (txid)
 { 
     const arweave = await Init ();     
-    let   data    = null;
-
+    
     try               
     { 
-         data = await arweave.transactions.getData (txid, {decode: true} );  
+         data = await arweave.transactions.getData (txid, {decode: true} );
+         return data;
     }
-    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); tx = null;  }
-
-    return data;
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); tx = null;  }    
 }
 
 
@@ -240,11 +281,11 @@ async function GetTxData (txid)
 async function GetTxStrData (txid)
 {    
     const arweave = await Init ();
-    let   data    = null;
-
+    
     try
     { 
-        data = await arweave.transactions.getData (txid, {decode: true, string: true} );  
+        data = await arweave.transactions.getData (txid, {decode: true, string: true} );
+        return data; 
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxStrData (" + txid + ")"); }
  
@@ -257,15 +298,14 @@ async function GetTxStrData (txid)
 async function GetTxRawData (txid)
 {    
     const arweave = await Init ();
-    let   data    = null;
-
+    
     try
     { 
         data = await arweave.chunks.downloadChunkedData (txid); 
+        return data;
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxRawData (" + txid + ")"); }
     
-    return data;
 }
 
 
@@ -276,16 +316,19 @@ async function GetTXs ( args = {address: null, tags: null, first: null, sort: nu
     
     try
     { 
+        Sys.INFO ("Fetching transactions...");
         const success = await query.ExecuteReqOwner (args);
+
         if (success)
             return query;
+
         else
-        {
-            Sys.ERR ("Failed to get transactions for address " + address + " .");
+        {             
+            Sys.ERR ("Failed to get transactions for address " + args.owner + " .");
             return null;
         }
     }
-    catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTXsForAddress (" + address + ", " + tags + ")"); }    
+    catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTXsForAddress (" + args.owner + ", " + args.tags + ")"); }    
     
     return null;
 }

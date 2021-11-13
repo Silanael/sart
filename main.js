@@ -151,7 +151,7 @@ async function Main (argv)
             }
            
             else
-                Sys.ERR_FATAL (`Unknown command: "${arg_raw}".`);                    
+                return Sys.ERR_ABORT (`Unknown command: "${arg_raw}".`);                    
 
             // Process only one command.
             command_found = true;
@@ -195,14 +195,16 @@ function ParseFlags (argc, argv)
             }
 
             else
-                Sys.ERR_FATAL ("Unknown argument: " + arg_raw);
+                return Sys.ERR_ABORT ("Unknown argument: " + arg_raw);
 
         }
-        else if (arg_raw.startsWith ("--") )
-            Sys.ERR_OVERRIDABLE ("Unknown option: " + arg_raw);
+
+        else if (arg_raw.startsWith ("--") && ! Sys.ERR_OVERRIDABLE ("Unknown option: " + arg_raw) )
+            return false;
+            
     }
     
-    Sys.VERBOSE ("Flags parsed.");
+    Sys.VERBOSE ("Flags parsed.", "MAIN");
 }
 
 
@@ -211,8 +213,12 @@ function ParseFlags (argc, argv)
 function FetchFlagArg (argc, argv, pos, flag)
 {
     ++pos;
+
     if (pos >= argc)
-        Sys.ERR_FATAL ("Missing argument for " + flag + "!");
+    {
+        Sys.ERR_ABORT ("Missing argument for " + flag + "!");
+        return null;
+    }
     else 
         return argv[pos];
 }

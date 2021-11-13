@@ -166,18 +166,22 @@ class Results
 
 async function HandleCommand (args)
 {
-    const target  = args.RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ).Pop ();
+    if ( ! args.RequireAmount (1, "A subcommand is required. Valid ones: " + Util.KeysToStr (SUBCOMMANDS) ) )
+        return false; 
+
+    const target  = args.Pop ();
     const handler = SUBCOMMANDS[target.toLowerCase () ];
 
     // Invoke handler if found
     if (handler != null)
     {
         Sys.VERBOSE ("Invoking subcommand-handler for '" + target + "'...", "VERIFY");
-        await handler (args);
+        const ret = await handler (args);
+        return ret;
     }
 
     else
-        Sys.ERR ("Unknown command '" + target + "'. Available commands: " + Util.KeysToStr (SUBCOMMANDS) );
+        return Sys.ERR ("Unknown command '" + target + "'. Available commands: " + Util.KeysToStr (SUBCOMMANDS) );
     
 }
 
@@ -189,14 +193,16 @@ async function HandleCommand (args)
 async function Handler_Uploads (args)
 {    
 
+    if ( ! args.RequireAmount (1, "Drive-ID required.") )
+        return false; 
+
     const start_time = new Date ().getTime ();
     Sys.VERBOSE ("Operation started at " + Util.GetDate () );
 
 
 
-
     // Prepare variables
-    const drive_id    = args.RequireAmount (1, "Drive-ID required.").Pop ();
+    const drive_id    = args.Pop ();
     let numeric_mode = false;
     let list_mode    = null;    
     let first        = -1;
@@ -213,15 +219,27 @@ async function Handler_Uploads (args)
                 break;
 
             case "RANGE":
-                let split = args.RequireAmount (1, "RANGE first-last").Pop ().split ("-");
+                if ( ! args.RequireAmount (1, "first-last required, ie. 0-999 . Omit RANGE for autodetection.") )
+                    return false; 
+
+                let split = args.Pop ().split ("-");
+
                 if (split?.length != 2 || isNaN (first = split[0]) || isNaN (last = split[1]) )
-                    return Sys.ERR_FATAL ("RANGE needs to be in format of 'first-last'.");
+                    return Sys.ERR_ABORT ("RANGE needs to be in format of 'first-last'.");
+
                 Sys.INFO ("Manual numbered filename range set to " + first + " - " + last);
                 break;
 
             case "EXTENSION":
-                extension = args.RequireAmount (1, "Extension required.").PopLC ();
-                if (!extension.includes (".") ) extension = "." + extension;
+                if ( ! args.RequireAmount (1, "File-extension required, ie. jpg") )
+                    return false; 
+
+                extension = args.PopLC ();
+                
+                // Add the dot if it's omitted.
+                if (!extension.includes (".") ) 
+                    extension = "." + extension;
+
                 Sys.INFO ("Extension filter set to " + extension);
                 break;
 
@@ -243,7 +261,7 @@ async function Handler_Uploads (args)
     Sys.DEBUG ("List mode -flags: " + listmode_flags);
 
     if (listmode_flags <= 0)
-        Sys.ERR_FATAL ("Unknown list mode '" + list_mode + "'. Valid modes: " + Util.KeysToStr (LISTMODES_VALID) );
+        return Sys.ERR_ABORT ("Unknown list mode '" + list_mode + "'. Valid modes: " + Util.KeysToStr (LISTMODES_VALID) );
 
     // Allow numeric mode to be enabled in the flags as well.
     if ( (listmode_flags & F_NUMERIC) != 0)
@@ -260,8 +278,8 @@ async function Handler_Uploads (args)
     // Extract drive owner
     const owner = await ArFS.GetDriveOwner (drive_id);
     
-    if (owner == null)
-        Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .");
+    if (owner == null && ! Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .") )        
+        return false;
 
 
 
@@ -284,10 +302,8 @@ async function Handler_Uploads (args)
     Sys.VERBOSE ("Total transactions: " + tx_amount);
 
     if (tx_amount <= 0)
-    {
-        Sys.ERR_FATAL ("Could not find any transactions from Arweave-address " + owner);
-        return;
-    }
+        return Sys.ERR_ABORT ("Could not find any transactions from Arweave-address " + owner);
+        
 
     // Make a lookup-table. Wastes memory but what the hell.
     const by_txid = {};
@@ -307,11 +323,9 @@ async function Handler_Uploads (args)
     Sys.VERBOSE ("File metadata entries: " + metadata_amount);
     
 
-    if (metadata_amount <= 0)
-    {
-        Sys.ERR ("No ArFS-metadata transactions found on " + owner + " .");
-        return false;
-    }
+    if (metadata_amount <= 0)    
+        return Sys.ERR_ABORT ("No ArFS-metadata transactions found on " + owner + " .");
+        
 
 
 
@@ -422,6 +436,7 @@ async function Handler_Uploads (args)
     const duration_sec = (after.getTime () - start_time) / 1000;    
     Sys.VERBOSE ("Operation ended at " + Util.GetDate () + ". Time taken: " + duration_sec + " sec.");
 
+    return true;
 }
 
 
@@ -737,12 +752,13 @@ async function Handler_Uploads_Old (args)
     const listmode_flags = Util.StrToFlags    (list_mode, LISTMODES_FLAGTABLE);
 
     if (listmode_flags <= 0)
-        Sys.ERR_FATAL ("Unknown list mode '" + list_mode + "'. Valid modes: " + LISTMODES_VALID );
+        return Sys.ERR_ABORT ("Unknown list mode '" + list_mode + "'. Valid modes: " + LISTMODES_VALID );
 
     const owner          = await ArFS.GetDriveOwner (drive_id);
     
-    if (owner == null)
-        Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .");
+    if (owner == null && ! Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .") )
+        return false;
+       
     
     
 

@@ -37,12 +37,12 @@ async function HandleCommand (args)
 {    
     Sys.VERBOSE ("Entering the Command Interface.")
 
-    if (Running)
+    if (Settings.ConsoleActive)
     {
         Sys.ERR ("Console already running.")
         return false;
     }
-    Running = true;
+    Settings.ConsoleActive = true;
 
 
     // Banner
@@ -50,31 +50,50 @@ async function HandleCommand (args)
 
 
     const input = ReadLine.createInterface ( {input: process.stdin, output: null} );
+    
+    PrintEmptyLine ();
+    PrintPrompt    ();
 
-    PrintPrompt ();
 
     for await (const line of input)
     {        
-        let argv = line.split (" ");        
+        if (line == null || line.trim () == "")
+            Sys.ERR ("No command given.");
         
-        if (Util.ContainsString (">", argv) )
-            Sys.ERR ("Redirecting into a file from the console not yet supported.");
-
         else
         {
-            // This is a bit of a hack prior to moving 
-            // the command parsing logic to its own module.            
-            argv.unshift ("bar");
-            argv.unshift ("foo");
-        
-            await Main (argv);
+            let argv = line.split (" ");        
+            
+            if (Util.ContainsString (">", argv, false, true) )
+                Sys.ERR ("Redirecting into a file from the console not yet supported.");
+
+            else
+            {
+                // This is a bit of a hack prior to moving 
+                // the command parsing logic to its own module.            
+                argv.unshift ("bar");
+                argv.unshift ("foo");
+            
+                await Main (argv);
+            }
         }
 
         PrintPrompt ();
     }
     
     input.close ();
+}
 
+
+function PrintLine (str)
+{
+    Sys.OUT_TXT (str);
+}
+
+
+function PrintEmptyLine ()
+{
+    Sys.OUT_TXT ("");
 }
 
 

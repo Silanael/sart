@@ -23,7 +23,7 @@ const IsPiped = !process.stdout.isTTY;
 
 
 
-function ERR_MISSING_ARG   (msg = null, src = null) { ERR_FATAL ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
+function ERR_MISSING_ARG   (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj); };
 
 
@@ -31,35 +31,54 @@ function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj
 
 function ErrorHandler (error)
 {        
-    if (error != undefined)
+    msg = "???";    
+
+    if (error != null)
     {
         DEBUG (error);
-        INFO (error);
-        let msg = error.code;
         
-        // The Error is a string or so.
-        if (msg == undefined)
+        // The Error is an exception
+        if (error.code == null)
         {
             ERR ("A possible bug in the code - recommend contacting me (sila@silanael.com).");
-            msg = error;
+            ERR ("To troubleshoot, run SART with the --debug and send the output to me.");            
+            ERR_FATAL ("ERROR: " + (error.name != null ? error.name : "UNKNOWN SYSTEM ERROR") );
+            return;
         }
 
         // The error is a Javascript-array-thingy.
         else
-        {
+        {            
             switch (error.code)
             {
-                case "ENOTFOUND":    msg = "Host not found.";      break;
-                case "ECONNREFUSED": msg = "Connection refused.";  break;
+                case "ENOTFOUND":    msg = "Host not found.";                        break;
+                case "ECONNREFUSED": msg = "Connection refused.";                    break;
+                case "EACCESS":      msg = "Access denied.";                         break;
+                case "ETIMEDOUT":    msg = "Operation timeout. Rather unfortunate."; break;
+                case "EPIPE":        msg = "Broken pipe.";                           break;
+                case "EMFILE":       msg = "Too many files open. Contact the dev.";  break;
+                case "ENOENT":       msg = "No such file or directory.";             break;
+
+                default:
+                    msg = "ERROR: " + error.code;
+
+                    if (!ERR_OVERRIDABLE (msg + " (Use the --force to ignore.)") )                    
+                    {
+                        EXIT (-1);
+                        return;
+                    }
+                    break;              
             }
-        }
-
-        ERR_FATAL ("ERROR: " + msg);
+            ERR ("ERROR: " + msg);
+            return true;            
+        }        
     }
-
     else
-        ERR_FATAL ("It appears that an error of an unknown nature has occurred.. How curious..");
+    {
+        ERR_FATAL ("It appears that an error of an unknown nature (null) has occurred. How curious..");
+    }     
 
+    ERR_FATAL ("UNKNOWN SYSTEM ERROR. HALTING.");
 }
 
 
@@ -238,14 +257,18 @@ function ERR (str, src)
 
 
 // An error that can be overridden with --force
-function ERR_OVERRIDABLE (str)
+function ERR_OVERRIDABLE (str, src)
 {
     ERR (str);
 
     if (!Settings.IsForceful () )
-        EXIT (-1);
+        return ERR_ABORT (str, src);
 
-    return false;
+    else
+    {
+        ERR (str);
+        return true;
+    }
 }
 
 
@@ -272,6 +295,18 @@ function ERR_ONCE (str, src)
 }
 
 
+// Error message output + exit or return false.
+function ERR_ABORT (str, src)
+{
+    ERR (str, src);
+
+    if (!Settings.ConsoleActive)
+        EXIT (-1);
+
+    return false;
+}
+
+
 
 // Error message output + exit.
 function ERR_FATAL (str, src)
@@ -289,7 +324,7 @@ function EXIT (code)
 
 
 
-function ON_EXCEPTION (exception, src = "Something")
+function ON_EXCEPTION (exception, src = "Something", subject = null)
 {    
     if (exception != null)
     {        
@@ -298,11 +333,33 @@ function ON_EXCEPTION (exception, src = "Something")
             DEBUG (src + " caused the following exception:")
             DEBUG (exception);
         }
+        
         if (Settings.IsVerbose () )
             VERBOSE (src + " failed.");
+
+        if (exception.code != null)
+        {
+            let msg = "???";
+
+            switch (exception.code)
+            {
+                case "ENOTFOUND":    msg = "Host not found.";                            break;
+                case "ECONNREFUSED": msg = "Connection refused.";                        break;
+                case "EACCESS":      msg = "ACCESS DENIED";                              break;
+                case "ETIMEDOUT":    msg = "The operation timeouted. How unfortunate.";  break;
+                case "EPIPE":        msg = "Broken pipe. Plumbers won't help.";          break;
+                case "EMFILE":       msg = "Too many files open. Contact the dev.";      break;
+                case "ENOENT":       msg = "No such file or directory.";                 break;
+
+                default:
+                    msg = exception.code;                                            
+            }
+
+            ERR ("ERROR: " + msg + (subject != null ? " [" + subject + "]" : "") );
+        }
     }
     else
-        ERR ("Sys.ON_EXCEPTION: Parameter missing (Caused by " + src + ").");
+        ERR ("Parameter missing (Caused by " + src + ").", "Sys.ON_EXCEPTION");
 
     return false;
 }
@@ -320,6 +377,7 @@ module.exports =
     DEBUG,
     WARN,
     ERR,
+    ERR_ABORT,
     ERR_OVERRIDABLE,
     ERR_CONFLICT,
     ERR_MISSING_ARG,

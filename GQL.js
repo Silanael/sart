@@ -159,7 +159,7 @@ class Query
     constructor (arweave)
     {
         if (arweave == null)
-            Sys.ERR_FATAL ("Query: Missing parameter 'Arweave'.", "GQL");
+            return Sys.ERR_ABORT ("Query constructor: Missing parameter 'Arweave'.", "GQL");
 
         this.Arweave       = arweave;
             
@@ -174,14 +174,24 @@ class Query
         if (query != null)
             this.Query = query;
  
-        Sys.DEBUG (Query);
+        Sys.DEBUG (query);
  
-        const arweave = this.Arweave.Init ();                
-        this.Results  = await RunGQLQuery (this.Arweave, this.Query)
+        const arweave = await this.Arweave.Init ();
+        if (arweave != null)
+        {
+            this.Results  = await RunGQLQuery (this.Arweave, this.Query)
                      
-        this.Edges         = this.Results?.data?.data.transactions.edges;
-        this.EntriesAmount = this.Edges != null ? this.Edges.length : 0;
-        this._ParseEntries ();
+            this.Edges         = this.Results?.data?.data.transactions.edges;
+            this.EntriesAmount = this.Edges != null ? this.Edges.length : 0;
+            this._ParseEntries ();
+        }
+        else
+        {
+            this.Results       = null;
+            this.Edges         = null;
+            this.EntriesAmount = null;
+            this.Entries       = [];
+        }
     }
      
     
@@ -317,6 +327,7 @@ class TXQuery extends Query
        let pass_entries  = 0;
        let pass_num      = 1;
        let edges         = [];
+       let fail          = false;
        
        const desired_amount = config.first != undefined ? config.first : 0;
        const fetch_amount   = config.first != undefined ? config.first : GQL_MAX_RESULTS;
@@ -338,13 +349,23 @@ class TXQuery extends Query
                } 
            );                         
            
-           results    = await RunGQLQuery (this.Arweave, q_str);                 
-           pass_edges = results.data?.data?.transactions?.edges;
+           results = await RunGQLQuery (this.Arweave, q_str);
+           
+           if (results == null)
+           {
+               Sys.ERR   ("GQL-query failed.");
+               Sys.DEBUG ("RunGLQuery returned null.");
+               return false;
+           }
+           
+           pass_edges = results?.data?.data?.transactions?.edges;
            
            if (pass_edges == undefined)
            {
                Sys.ERR ("Something went wrong with the query, at pass #" + pass_num);
-               Sys.DEBUG (results);               
+               Sys.DEBUG ("Query results:");
+               Sys.DEBUG (results);
+               fail = true;              
                break;
            }
 
@@ -380,7 +401,7 @@ class TXQuery extends Query
        Sys.INFO ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", __TAG)   
        
        
-       return this.EntriesAmount >= desired_amount;
+       return !fail && this.EntriesAmount >= desired_amount;
    }
 
     
@@ -471,12 +492,17 @@ async function RunGQLQuery (Arweave, query_str)
 {            
     const arweave = Arweave.Init ();
 
-    Sys.DEBUG ("Running query:");
-    Sys.DEBUG (query_str);
+    if (arweave != null)
+    {
+        Sys.DEBUG ("Running query:");
+        Sys.DEBUG (query_str);
 
-    const results = await Arweave.Post (Settings.GetGQLHostString (), { query: query_str } );
-
-    return results;
+        const results = await Arweave.Post (Settings.GetGQLHostString (), { query: query_str } );
+        return results;
+    }
+    else
+        return null;
+    
 }
 
 
