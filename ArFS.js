@@ -123,6 +123,7 @@ const URLMODES =
 
 class ArFSURL
 {     
+    URL      = null;
     DriveID  = null;
     Mode     = null;
     Target   = null;
@@ -133,7 +134,9 @@ class ArFSURL
     
     constructor (url = null)
     {
-        if (url != null)
+        this.URL = url;
+
+        if (url != null)        
             this.Parse (url);
     }
     
@@ -248,7 +251,7 @@ class ArFSURL
         return false;       
     }
 
-        
+    /* Override */ toString () { return this.URL; }
 
 }
 
@@ -866,6 +869,7 @@ class ArFSDrive extends ArFSEntity
             return false;
         }
 
+        Sys.INFO ("Listing content for " + arfs_url + " ...")
 
         let success = false;;
 

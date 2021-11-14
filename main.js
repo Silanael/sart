@@ -54,6 +54,7 @@ const Commands =
     "--version"   : DisplayVersion,
     "info"        : Info,
     "-i"          : Info,
+    "connect"     : Arweave.Connect,
     "list"        : List,
     "-l"          : List,
     "get"         : Get,
@@ -172,12 +173,13 @@ function ParseFlags (argc, argv)
 
     for (let C = FIRST_ARG; C < argc; ++C)
     {    
-        let arg_raw  = argv[C];    
+        let arg_raw   = argv[C];
+        let arg_lower = arg_raw?.toLowerCase ();   
 
         // Only process flags.
         if (Util.IsFlag (arg_raw, Flags) )
         {
-            let arg = arg_raw.startsWith ("--") ? arg_raw.toLowerCase () 
+            let arg = arg_raw.startsWith ("--") ? arg_lower
                                                 : arg_raw;
 
             const entry = Flags[arg];
@@ -199,7 +201,7 @@ function ParseFlags (argc, argv)
 
         }
 
-        else if (arg_raw.startsWith ("--") && ! Sys.ERR_OVERRIDABLE ("Unknown option: " + arg_raw) )
+        else if (arg_raw.startsWith ("--") && Commands[arg_lower] == null && ! Sys.ERR_OVERRIDABLE ("Unknown option: " + arg_raw) )
             return false;
             
     }
@@ -282,12 +284,18 @@ function DisplayHelp (args)
         Sys.INFO ("  -g, get     [TARGET]     Get (more or less) raw data (TX-data, files etc.)");
         Sys.INFO ("  -i, info    [TARGET]     Obtain detailed information about the target.");
         Sys.INFO ("  -s, status  [TARGET]     Obtain the current status of the target.");
+        Sys.INFO ("      console              Enter the console. This is the default command.")
         Sys.INFO ("    , pending              Display network pending TX amount.");
         Sys.INFO ("  -v, version              Display version info.");
         Sys.INFO ("      help    [COMMAND]    Display help for a command.");
         Sys.INFO ("");
-        
+        Sys.INFO ("CONSOLE:");
+        Sys.INFO ("");
+        Sys.INFO ("      connect [URL]        Connect to an Arweave-node or gateway.")
+        Sys.INFO ("      exit                 Exit the console.")        
+        Sys.INFO ("");
         Sys.INFO ("OPTIONS:");
+        Sys.INFO ("");
         Sys.INFO ("      --quiet              Output only data, no messages or errors.");
         Sys.INFO ("      --no-msg             Output only data/results and errors. Default for piped.");
         Sys.INFO ("      --msg                Display info on what's done. Default for non-piped.");

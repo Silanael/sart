@@ -43,7 +43,7 @@ function Help (args)
 
 async function HandleCommand (args)
 {
-    if ( ! args.RequireAmount (1, "Target required.") )
+    if ( ! args.RequireAmount (1, "Valid targets: " + Util.KeysToStr (SUBCOMMANDS) ) )
         return false;
 
     const target = args.Pop ();
@@ -171,10 +171,11 @@ async function Handler_Author ()
     {
         "__ANSI":          "\033[31m",
         Name:              "Silanael",
-        Description:       "A weary, darkened, shattered soul using its fractured shards to engrave what remains of it into this world. "
-                           + "A creator and a destroyer. A powerful ally and an enemy to be reckoned with. "
-                           + "A pragmatic idealist. A dark ambassador. A ghost imprisoned in the past.. "
-                           + "A fighter longing for a moment of rest..",
+        Description:       "A weary, darkened, shattered soul using its fractured shards to engrave"
+                           + "\n                 what remains of it into this world. "
+                           + "\n                 A creator and a destroyer. A powerful ally and an enemy to be reckoned with. "
+                           + "\n                 A pragmatic idealist. A dark ambassador. A ghost imprisoned in the past.. "
+                           + "\n                 A fighter longing for a moment of rest..",
         Properties:        "MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, stalker, ex-drifter",
         Age:               Util.GetAge (),        
         Website:           "www.silanael.com",

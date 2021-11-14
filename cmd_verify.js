@@ -22,6 +22,7 @@ const Tag          = GQL.Tag;
 
 
 const LISTMODE_SUMMARY   = "SUMMARY";
+const LISTMODE_PROCESSED = "PROCESSED";
 const LISTMODE_ALL       = "ALL";
 const LISTMODE_HEALTHY   = "HEALTHY";
 const LISTMODE_FAILED    = "FAILED";
@@ -29,7 +30,7 @@ const LISTMODE_MISSING   = "MISSING";
 const LISTMODE_UNKNOWN   = "UNKNOWN";
 const LISTMODE_ALL_SEP   = "ALL-SEPARATE";
 
-const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_UNKNOWN, LISTMODE_ALL, LISTMODE_ALL_SEP ];
+const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_UNKNOWN, LISTMODE_ALL, LISTMODE_ALL_SEP, LISTMODE_PROCESSED ];
 
 
 const F_LISTMODE_SUMMARY   = 1,
@@ -39,9 +40,10 @@ const F_LISTMODE_SUMMARY   = 1,
       F_LISTMODE_MISSING   = 16,
       F_LISTMODE_UNKNOWN   = 32,
       F_NUMERIC            = 64,
+      F_LISTMODE_PROCESSED = 128,
       
       F_LISTMODE_ALL_SEP   = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING | F_LISTMODE_UNKNOWN,
-      MASK_LISTS           = F_LISTMODE_ALL_SEP | F_LISTMODE_ALL;
+      MASK_LISTS           = F_LISTMODE_ALL_SEP | F_LISTMODE_ALL | F_LISTMODE_PROCESSED;
       
       
 
@@ -55,6 +57,7 @@ const LISTMODES_FLAGTABLE =
     [LISTMODE_MISSING]   : F_LISTMODE_MISSING,
     [LISTMODE_UNKNOWN]   : F_LISTMODE_UNKNOWN,
     [LISTMODE_ALL_SEP]   : F_LISTMODE_ALL_SEP,
+    [LISTMODE_PROCESSED] : F_LISTMODE_PROCESSED,
     "STATUS"             : F_LISTMODE_SUMMARY,
     "NUMERIC"            : F_NUMERIC,
         
@@ -62,8 +65,9 @@ const LISTMODES_FLAGTABLE =
 
 
 const LISTMODES_TO_FIELDS_MAP = 
-{    
-    [F_LISTMODE_ALL    ]   : "Processed",
+{   
+    [F_LISTMODE_PROCESSED] : "Processed", 
+    [F_LISTMODE_ALL    ]   : "Filtered",
     [F_LISTMODE_HEALTHY]   : "Healthy",
     [F_LISTMODE_FAILED ]   : "Failed",     
     [F_LISTMODE_MISSING]   : "Missing",  
@@ -92,19 +96,26 @@ function Help (args)
     Sys.INFO ("------------");
     Sys.INFO ("");
     Sys.INFO ("Verify upload success:")
-    Sys.INFO ("   verify files <Drive-ID> [OUTPUT]");
+    Sys.INFO ("   verify files <Drive-ID> [OUTPUT] (NUMERIC) [PARAMS]");
     Sys.INFO ("");
     Sys.INFO ("'OUTPUT' is optional and can be any combination of following:");
-    Sys.INFO ("   summary,healthy,failed,numeric");
+    Sys.INFO ("   summary,healthy,failed,missing,unknown,all,all-separate,processed");
+    Sys.INFO ("");
+    Sys.INFO ("'all' lists all files matching the filter in one go, while 'all-separate'");
+    Sys.INFO ("outputs separate lists for healthy, failed, missing and unknown.");
+    Sys.INFO ("'processed' gives a list of all encountered files, even those that don't");
+    Sys.INFO ("match the extension filter. ");
     Sys.INFO ("");
     Sys.INFO ("Optional parameter: 'EXTENSION ext' - filter processed files by extension.");
+    Sys.INFO ("The extension-filter is case-sensitive.");
     Sys.INFO ("");
-    Sys.INFO ("Numeric output is designed to be used with numbered filenames,")
-    Sys.INFO ("listing healthy, failed, pending and missing files.")
+    Sys.INFO ("'NUMERIC' mode is designed to be used with numbered filenames,")
+    Sys.INFO ("listing missing files along with the regular output.")
+    Sys.INFO ("")
     Sys.INFO ("'RANGE first-last' is an optional parameter for this mode.");
     Sys.INFO ("If omitted, the range is autodetected.");
 
-    Sys.INFO ("EXTENSION is case-sensitive.");
+    
     Sys.INFO ("");
     Sys.INFO ("EXAMPLES:")
     Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 summary,failed");
@@ -122,6 +133,7 @@ class Results
     FileLists = 
     {
         Processed : [],
+        Filtered  : [],
         Healthy   : [],
         Failed    : [],
         Missing   : [],
@@ -137,11 +149,16 @@ class Results
     {
         this.FileLists.Processed.push (file);
         
-        if (file.Analyzed && (filter_ext == null || file.Filename?.endsWith (filter_ext) ) )
+        if (file.Analyzed)
         {            
-            if      (file.Healthy) this.FileLists.Healthy.push (file);
-            else if (file.Error)   this.FileLists.Failed .push (file);
-            else                   this.FileLists.Unknown.push (file);
+            if (filter_ext == null || file.Filename?.endsWith (filter_ext) )
+            {
+                this.FileLists.Filtered.push (file);
+
+                if      (file.Healthy) this.FileLists.Healthy.push (file);
+                else if (file.Error)   this.FileLists.Failed .push (file);
+                else                   this.FileLists.Unknown.push (file);
+            }
             
         }
         else 
@@ -235,7 +252,7 @@ async function Handler_Uploads (args)
                     return false; 
 
                 extension = args.PopLC ();
-                
+
                 // Add the dot if it's omitted.
                 if (!extension.includes (".") ) 
                     extension = "." + extension;

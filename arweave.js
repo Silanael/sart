@@ -31,9 +31,28 @@ const TXSTATUS_NOTFOUND = 404;
 const ENDPOINT_PENDING = "tx/pending";
 const _TAG             = "Arweave";
 
+const CONNSTATES =
+{
+    NOTCONN : "NOT CONNECTED",
+    OK      : "OK",
+    FAIL    : "FAILED",
+}
+
+let ConnectionState = CONNSTATES.NOTCONN;
 
 
 
+async function Connect (args)
+{    
+    const hoststr = args.Pop ();
+
+    if (hoststr != null)
+        Settings.SetHost (hoststr);
+
+    Arweave_Instance = null;
+
+    return await Init () != null;
+}
 
 
 
@@ -54,9 +73,7 @@ async function Init (nofail = false)
             }
         );    
         // Test the connection.
-        const info = await GetNetworkInfo ();
-        
-        if (info != null)
+        if (await TestConnection () )
         {
             Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) );
             return Arweave_Instance;
@@ -66,6 +83,36 @@ async function Init (nofail = false)
     }
     return Arweave_Instance;
 }
+
+
+
+async function TestConnection ()
+{
+    if (Arweave_Instance != null)
+    {
+        const info = await GetNetworkInfo ();
+        
+        if (info != null)
+        {            
+            ConnectionState = CONNSTATES.OK;
+            return { State: ConnectionState, NetworkInfo: info };
+        }
+        else
+            ConnectionState = CONNSTATES.FAIL;
+    }
+    else
+        ConnectionState = CONNSTATES.NOTCONN;
+
+    return { State: ConnectionState, NetworkInfo: null }
+}
+
+
+
+async function GetTargetHost ()
+{
+    return Arweave_Instance != null ? GetHostStr (Arweave_Instance) : Settings.GetHostString ();
+}
+
 
 
 function GetHostStr (arweave)
@@ -85,6 +132,15 @@ function GetHostStr (arweave)
 }
 
 
+async function GetConnectionStatus ()
+{ 
+    const ret = await TestConnection ();
+    return ret;
+}
+
+
+
+
 async function Testing ()
 {
     const arweave = ArweaveLib.init
@@ -94,7 +150,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );        
+    );      
 }
 
 
@@ -139,27 +195,30 @@ function QuantityToAR (quantity) { return WinstonToAR (quantity); }
 
 async function DisplayArweaveInfo ()
 {
-    const arweave = await Init ();
-
-    if (arweave != null)
-    {
-        Sys.VERBOSE ("Fetching network information..");
-
-        try               { Sys.OUT_TXT (await arweave.network.getInfo () ); }
-        catch (Exception) { Sys.ON_EXCEPTION (Exception, GetHostStr (arweave) );   }
-    }
+    const ret = await GetnetworkInfo ();
+    
+    if (ret != null)
+        Sys.OUT_TXT (ret);    
 }
 
 
 async function GetNetworkInfo ()
 { 
-    const arweave = await Init (); 
+    const arweave = await Init ();
+
     if (arweave != null)
     {
         try 
         {
-            const r = await arweave.network.getInfo (); 
-            return r; 
+            const r = await arweave.network.getInfo ();
+                        
+            if (typeof r === 'string')
+            {
+                Sys.ERR ("Host " + GetHostStr (arweave) + " doesn't seem to be a valid gateway/node. Call with --force to use anyway.");
+                return Settings.IsForceful () ? r : null;
+            }
+            else
+                return r;                         
         }
         catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetNetworkInfo", GetHostStr (arweave) ); }
     }
@@ -341,7 +400,9 @@ async function GetTXsForAddress (address, tags = null)
 
 
 
+
+
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
-                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Tag,
-                   TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING };
+                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
+                   TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES };

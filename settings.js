@@ -9,7 +9,7 @@
 
 // Whether to allow the program to access the system,
 // restricting fopen and SYS if set to false.
-const SystemAccess = true;
+const SystemAccess  = true;
 
 const ConsoleActive = false;
 

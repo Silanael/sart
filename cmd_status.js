@@ -8,6 +8,8 @@
 //
 
 // Imports
+const OS           = require ('os');
+
 const Sys          = require ('./sys.js');
 const Settings     = require ('./settings.js');
 const Util         = require ('./util.js');
@@ -46,39 +48,72 @@ function Help (args)
 }
 
 
+
+
 // TODO: Make a class containing a generic implementation of this.
 async function HandleCommand (args)
 {
-    if ( ! args.RequireAmount (1, "Arweave-status or subcommand required. Valid ones: " + Util.KeysToStr (SUBCOMMANDS) ) )
-        return false; 
 
-    const target  = args.Pop ();    
-    const handler = SUBCOMMANDS[target.toLowerCase () ];
+    if (args.GetAmount () <= 0)
+    {        
+        const conn_status = await Arweave.GetConnectionStatus ();
 
-    // Invoke handler if found
-    if (handler != null)
-    {
-        Sys.VERBOSE ("STATUS: Invoking subcommand-handler for '" + target + "'...");
-        const ret = handler (args);
-        return ret;
+        const status =
+        {
+            "Arweave-host"      : await Arweave.GetTargetHost (),
+            "Connection state"  : conn_status.State,             
+            "Memory"            : OS.freemem () + " bytes free"
+        }
+
+        if (conn_status.State == Arweave.CONNSTATES.OK)
+        {
+            if (conn_status.NetworkInfo != null)
+            {
+                status ["Network version"]  = conn_status.NetworkInfo.version + "." + conn_status.NetworkInfo.release
+                status ["Network-peers"]    = conn_status.NetworkInfo.peers;
+                status ["Arweave-blocks"]   = conn_status.NetworkInfo.blocks;
+            }
+            status ["Network pending TX"] = await Arweave.GetPendingTXAmount ();
+        }
+
+        Sys.OUT_TXT ("");
+        Sys.OUT_OBJ (status);
+        Sys.OUT_TXT ("");
+        Sys.OUT_TXT ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) );
+
+        return true;
     }
 
-
-    // Arweave-hash, only transactions applicable.
-    else if (Util.IsArweaveHash (target) )
-    {
-        const ret = await Handler_TX (args, target);
-        return ret;
-    }
-
-    // ArFS-ID
-    //else if (Util.IsArFSID (target) )
-    //    await Handler_ArFS (args, target);
-    
     else
-        return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
-  
-    return false;
+    {
+        const target  = args.Pop ();    
+        const handler = SUBCOMMANDS[target.toLowerCase () ];
+
+        // Invoke handler if found
+        if (handler != null)
+        {
+            Sys.VERBOSE ("STATUS: Invoking subcommand-handler for '" + target + "'...");
+            const ret = handler (args);
+            return ret;
+        }
+
+
+        // Arweave-hash, only transactions applicable.
+        else if (Util.IsArweaveHash (target) )
+        {
+            const ret = await Handler_TX (args, target);
+            return ret;
+        }
+
+        // ArFS-ID
+        //else if (Util.IsArFSID (target) )
+        //    await Handler_ArFS (args, target);
+
+        else
+            return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
+    
+        return false;
+    }
 }
 
 

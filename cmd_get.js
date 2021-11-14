@@ -75,7 +75,7 @@ function Help (args)
 
 async function HandleCommand (args)
 {
-    if (! RequireAmount (1, "Possible commands: " + Util.KeysToStr (SUBCOMMANDS) ) )
+    if (! args.RequireAmount (1, "Valid targets: " + Util.KeysToStr (SUBCOMMANDS) ) )
         return false;
 
     const subcmd  = args.PopLC ();    

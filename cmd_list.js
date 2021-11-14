@@ -52,7 +52,7 @@ function Help (args)
 // TODO
 async function HandleCommand (args)
 {
-    if ( ! args.RequireAmount (1, "Target required. May be a TXID or an ArFS Drive-ID."))
+    if ( ! args.RequireAmount (1, "Can be an address, an ArFS Drive-ID or a path like <drive-id>/path/Images ."))
         return false;
 
     
