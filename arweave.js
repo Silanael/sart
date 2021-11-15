@@ -69,13 +69,13 @@ async function Init (nofail = false)
                 host:     Config.ArweaveHost,
                 port:     Config.ArweavePort,
                 protocol: Config.ArweaveProto,
-                timeout:  100000
+                timeout:  Config.ArweaveTimeout_ms,
             }
         );    
         // Test the connection.
         if (await TestConnection () )
         {
-            Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) );
+            Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) + "(" + Config.ArweaveTimeout_ms + "ms timeout)" );
             return Arweave_Instance;
         }
 

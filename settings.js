@@ -56,13 +56,16 @@ const Config =
               
     ArweaveHost            : "arweave.net",
     ArweavePort            : 443,
-    ArweaveProto           : "https",    
+    ArweaveProto           : "https",
+    ArweaveTimeout_ms      : 25000,   
     ManualDest             : false,
           
     Recursive              : false,
     DisplayAll             : false,    
     AllowWildcards         : true,
     ConcurrentDelay_ms     : 50,
+    ErrorWaitDelay_ms      : 1000,
+    ErrorRetries           : 5,
       
     OutputFields           : null,
     OutputFormat           : OutputFormats.TXT,
@@ -71,7 +74,7 @@ const Config =
     ANSIAllowed            : true,
     CSVReplacePeriodWith   : "#!#",
 
-    VerifyDefaultFlags     : "SUMMARY,FAILED,UNKNOWN",
+    VerifyDefaultFlags     : "SUMMARY,NOT-VERIFIED",
     VerifyDefaultFlags_Num : "SUMMARY,ALL",
 
     Force                  : false,

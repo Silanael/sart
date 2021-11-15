@@ -25,7 +25,7 @@ const IsPiped = !process.stdout.isTTY;
 
 function ERR_MISSING_ARG   (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj); };
-
+function ANSI              (code)                   { return Settings.IsANSIAllowed () ? code : "" };
 
 
 
@@ -372,6 +372,7 @@ module.exports =
     OUT_BIN,
     OUT_OBJ,
     SET_RECURSIVE_OUT,
+    ANSI,
     INFO,
     VERBOSE,
     DEBUG,
@@ -385,5 +386,5 @@ module.exports =
     ERR_FATAL,
     EXIT,
     ON_EXCEPTION,
-    ErrorHandler,
+    ErrorHandler,    
 };EXIT

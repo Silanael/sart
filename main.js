@@ -104,7 +104,11 @@ const Flags =
     "-h"                : { "F": Settings.SetHost,       "A":true  },
     "--host"            : { "F": Settings.SetHost,       "A":true  },
     "--port"            : { "F": Settings.SetPort,       "A":true  },
-    "--proto"           : { "F": Settings.SetProto,      "A":true  }, 
+    "--proto"           : { "F": Settings.SetProto,      "A":true  },
+    "--timeout-ms"      : { "F": function (ms) { Settings.Config.ArweaveTimeout_ms  = ms; }, "A":true },
+    "--concurrent-ms"   : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = ms; }, "A":true },
+    "--retries"         : { "F": function (n)  { Settings.Config.ErrorRetries       = n;  }, "A":true },
+    "--retry-ms"        : { "F": function (ms) { Settings.Config.ErrorWaitDelay_ms  = ms; }, "A":true },
     "--force"           : { "F": Settings.SetForce,      "A":false },
         
     "--format"          : { "F": Settings.SetFormat,     "A":true  }, 
@@ -316,10 +320,15 @@ function DisplayHelp (args)
         Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
         Sys.INFO ("      --port               Arweave gateway port.");
         Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
+        Sys.INFO ("      --timeout-ms         HTTP request timeout. Default is 25000.");
+        Sys.INFO ("      --concurrent-ms      Interval between concurrent requests. Default is 50. Increase if issues.");
+        Sys.INFO ("      --retry-ms           Delay between retries upon errors. Default is 1000.");
+        Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 5.");
         Sys.INFO ("  -f, --format             Output data format. Valid formats: txt, json, csv");
         Sys.INFO ("");
     }
- 
+     
+
 }
 
 

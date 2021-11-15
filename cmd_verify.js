@@ -21,58 +21,86 @@ const { Entry }    = require('./GQL.js');
 const Tag          = GQL.Tag;
 
 
-const LISTMODE_SUMMARY   = "SUMMARY";
-const LISTMODE_PROCESSED = "PROCESSED";
-const LISTMODE_ALL       = "ALL";
-const LISTMODE_HEALTHY   = "HEALTHY";
-const LISTMODE_FAILED    = "FAILED";
-const LISTMODE_MISSING   = "MISSING";
-const LISTMODE_UNKNOWN   = "UNKNOWN";
-const LISTMODE_ALL_SEP   = "ALL-SEPARATE";
+const LISTMODE_SUMMARY         = "SUMMARY";
+    
+const LISTMODE_PROCESSED       = "PROCESSED";
+const LISTMODE_FILTERED        = "FILTERED";
+    
+const LISTMODE_VERIFIED        = "VERIFIED";
+const LISTMODE_NOT_VERIFIED    = "NOT-VERIFIED";
+const LISTMODE_REUPLOAD_NEEDED = "REUPLOAD-NEEDED";
 
-const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_HEALTHY, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_UNKNOWN, LISTMODE_ALL, LISTMODE_ALL_SEP, LISTMODE_PROCESSED ];
-
-
-const F_LISTMODE_SUMMARY   = 1,
-      F_LISTMODE_ALL       = 2,
-      F_LISTMODE_HEALTHY   = 4,
-      F_LISTMODE_FAILED    = 8,      
-      F_LISTMODE_MISSING   = 16,
-      F_LISTMODE_UNKNOWN   = 32,
-      F_NUMERIC            = 64,
-      F_LISTMODE_PROCESSED = 128,
+const LISTMODE_FAILED          = "FAILED";
+const LISTMODE_PENDING         = "PENDING";
+const LISTMODE_MISSING         = "MISSING";
+const LISTMODE_ERROR           = "ERROR";
+const LISTMODE_UNKNOWN         = "UNKNOWN";
       
-      F_LISTMODE_ALL_SEP   = F_LISTMODE_HEALTHY | F_LISTMODE_FAILED | F_LISTMODE_MISSING | F_LISTMODE_UNKNOWN,
-      MASK_LISTS           = F_LISTMODE_ALL_SEP | F_LISTMODE_ALL | F_LISTMODE_PROCESSED;
+const LISTMODE_ALL             = "ALL";
+const LISTMODE_ALL_SEP         = "ALL-SEPARATE";
+
+
+const LISTMODES_VALID = [ LISTMODE_SUMMARY, LISTMODE_VERIFIED, LISTMODE_NOT_VERIFIED, LISTMODE_FAILED, LISTMODE_MISSING, LISTMODE_UNKNOWN, 
+                          LISTMODE_PENDING, LISTMODE_FILTERED, LISTMODE_ALL, LISTMODE_ALL_SEP, LISTMODE_PROCESSED, LISTMODE_REUPLOAD_NEEDED, LISTMODE_ERROR];
+
+
+const F_LISTMODE_SUMMARY         = 1,
+      F_LISTMODE_FILTERED        = 2,
+      F_LISTMODE_VERIFIED        = 4,
+      F_LISTMODE_FAILED          = 8,      
+      F_LISTMODE_MISSING         = 16,
+      F_LISTMODE_UNKNOWN         = 32,
+      F_NUMERIC                  = 64,
+      F_LISTMODE_PROCESSED       = 128,
+      F_LISTMODE_PENDING         = 256,
+      F_LISTMODE_NOT_VERIFIED    = 512,
+      F_LISTMODE_REUPLOAD_NEEDED = 1024,
+      F_LISTMODE_ERROR           = 2048, // Yes, yes, I'm aware I could just do 1 << 11 etc. Leave my numbers be.
+    
+      F_LISTMODE_ALL       = F_LISTMODE_FILTERED | F_LISTMODE_ERROR,
+      F_LISTMODE_ALL_SEP   = F_LISTMODE_VERIFIED | F_LISTMODE_FAILED | F_LISTMODE_ERROR | F_LISTMODE_MISSING | F_LISTMODE_PENDING,
+    
+
+      MASK_LISTS           = F_LISTMODE_ALL_SEP | F_LISTMODE_FILTERED | F_LISTMODE_PROCESSED 
+                           | F_LISTMODE_NOT_VERIFIED | F_LISTMODE_REUPLOAD_NEEDED | F_LISTMODE_UNKNOWN;
       
       
 
 
 const LISTMODES_FLAGTABLE =
 { 
-    [LISTMODE_SUMMARY]   : F_LISTMODE_SUMMARY,
-    [LISTMODE_ALL]       : F_LISTMODE_ALL,
-    [LISTMODE_HEALTHY]   : F_LISTMODE_HEALTHY,    
-    [LISTMODE_FAILED]    : F_LISTMODE_FAILED,
-    [LISTMODE_MISSING]   : F_LISTMODE_MISSING,
-    [LISTMODE_UNKNOWN]   : F_LISTMODE_UNKNOWN,
-    [LISTMODE_ALL_SEP]   : F_LISTMODE_ALL_SEP,
-    [LISTMODE_PROCESSED] : F_LISTMODE_PROCESSED,
-    "STATUS"             : F_LISTMODE_SUMMARY,
-    "NUMERIC"            : F_NUMERIC,
-        
+    [LISTMODE_SUMMARY]          : F_LISTMODE_SUMMARY,
+    [LISTMODE_FILTERED]         : F_LISTMODE_FILTERED,
+    [LISTMODE_VERIFIED]         : F_LISTMODE_VERIFIED,
+    [LISTMODE_NOT_VERIFIED]     : F_LISTMODE_NOT_VERIFIED,
+    [LISTMODE_REUPLOAD_NEEDED]  : F_LISTMODE_REUPLOAD_NEEDED,
+    [LISTMODE_FAILED]           : F_LISTMODE_FAILED,
+    [LISTMODE_ERROR]            : F_LISTMODE_ERROR,
+    [LISTMODE_MISSING]          : F_LISTMODE_MISSING,
+    [LISTMODE_PENDING]          : F_LISTMODE_PENDING,
+    [LISTMODE_UNKNOWN]          : F_LISTMODE_UNKNOWN,
+    [LISTMODE_ALL]              : F_LISTMODE_ALL,
+    [LISTMODE_ALL_SEP]          : F_LISTMODE_ALL_SEP,
+    [LISTMODE_PROCESSED]        : F_LISTMODE_PROCESSED,
+    "STATUS"                    : F_LISTMODE_SUMMARY,
+    "NUMERIC"                   : F_NUMERIC,            
 };
 
 
 const LISTMODES_TO_FIELDS_MAP = 
 {   
-    [F_LISTMODE_PROCESSED] : "Processed", 
-    [F_LISTMODE_ALL    ]   : "Filtered",
-    [F_LISTMODE_HEALTHY]   : "Healthy",
-    [F_LISTMODE_FAILED ]   : "Failed",     
-    [F_LISTMODE_MISSING]   : "Missing",  
+    [F_LISTMODE_PROCESSED]          : "Processed", 
+    [F_LISTMODE_FILTERED]           : "Filtered",
+    [F_LISTMODE_VERIFIED]           : "Verified",
+    [F_LISTMODE_NOT_VERIFIED]       : "Not-Verified",
+    [F_LISTMODE_REUPLOAD_NEEDED]    : "Reupload-Needed",
+    [F_LISTMODE_FAILED]             : "Failed",    
+    [F_LISTMODE_ERROR]              : "Error",    
+    [F_LISTMODE_MISSING]            : "Missing",
+    [F_LISTMODE_PENDING]            : "Pending",
+    [F_LISTMODE_UNKNOWN]            : "Unknown",  
 }
-const FIELD_UNKNOWN        = "Unknown";
+
 
 
 const SUBCOMMANDS = 
@@ -81,9 +109,10 @@ const SUBCOMMANDS =
 };
 
 
-const ANSI_ERROR   = "\033[31m";
-const ANSI_PENDING = "\033[33m";
-const ANSI_CLEAR   = "\033[0m";
+const ANSI_ERROR     = "\033[31m";
+const ANSI_PENDING   = "\033[33m";
+const ANSI_CLEAR     = "\033[0m";
+const ANSI_UNDERLINE = "\033[4m";
 
 
 
@@ -99,7 +128,7 @@ function Help (args)
     Sys.INFO ("   verify files <Drive-ID> [OUTPUT] (NUMERIC) [PARAMS]");
     Sys.INFO ("");
     Sys.INFO ("'OUTPUT' is optional and can be any combination of following:");
-    Sys.INFO ("   summary,healthy,failed,missing,unknown,all,all-separate,processed");
+    Sys.INFO ("   summary,ok,not-ok,failed,missing,pending,unknown,all,all-separate,filtered,processed");
     Sys.INFO ("");
     Sys.INFO ("'all' lists all files matching the filter in one go, while 'all-separate'");
     Sys.INFO ("outputs separate lists for healthy, failed, missing and unknown.");
@@ -123,6 +152,8 @@ function Help (args)
     Sys.INFO ("   verify files <NFT-drive-id> numeric range 1-1000 extension jpg");
     Sys.INFO ("   verify files <NFT-drive-id> numeric");
     Sys.INFO ("");
+    Sys.INFO ("");
+    Sys.INFO (Sys.ANSI (ANSI_UNDERLINE) + "Private drives are not yet supported!" + Sys.ANSI (ANSI_CLEAR));
 }
 
 
@@ -130,39 +161,58 @@ function Help (args)
 
 class Results
 {
+    Sorted = false;
+
     FileLists = 
     {
-        Processed : [],
-        Filtered  : [],
-        Healthy   : [],
-        Failed    : [],
-        Missing   : [],
-        Unknown   : [],        
+        Processed         : [],
+        Filtered          : [],
+        Verified          : [],
+        "Not-Verified"    : [],
+        "Reupload-Needed" : [],
+        Failed            : [],
+        Error             : [],
+        Pending           : [],
+        Missing           : [],
+        Unknown           : [],        
     };
 
+    
     Numeric = null;
 
     Summary = {};
 
 
     Add (file, filter_ext)
-    {
-        this.FileLists.Processed.push (file);
-        
-        if (file.Analyzed)
-        {            
-            if (filter_ext == null || file.Filename?.endsWith (filter_ext) )
-            {
-                this.FileLists.Filtered.push (file);
+    {    
+        this.FileLists.Processed.push (file);        
 
-                if      (file.Healthy) this.FileLists.Healthy.push (file);
-                else if (file.Error)   this.FileLists.Failed .push (file);
-                else                   this.FileLists.Unknown.push (file);
+        if (filter_ext == null || file.Filename == null || file.Filename?.endsWith (filter_ext) )
+        {            
+            this.FileLists.Filtered.push (file);
+            if (file.Error) this.FileLists.Error.push (file);
+
+            if (file.Healthy) 
+                this.FileLists.Verified.push (file);
+
+            else
+            {
+                this.FileLists['Not-Verified'].push (file);
+
+                if (file.Failed || file.Missing)
+                    this.FileLists['Reupload-Needed'].push (file);
+
+                if (file.Error || file.Pending)
+                    this.FileLists.Unknown.push (file);
             }
-            
+                
+                 if (file.Failed)                this.FileLists.Failed    .push (file);
+            else if (file.Pending)               this.FileLists.Pending   .push (file);
+            else if (file.Missing)               this.FileLists.Missing   .push (file);                        
         }
-        else 
-            this.FileLists.Unknown.push (file);        
+
+        
+
     }
 
     CreateSummary ()
@@ -220,12 +270,17 @@ async function Handler_Uploads (args)
 
     // Prepare variables
     const drive_id    = args.Pop ();
-    let numeric_mode = false;
-    let list_mode    = null;    
-    let first        = -1;
-    let last         = -1;
-    let extension    = null;
+    let numeric_mode  = false;
+    let list_mode     = null;    
+    let first         = -1;
+    let last          = -1;
+    let extension     = null;
+    const req_delay   = Settings.Config.ConcurrentDelay_ms;
     
+
+    Sys.VERBOSE ("Concurrent delay: " + req_delay + "ms, Retries: " + Settings.Config.ErrorRetries + ", Retry delay: "
+                    + Settings.Config.ErrorWaitDelay_ms + "ms.")
+
     let arg;
     while (args.HasNext () )
     {
@@ -357,7 +412,7 @@ async function Handler_Uploads (args)
     const Results_All      = new Results ();
     let   Results_Numeric;
     let   results          = Results_All;   
-
+    
     
     
 
@@ -365,6 +420,10 @@ async function Handler_Uploads (args)
                                                             : "one metadata-transaction... Shouldn't take long..") );
 
     let f_id, file;
+
+    
+
+    Sys.Info ("Operation expected to take approx. " + (metadata_amount * req_delay / 1000) + " seconds.");
 
     for (const f of file_metadata)
     {
@@ -382,7 +441,7 @@ async function Handler_Uploads (args)
 
             verifyqueue.push (file.Verify (by_txid) );
             
-            await Util.Delay (Settings.Config.ConcurrentDelay_ms);            
+            await Util.Delay (req_delay);            
         }
     }
 
@@ -391,14 +450,14 @@ async function Handler_Uploads (args)
     for (const p of verifyqueue)
     {
         file = await p;
-
         Results_All.Add (file);        
     }
     const proc_amount = Results_All.FileLists.Processed.length;
 
+
+
     Sys.INFO ( (proc_amount > 1 ? proc_amount + " files processed" : proc_amount <= 0 ? "Zero (or less) files processed" : "Only one file processed") );
                 
-
     if (proc_amount == 1)
         Sys.INFO ("Must be an important one.. A treasured memento of a belowed one or a piece of one's soul, I wonder..");
     
@@ -408,8 +467,9 @@ async function Handler_Uploads (args)
     // Generate a numbered list if requested
     if (numeric_mode)
     {
-        Results_Numeric = GenerateNumericList (Results_All, first, last, extension); 
-        results         = Results_Numeric;
+        Results_Numeric        = GenerateNumericList (Results_All, first, last, extension);
+        Results_Numeric.Sorted = true; 
+        results                = Results_Numeric;
     }
 
 
@@ -425,6 +485,7 @@ async function Handler_Uploads (args)
 
     
     let captions_displayed = false;
+
     for (const f of Object.entries (LISTMODES_TO_FIELDS_MAP) )
     {
         const mask  = f[0];
@@ -437,7 +498,7 @@ async function Handler_Uploads (args)
                 Sys.OUT_TXT ("Filename,State,FileID,MetaTXID,MetaState,DataTXID,DataState,Details");
                 captions_displayed = true;
             }
-            DisplayResults (results.FileLists[field] );
+            DisplayResults (results.FileLists[field], !results.Sorted);
         }
         
     }
@@ -491,9 +552,12 @@ class File
 {
     FileID         = null;
     
+    // TODO: Should turn these into one variable at some point.
     Analyzed       = false;
     Healthy        = false;
     Pending        = false;
+    Failed         = false;
+    Missing        = false;
     Error          = false;
     
     StatusText     = "?????";
@@ -513,32 +577,22 @@ class File
 
     constructor (f_id, tx_entry)
     {
-        this.FileID = f_id;
-
-        if (tx_entry != null)
-        {
-            this.MetaTXID = tx_entry.GetTXID ();
-            if (tx_entry.IsMined () )
-            {
-                this.MetaOK   = true;
-                this.MetaText = " OK ";
-            }
-            else
-            {
-                this.MetaText = "PEND";
-                this.Pending  = true;
-            }
-        }        
+        this.FileID   = f_id;
+        this.MetaTXID = tx_entry != null ? tx_entry.GetTXID () : null;        
     }
-
-    
 
 
     static CreateMissing (filename)
     {
         const f = new File (null, null);
 
-        f.Analyzed   = true;
+        f.Analyzed       = true;
+        f.Healthy        = false;
+        f.Pending        = false;
+        f.Failed         = false;
+        f.Missing        = true;
+        f.Error          = false;
+
         f.Filename   = filename;
         f.StatusText = "MISS";
         f.MetaOK     = false;
@@ -550,10 +604,27 @@ class File
     }
 
 
+    ResetStatus ()
+    {
+        this.Error          = false;
+        this.Healthy        = false;
+        this.Analyzed       = false;
+        this.Pending        = false;
+        this.Failed         = false;
+        this.Missing        = false;
+        this.MetaOK         = false;
+        this.DataOK         = false;
+        this.StatusText     = "???"
+        this.MetaText       = null;
+        this.DataText       = null;
+        this.DetailedStatus = null; 
+    }
+
+
     async Verify (tx_table)
     {
-        const tries_max       = 5;
-        let   tries_remaining = tries_max;
+        const tries_max       = Settings.Config.ErrorRetries;
+        let   tries_remaining = Config.Settings.ErrorWa;
         
         while (tries_remaining > 0)
         {
@@ -565,12 +636,13 @@ class File
             else
             {            
                 --tries_remaining;
-                await Util.Delay (1000);
+                await Util.Delay (Settings.Config.ErrorWaitDelay_ms);
             }
         }
 
         Sys.ERR ("Could not analyze file " + this.FileID + " in " + tries_max + " attempts. Giving up.");
         this.Healthy = false;
+        this.Error   = true;
         return this;
     }
 
@@ -578,64 +650,117 @@ class File
 
     async _DoVerify (tx_table)
     {
+
+        this.ResetStatus ();
+
+        if (this.MetaTXID == null)
+        {
+            this.Error          = true;
+            this.StatusText     = "ERR";
+            this.MetaText       = "ERR";
+            this.DataText       = " - ";
+            this.DetailedStatus = "PROGRAM ERROR: MetaTXID not set.";
+
+            return this;
+        }
+
+
         // Fetch the metadata JSON
         const arfs_meta = await Arweave.GetTxStrData (this.MetaTXID);
 
-        if (arfs_meta != null)
-        {            
+        if (arfs_meta == null)
+        {
+            this.Error          = true;
+            this.StatusText     = "ERR";
+            this.MetaText       = "ERR";
+            this.DataText       = " - ";
+            this.DetailedStatus = "Could not download JSON-metadata.";                        
+        }
+
+        else
+        {                            
             const json = await JSON.parse (arfs_meta);
 
-            if (json != null)
-            {   
+            if (json == null)
+            {                
+                this.Error          = true;
+                this.StatusText     = "ERR";
+                this.MetaText       = "ERR";
+                this.DataText       = " - ";
+                this.DetailedStatus = "Could not parse JSON-metadata.";                
+            }
+
+            else
+            {                
                 this.Filename    = json.name;
                 this.DataTXID    = json.dataTxId;            
-                this.MetaOK      = true;
-                this.MetaText    = " OK ";
-            
-                const data_entry = tx_table[this.DataTXID];
-                            
-
-                if (data_entry != null)
+                
+                // This shouldn't really happen
+                if (tx_table[this.MetaTXID] == null)
                 {
-                    if (data_entry.IsMined () )
+                    this.StatusText     = "ERR";
+                    this.MetaText       = "ERR";
+                    this.MetaOK         = false;                    
+                    this.DetailedStatus = "PROGRAM ERROR: MetaTXID " + this.MetaTXID + " not present in tx_table."
+                }
+
+                else
+                {
+                    this.Analyzed = true;
+                    
+                    if (tx_table[this.MetaTXID]?.IsMined () )
                     {
-                        this.DataOK     = true;
-                        this.DataText   = " OK ";                        
+                        this.MetaOK   = true;
+                        this.MetaText = " OK ";
                     }
                     else
                     {
-                        this.DataOK     = false;
-                        this.DataText   = "PEND";
+                        this.MetaOK     = false;
+                        this.StatusText = "PEND";
+                        this.MetaText   = "PEND";
                         this.Pending    = true;
-                    }                                  
+                    }
+
+
+                    const data_entry = tx_table[this.DataTXID];
+
+                    if (data_entry == null)
+                    {
+                        this.Failed         = true;
+                        this.StatusText     = "FAIL";                    
+                        this.DataText       = "FAIL";
+                        this.DetailedStatus = "Data-transaction doesn't seem to exist.";
+                    }
+
+                    else
+                    {
+                        if (data_entry.IsMined () )
+                        {
+                            this.DataOK     = true;
+                            this.DataText   = " OK ";                        
+                        }
+                        else
+                        {
+                            this.DataOK     = false;
+                            this.StatusText = "PEND";
+                            this.DataText   = "PEND";
+                            this.Pending    = true;
+                        }                                  
+                    }
                 }
-                else
-                    this._SetFail (this.MetaOK, false, this.MetaText, "MISS", "Data-TX doesn't seem to exist.");                    
-            
 
-                this.Analyzed = true;
             }
-            else
-            {
-                this.Analyzed = true;
-                Sys.ERR ("Unable to parse JSON metadata for File-ID: " + this.FileID + " TXID:" + this.MetaTXID);
-                    this._SetFail (false, false, "ERR ", " - ", "Could not parse JSON-metadata.");
-                
-            }
+           
         }
-        else
-        {
-            Sys.ERR ("Unable to download JSON metadata for File-ID: " + this.FileID + " TXID:" + this.MetaTXID);
-            this._SetFail (false, false, "ERR ", " - ", "Could not download JSON-metadata.");            
-        }
-
-
+  
         // Set result
         this.Healthy    = this.MetaOK && this.DataOK;
-        this.StatusText = this.Healthy ? " OK  " 
-                                       : this.Error ? "ERR " 
-                                                    : this.Pending ? "PEND" 
-                                                                   : " ? ";
+
+        if      (this.Healthy) this.StatusText = "OK";
+        else if (this.Fail)    this.StatusText = "FAIL";
+        else if (this.Error)   this.StatusText = "ERR";        
+        else if (this.Pending) this.StatusText = "PEND";
+        
         if (this.Healthy)
             this.DetailedStatus = null;
 
@@ -644,18 +769,6 @@ class File
             Sys.VERBOSE (this.toString () );
 
         return this;
-    }
-
-
-
-    _SetFail (meta_ok, data_ok, metatext, datatext, detailed)
-    {        
-        this.MetaOK         = meta_ok;
-        this.DataOK         = data_ok;
-        this.MetaText       = metatext;
-        this.DataText       = datatext;        
-        this.Error          = true;    
-        this.DetailedStatus = detailed;
     }
 
 
@@ -706,7 +819,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
             if (filetable[num] == null)            
                 filetable[num] = fn;
 
-            else if (filetable[num].Healthy == false && fn.Healthy == true)
+            else if (filetable[num].Healthy == false && (fn.Healthy == true || (filetable[num].Pending == false && fn.Pending == true) ) )
             {
                 if (Settings.IsMsg () )
                     Sys.INFO ("Replaced unhealthy " + filetable[num].Filename + " (" + filetable[num].MetaTXID + ")"
@@ -734,7 +847,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
     // TODO pre-alloc?  
     for (let C = min; C <= max; ++C)
     {
-        file = filetable[C] != null ? filetable[C] : File.CreateMissing (`${C}`);
+        file = filetable[C] != null ? filetable[C] : File.CreateMissing (`${C}` + (filter_ext != null ? filter_ext : "") );
         
         results.Numeric.push (file);
         results.Add (file, filter_ext);
@@ -889,7 +1002,7 @@ async function Handler_Uploads_Old (args)
     }
         
 
-    if ( (listmode_flags & F_LISTMODE_HEALTHY) != 0)
+    if ( (listmode_flags & F_LISTMODE_OK) != 0)
         DisplayResults (healthy);
 
 

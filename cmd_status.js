@@ -80,7 +80,7 @@ async function HandleCommand (args)
         Sys.OUT_OBJ (status);
         Sys.OUT_TXT ("");
         Sys.OUT_TXT ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) );
-
+        
         return true;
     }
 
