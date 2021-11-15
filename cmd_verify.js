@@ -423,7 +423,7 @@ async function Handler_Uploads (args)
 
     
 
-    Sys.Info ("Operation expected to take approx. " + (metadata_amount * req_delay / 1000) + " seconds.");
+    Sys.INFO ("Operation expected to take approx. " + (metadata_amount * req_delay / 1000) + " seconds.");
 
     for (const f of file_metadata)
     {
@@ -624,7 +624,7 @@ class File
     async Verify (tx_table)
     {
         const tries_max       = Settings.Config.ErrorRetries;
-        let   tries_remaining = Config.Settings.ErrorWa;
+        let   tries_remaining = tries_max;
         
         while (tries_remaining > 0)
         {
