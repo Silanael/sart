@@ -659,7 +659,7 @@ class File
     constructor (f_id, tx_entry)
     {
         this.FileID = f_id;
-        
+
         if (tx_entry != null)
         {
             this.MetaTXID    = tx_entry.GetTXID ();
@@ -895,7 +895,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
     {                
         num = new Number (Util.StripExtension (fn.Filename) );
 
-        if (!isNaN (num) )
+        if (!isNaN (num) && (filter_ext == null || fn.Filename?.endsWith (filter_ext)) )
         {
             if (num < min || min == -1)
                 min = num;
@@ -921,7 +921,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
                 results.Add (fn);
 
             else
-                Sys.VERBOSE ("Omitting file '" + fn.Filename + "' - filename not a number.");
+                Sys.VERBOSE ("Omitting file: " + fn.Filename);
         }
     }
 
