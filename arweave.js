@@ -81,7 +81,7 @@ async function Init (nofail = false)
 
         return nofail == true ? Arweave_Instance : null;    
     }
-    
+
     return Arweave_Instance;
 }
 
@@ -151,7 +151,7 @@ async function Testing ()
             port:     Settings.Config.ArweavePort,
             protocol: Settings.Config.ArweaveProto
         }
-    );      
+    );  
 }
 
 
@@ -243,6 +243,23 @@ async function GetMemPool ()
 
     return null;
 }
+
+async function GetPeers ()
+{
+    const arweave = await Init ();
+    if (arweave != null)
+    {
+        try
+        {
+            const ret = await arweave.network.getPeers ();
+            return ret;            
+        }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetPeers", GetHostStr (arweave) ); }
+    }
+
+    return null;
+}
+
 
 
 async function GetPendingTXAmount ()
@@ -404,7 +421,7 @@ async function GetTXsForAddress (address, tags = null)
 
 
 
-module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, 
+module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
                    TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES };

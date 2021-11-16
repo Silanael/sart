@@ -30,6 +30,7 @@ const SUBCOMMANDS =
     "file"         : Handler_ArFS,
     "mempool"      : Handler_MemPool,
     "pending"      : Handler_PendingAmount,
+    "peers"        : Handler_Peers,
     "config"       : Handler_Config
 }
 
@@ -275,6 +276,19 @@ async function Handler_MemPool (args, show_amount = false)
         Sys.OUT_OBJ (mempool);
 
 }
+
+
+async function Handler_Peers (args)
+{
+    const peers = await Arweave.GetPeers ();
+
+    if (peers != null)        
+        Sys.OUT_OBJ (peers);
+    
+    else
+        Sys.ERR ("Failed to get peers (Arweave-nodes).");
+}
+
 
 
 async function Handler_PendingAmount ()
