@@ -48,12 +48,13 @@ async function HandleCommand (args)
     // Banner
     PrintBanner ();
 
-
-    const input = ReadLine.createInterface ( {input: process.stdin, output: null} );
-    
     PrintEmptyLine ();
+    PrintLine ("!!! DEVELOPMENT VERSION !!!")    
+    PrintEmptyLine ();
+    
     PrintPrompt    ();
 
+    const input = ReadLine.createInterface ( {input: process.stdin, output: null} );
 
     for await (const line of input)
     {        

@@ -6,6 +6,7 @@
   "codename": "Dying light",
   "main": "main.js",
   "bin": "main.js",
+  "man": "./README.md",
   "scripts": {
     "start": "node ./main.js",
     "help": "node ./main.js --help",
@@ -17,10 +18,7 @@
   "dependencies": {
     "arweave": "^1.10.18"
   },
-  "repository": {
-    "type": "git",
-    "url": ".git"
-  },
+  "repository": "github:Silanael/sart",      
   "keywords": [
     "Arweave",
     "ArDrive",
@@ -31,5 +29,6 @@
     "CLI"
   ],
   "author": "Silanael",
-  "license": "GPL-2.0-modified"
+  "license": "SEE LICENSE IN 'LICENSE'",
+  "homepage": "https://github.com/Silanael/sart"
 }

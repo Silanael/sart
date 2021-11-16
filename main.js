@@ -289,6 +289,7 @@ function DisplayHelp (args)
         Sys.INFO ("  -g, get     [TARGET]     Get (more or less) raw data (TX-data, files etc.)");
         Sys.INFO ("  -i, info    [TARGET]     Obtain detailed information about the target.");
         Sys.INFO ("  -s, status  [TARGET]     Obtain the current status of the target.");
+        Sys.INFO ("      verify               Verify that ArFS-files are uploaded correctly.")
         Sys.INFO ("      console              Enter the console. This is the default command.")
         Sys.INFO ("    , pending              Display network pending TX amount.");
         Sys.INFO ("  -v, version              Display version info.");
@@ -313,8 +314,8 @@ function DisplayHelp (args)
         Sys.INFO ("      --debug-stderr       Display extensive debugging info in STDERR. Use to monitor while piping.");
         Sys.INFO ("      --stderr             Display info and warning messages in STDERR. Same as --msg-out stderr,");
         Sys.INFO ("                           but sets the LogLevel to >= MSG.");
-        Sys.INFO ("      --msg-out [FLAGS]    Set destination for info-messages.  Flags: stdout, stderr, none");
-        Sys.INFO ("      --err-out [FLAGS]    Set destination for error-messages. Flags: stdout, stderr, none");
+        Sys.INFO ("      --msg-out [FLAGS]    Set destination for info-messages.  Flags: stdout,stderr,none");
+        Sys.INFO ("      --err-out [FLAGS]    Set destination for error-messages. Flags: stdout,stderr,none");
         Sys.INFO ("      --no-ansi            Don't use ANSI codes in output.");
         Sys.INFO ("");
         Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.).");

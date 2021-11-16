@@ -172,7 +172,7 @@ function Help (args)
     Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 not-verified");
     Sys.INFO ("   verify files <NFT-drive-id> numeric");
     Sys.INFO ("   verify files <NFT-drive-id> numeric range 1-1000 extension jpg");
-    Sys.INFO ("   verify files <NFT-drive-id> numeric");
+    Sys.INFO ("   verify files <NFT-drive-id> numeric reupload-needed");
     Sys.INFO ("");
     Sys.INFO ("");
     Sys.INFO (Sys.ANSI (ANSI_UNDERLINE) + "Private drives are not yet supported!" + Sys.ANSI (ANSI_CLEAR));
