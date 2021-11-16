@@ -85,19 +85,19 @@ Though it's in GitHub, this is my hobby project.
 - `./sart verify files <drive-id> not-verified --verbose-stderr > not-verified.csv`
 
 ### Generate a list of just failed files
-- `./sart verify files <drive-id>  failed --verbose-stderr > failed.csv`
+- `./sart verify files <drive-id> failed --verbose-stderr > failed.csv`
 
 ### Generate a list for NFT-uploads
 - `./sart verify files <drive-id> numeric all --verbose-stderr > numeric-all.csv`
 
 ### Generate a list of failed, missing and uncertain files for NFT-uploads
-- `./sart verify files <drive-id> numeric not-verified --verbose-stderr > numeric-all.csv`
+- `./sart verify files <drive-id> numeric not-verified --verbose-stderr > numeric-not-verified.csv`
 
 ### Generate a list of files that very likely need to be re-uploaded for NFT-uploads
-- `./sart verify files <drive-id> numeric reupload-needed --verbose-stderr > numeric-all.csv`
+- `./sart verify files <drive-id> numeric reupload-needed --verbose-stderr > numeric-reupload-needed.csv`
 
 ### Generate a list for NFT-uploads for specific range and file extension (PNG)
-- `./sart verify files <drive-id> numeric all range 1-1000 extension png --verbose-stderr > numeric-all.csv`
+- `./sart verify files <drive-id> numeric all range 1-1000 extension png --verbose-stderr > numeric-range.csv`
 
 
 

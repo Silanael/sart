@@ -658,9 +658,13 @@ class File
 
     constructor (f_id, tx_entry)
     {
-        this.FileID      = f_id;
-        this.MetaTXID    = tx_entry != null ? tx_entry.GetTXID () : null;
-        this.BlockHeight = tx_entry.GetBlockHeight ();     
+        this.FileID = f_id;
+        
+        if (tx_entry != null)
+        {
+            this.MetaTXID    = tx_entry.GetTXID ();
+            this.BlockHeight = tx_entry.GetBlockHeight ();
+        }
     }
 
 
