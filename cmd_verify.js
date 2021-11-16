@@ -28,7 +28,7 @@ const LISTMODE_FILTERED        = "FILTERED";
     
 const LISTMODE_VERIFIED        = "VERIFIED";
 const LISTMODE_NOT_VERIFIED    = "NOT-VERIFIED";
-const LISTMODE_REUPLOAD_NEEDED = "REUPLOAD-NEEDED";
+const LISTMODE_REUPLOAD_NEEDED = "UPLOAD-NEEDED";
 
 const LISTMODE_FAILED          = "FAILED";
 const LISTMODE_PENDING         = "PENDING";
@@ -93,7 +93,7 @@ const LISTMODES_TO_FIELDS_MAP =
     [F_LISTMODE_FILTERED]           : "Filtered",
     [F_LISTMODE_VERIFIED]           : "Verified",
     [F_LISTMODE_NOT_VERIFIED]       : "Not-Verified",
-    [F_LISTMODE_REUPLOAD_NEEDED]    : "Reupload-Needed",
+    [F_LISTMODE_REUPLOAD_NEEDED]    : "Upload-Needed",
     [F_LISTMODE_FAILED]             : "Failed",    
     [F_LISTMODE_ERROR]              : "Error",    
     [F_LISTMODE_MISSING]            : "Missing",
@@ -139,7 +139,7 @@ function Help (args)
     Sys.INFO ("ALL              All entries in one listing (FILTERED + ERROR)");
     Sys.INFO ("ALL-SEPARATE     All entries in separate listings.");    
     Sys.INFO ("NOT-VERIFIED     FAILED, MISSING, PENDING and ERROR");
-    Sys.INFO ("REUPLOAD-NEEDED  FAILED and MISSING files.")
+    Sys.INFO ("UPLOAD-NEEDED    FAILED and MISSING files.")
     Sys.INFO ("UNKNOWN          PENDING and ERROR.");
     Sys.INFO ("FILTERED         All encountered files matching the filter (EXTENSION etc.)");
     Sys.INFO ("PROCESSED        All encountered files. May contain duplicate filenames.");
@@ -160,7 +160,7 @@ function Help (args)
     Sys.INFO ("");
     Sys.INFO ("'NO-PRUNE' disables the default behaviour of only displaying the newest")
     Sys.INFO ("file entity for each filename. Disabling this will cause a failed file to")
-    Sys.INFO ("to show as failed/reupload-needed etc. even if it has been successfully");
+    Sys.INFO ("to show as failed/upload-needed etc. even if it has been successfully");
     Sys.INFO ("reuploaded with a different File-ID. The option to disable this exists");
     Sys.INFO ("only for the possibility that something goes wrong with the pruning process.");
     Sys.INFO ("This option is currently NOT applicable for the NUMERIC mode.");
@@ -172,7 +172,7 @@ function Help (args)
     Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 not-verified");
     Sys.INFO ("   verify files <NFT-drive-id> numeric");
     Sys.INFO ("   verify files <NFT-drive-id> numeric range 1-1000 extension jpg");
-    Sys.INFO ("   verify files <NFT-drive-id> numeric reupload-needed");
+    Sys.INFO ("   verify files <NFT-drive-id> numeric upload-needed");
     Sys.INFO ("");
     Sys.INFO ("");
     Sys.INFO (Sys.ANSI (ANSI_UNDERLINE) + "Private drives are not yet supported!" + Sys.ANSI (ANSI_CLEAR));
@@ -196,7 +196,7 @@ class Results
         Filtered          : [],
         Verified          : [],
         "Not-Verified"    : [],
-        "Reupload-Needed" : [],
+        "Upload-Needed" : [],
         Failed            : [],
         Error             : [],
         Pending           : [],
@@ -210,7 +210,7 @@ class Results
     Summary = {};
 
 
-    Add (file, filter_ext)
+    Add (file, filter_ext = null)
     {    
         this.FileLists.Processed.push (file);        
 
@@ -227,7 +227,7 @@ class Results
                 this.FileLists['Not-Verified'].push (file);
 
                 if (file.Failed || file.Missing)
-                    this.FileLists['Reupload-Needed'].push (file);
+                    this.FileLists['Upload-Needed'].push (file);
 
                 if (file.Error || file.Pending)
                     this.FileLists.Unknown.push (file);
@@ -883,20 +883,27 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
     results.Numeric = [];
 
 
+    // Make sure the ranges are numbers, not strings..
+    min = Number (min);
+    max = Number (max);
+
     // Find the limits.
     let   num;
     const filetable = {};
 
     const auto_min  = min == -1;
     const auto_max  = max == -1;
+    let found = false;
     
-    
+
     for (const fn of all_results.FileLists.Processed)
     {                
         num = new Number (Util.StripExtension (fn.Filename) );
 
         if (!isNaN (num) && (filter_ext == null || fn.Filename?.endsWith (filter_ext)) )
         {
+            found = true;
+
             if (num < min || min == -1)
                 min = num;
         
@@ -925,9 +932,13 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
         }
     }
 
+    if (!found)
+        Sys.ERR ("Could not find numeric filenames" + (filter_ext != null ? " matching extension " + filter_ext : ".") );
+
+
     if (min == -1 || max == -1)
-    {
-        Sys.ERR ("Could not find numeric filenames.");
+    {        
+        Sys.ERR ("Range not set and couldn't auto-set it.");
         return results;
     }
 
@@ -941,13 +952,13 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
     for (let C = min; C <= max; ++C)
     {
         file = filetable[C] != null ? filetable[C] : File.CreateMissing (`${C}` + (filter_ext != null ? filter_ext : "") );
-        
+
         results.Numeric.push (file);
         results.Add (file);
     }
 
     results.Summary["Range"] = min + "-" + max;
-
+    
     return results;
 }
 

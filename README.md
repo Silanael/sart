@@ -94,7 +94,7 @@ Though it's in GitHub, this is my hobby project.
 - `./sart verify files <drive-id> numeric not-verified --verbose-stderr > numeric-not-verified.csv`
 
 ### Generate a list of files that very likely need to be re-uploaded for NFT-uploads
-- `./sart verify files <drive-id> numeric reupload-needed --verbose-stderr > numeric-reupload-needed.csv`
+- `./sart verify files <drive-id> numeric upload-needed --verbose-stderr > numeric-upload-needed.csv`
 
 ### Generate a list for NFT-uploads for specific range and file extension (PNG)
 - `./sart verify files <drive-id> numeric all range 1-1000 extension png --verbose-stderr > numeric-range.csv`
@@ -177,13 +177,13 @@ OUTPUT          | Description
 VERIFIED        | Files that are confirmed to be good.
 FAILED          | Failed files, usually Data TX is missing.
 PENDING         | Files still waiting to be mined.
-MISSING         | Missing files when using NUMERIC mode.
-ERROR           | Files that could not be analyzed due to errors. Connection faults etc.
+MISSING         | Missing files when using NUMERIC mode. **Reliable only if there are no fetch-errors**
+ERROR           | Files that could not be fetched, often due to connection errors.
 ***             | ***
 ALL             | All entries in one listing (FILTERED + ERROR)
 ALL-SEPARATE    | All entries in separate listings.
 NOT-VERIFIED    | FAILED, MISSING, PENDING and ERROR
-REUPLOAD-NEEDED | FAILED and MISSING files.
+UPLOAD-NEEDED   | FAILED and MISSING files.
 UNKNOWN         | PENDING and ERROR.
 FILTERED        | All encountered files matching the filter (EXTENSION etc.)
 PROCESSED       | All encountered files. May contain duplicate filenames.
@@ -210,7 +210,7 @@ An optional parameter for the NUMERIC mode. If omitted, the range is autodetecte
 ### PARAM: 'NO-PRUNE'
 Disable the default behaviour of only displaying the newest file entity for
 each filename. Disabling this will cause a failed file to
-to show as failed/reupload-needed etc. even if it has been successfully
+to show as failed/upload-needed etc. even if it has been successfully
 reuploaded with a different File-ID. The option to disable this exists
 only for the possibility that something goes wrong with the pruning process.
 This option is currently NOT applicable for the NUMERIC mode.
@@ -221,6 +221,6 @@ This option is currently NOT applicable for the NUMERIC mode.
 - `verify files a44482fd-592e-45fa-a08a-e526c31b87f1 not-verified`
 - `verify files <NFT-drive-id> numeric`
 - `verify files <NFT-drive-id> numeric range 1-1000 extension jpg`
-- `verify files <NFT-drive-id> numeric reupload-needed`
+- `verify files <NFT-drive-id> numeric upload-needed`
 
 
