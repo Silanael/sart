@@ -130,7 +130,7 @@ async function Handler_Arweave (args)
 
 async function Handler_TX (args)
 {
-    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+    if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
         return false;
 
     const txid  = args.Pop ();
@@ -166,7 +166,7 @@ async function Handler_TX (args)
 
 async function Handler_TXTags (args)
 {
-    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+    if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
         return false;
 
     const txid = args.Pop ();
@@ -191,7 +191,7 @@ async function Handler_TXTags (args)
 
 async function Handler_Data (args)
 {
-    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+    if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
         return false;
 
     const txid = args.Pop ();
@@ -209,7 +209,7 @@ async function Handler_Data (args)
 
 async function Handler_RawData (args)
 {
-    if ( ! RequireAmount (1, "Transaction ID (TXID) required.") )
+    if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
         return false;
 
     const txid = args.Pop ();
@@ -228,7 +228,7 @@ async function Handler_RawData (args)
 // TODO: Move to ArFS.js.
 async function Handler_ArFS (args)
 {
-    if ( ! RequireAmount (1, "An ArFS-ID or an transaction ID (TXID) required.") )
+    if ( ! args.RequireAmount (1, "An ArFS-ID or an transaction ID (TXID) required.") )
         return false;
 
     const target = args.Pop ();

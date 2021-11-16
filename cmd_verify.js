@@ -904,10 +904,10 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
         {
             found = true;
 
-            if (num < min || min == -1)
+            if (auto_min && (num < min || min == -1) )
                 min = num;
         
-            if (num > max || max == -1)            
+            if (auto_max && (num > max || max == -1) )
                 max = num;                            
 
             if (filetable[num] == null)            
