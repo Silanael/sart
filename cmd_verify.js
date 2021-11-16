@@ -143,6 +143,13 @@ function Help (args)
     Sys.INFO ("")
     Sys.INFO ("'RANGE first-last' is an optional parameter for this mode.");
     Sys.INFO ("If omitted, the range is autodetected.");
+    Sys.INFO ("");
+    Sys.INFO ("'NO-PRUNE' disables the default behaviour of only displaying the newest")
+    Sys.INFO ("file entity for each filename. Disabling this will cause a failed file to")
+    Sys.INFO ("to show as failed/reupload-needed etc. even if it has been successfully");
+    Sys.INFO ("reuploaded with a different File-ID. The option to disable this exists");
+    Sys.INFO ("only for the possibility that something goes wrong with the pruning process.");
+    Sys.INFO ("This option is currently NOT applicable for the NUMERIC mode.");
 
     
     Sys.INFO ("");
@@ -176,7 +183,7 @@ class Results
         Missing           : [],
         Unknown           : [],        
     };
-
+   
     
     Numeric = null;
 
@@ -192,8 +199,8 @@ class Results
             this.FileLists.Filtered.push (file);
             if (file.Error) this.FileLists.Error.push (file);
 
-            if (file.Healthy) 
-                this.FileLists.Verified.push (file);
+            if (file.Healthy)
+                this.FileLists.Verified.push (file);            
 
             else
             {
@@ -223,6 +230,49 @@ class Results
                 this.Summary[e[0]] = e[1].length;
         }
     }
+
+    CreateFilenamePruned (filter_ext)
+    {
+        const results = new Results ();
+
+        let pruned_amount = 0;
+        let last_pruned   = "???";
+
+        Sys.VERBOSE ("Beginning to prune files with same filenames..");
+
+        for (const src of this.FileLists.Processed)
+        {
+            let newer_found = false;
+            if (src.Filename != null && src.BlockHeight != null)
+            {                
+                for (const ref of this.FileLists.Processed)
+                {
+                    if (ref.Filename == src.Filename && ref.BlockHeight != null && ref.BlockHeight > src.BlockHeight)
+                    {
+                        newer_found = true;
+                        last_pruned = src.FileID;
+                        Sys.VERBOSE ("Newer entry for filename '" + ref.Filename + "' exists: " + ref.FileID + ", pruning " + src.FileID + " .", "PRUNE");
+                        break;
+                    }
+                }                
+            }
+
+            if (!newer_found)
+                results.Add (src, filter_ext);
+            else
+            {
+                ++pruned_amount;
+                results.FileLists.Processed.push (src);
+            }
+        }
+
+        Sys.INFO (pruned_amount == 0 ? "No files pruned." 
+                                     : pruned_amount == 1 ? ("One file pruned: " + last_pruned)
+                                                          : (pruned_amount + " files pruned.") );
+
+        return results;
+    }
+ 
 }
 
 
@@ -275,6 +325,7 @@ async function Handler_Uploads (args)
     let first         = -1;
     let last          = -1;
     let extension     = null;
+    let prune         = true;
     const req_delay   = Settings.Config.ConcurrentDelay_ms;
     
 
@@ -288,6 +339,11 @@ async function Handler_Uploads (args)
         {
             case "NUMERIC":
                 numeric_mode = true;
+                break;
+
+            case "NO-PRUNE":
+                prune = false;
+                Sys.INFO ("Filename-pruning disabled.");
                 break;
 
             case "RANGE":
@@ -333,7 +389,7 @@ async function Handler_Uploads (args)
     Sys.DEBUG ("List mode -flags: " + listmode_flags);
 
     if (listmode_flags <= 0)
-        return Sys.ERR_ABORT ("Unknown list mode '" + list_mode + "'. Valid modes: " + Util.KeysToStr (LISTMODES_VALID) );
+        return Sys.ERR_ABORT ("Unknown list mode '" + list_mode + "'. Valid modes: " + LISTMODES_VALID.toString () );
 
     // Allow numeric mode to be enabled in the flags as well.
     if ( (listmode_flags & F_NUMERIC) != 0)
@@ -472,6 +528,10 @@ async function Handler_Uploads (args)
         results                = Results_Numeric;
     }
 
+    // Prune duplicate filenames
+    else if (prune)    
+        results = results.CreateFilenamePruned (extension);
+
 
 
     // Generate a summary
@@ -551,6 +611,7 @@ function DisplayResults (files, sort = true)
 class File
 {
     FileID         = null;
+    BlockHeight    = null;
     
     // TODO: Should turn these into one variable at some point.
     Analyzed       = false;
@@ -577,8 +638,9 @@ class File
 
     constructor (f_id, tx_entry)
     {
-        this.FileID   = f_id;
-        this.MetaTXID = tx_entry != null ? tx_entry.GetTXID () : null;        
+        this.FileID      = f_id;
+        this.MetaTXID    = tx_entry != null ? tx_entry.GetTXID () : null;
+        this.BlockHeight = tx_entry.GetBlockHeight ();     
     }
 
 
@@ -593,12 +655,12 @@ class File
         f.Missing        = true;
         f.Error          = false;
 
-        f.Filename   = filename;
-        f.StatusText = "MISS";
-        f.MetaOK     = false;
-        f.DataOK     = false;
-        f.MetaText   = " - ";
-        f.DataText   = " - ";
+        f.Filename       = filename;
+        f.StatusText     = "MISS";
+        f.MetaOK         = false;
+        f.DataOK         = false;
+        f.MetaText       = " - ";
+        f.DataText       = " - ";
 
         return f;
     }
@@ -624,7 +686,7 @@ class File
     async Verify (tx_table)
     {
         const tries_max       = Settings.Config.ErrorRetries;
-        let   tries_remaining = tries_max;
+        let   tries_remaining = tries_max
         
         while (tries_remaining > 0)
         {
@@ -636,7 +698,8 @@ class File
             else
             {            
                 --tries_remaining;
-                await Util.Delay (Settings.Config.ErrorWaitDelay_ms);
+                await Util.Delay (Settings.Config.ErrorWaitDelay_ms != null ? Settings.Config.ErrorWaitDelay_ms : 1000);
+                Sys.VERBOSE ("Retrying File-ID:" + this.FileID + ", attempt " + (tries_max - tries_remaining + 1) );
             }
         }
 
@@ -805,7 +868,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
     
     
     for (const fn of all_results.FileLists.Processed)
-    {        
+    {                
         num = new Number (Util.StripExtension (fn.Filename) );
 
         if (!isNaN (num) )
@@ -829,7 +892,13 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
             }
         }
         else
-            Sys.VERBOSE ("Omitting file '" + fn.Filename + "' - filename not a number.");
+        {
+            if (fn.Error)
+                results.Add (fn);
+
+            else
+                Sys.VERBOSE ("Omitting file '" + fn.Filename + "' - filename not a number.");
+        }
     }
 
     if (min == -1 || max == -1)
@@ -850,7 +919,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
         file = filetable[C] != null ? filetable[C] : File.CreateMissing (`${C}` + (filter_ext != null ? filter_ext : "") );
         
         results.Numeric.push (file);
-        results.Add (file, filter_ext);
+        results.Add (file);
     }
 
     results.Summary["Range"] = min + "-" + max;

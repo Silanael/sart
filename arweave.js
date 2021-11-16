@@ -75,12 +75,13 @@ async function Init (nofail = false)
         // Test the connection.
         if (await TestConnection () )
         {
-            Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) + "(" + Config.ArweaveTimeout_ms + "ms timeout)" );
+            Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) + " (" + Config.ArweaveTimeout_ms + "ms timeout)" );
             return Arweave_Instance;
         }
 
         return nofail == true ? Arweave_Instance : null;    
     }
+    
     return Arweave_Instance;
 }
 
@@ -328,10 +329,11 @@ async function GetTxData (txid)
     
     try               
     { 
-         data = await arweave.transactions.getData (txid, {decode: true} );
+         const data = await arweave.transactions.getData (txid, {decode: true} );
          return data;
     }
-    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); tx = null;  }    
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); }
+    return null;
 }
 
 
@@ -343,12 +345,12 @@ async function GetTxStrData (txid)
     
     try
     { 
-        data = await arweave.transactions.getData (txid, {decode: true, string: true} );
+        const data = await arweave.transactions.getData (txid, {decode: true, string: true} );
         return data; 
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxStrData (" + txid + ")"); }
  
-    return data;
+    return null;
 }
 
 
@@ -360,7 +362,7 @@ async function GetTxRawData (txid)
     
     try
     { 
-        data = await arweave.chunks.downloadChunkedData (txid); 
+        const data = await arweave.chunks.downloadChunkedData (txid); 
         return data;
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxRawData (" + txid + ")"); }

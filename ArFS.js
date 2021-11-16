@@ -1335,6 +1335,7 @@ async function GetDriveOwner (drive_id)
 {
     if (Util.IsArFSID (drive_id) )
     {
+        Sys.VERBOSE ("Fetching owner for " + drive_id + " ...");
         const query = new GQL.DriveOwnerQuery (Arweave);
         const owner = await query.Execute (drive_id);
         

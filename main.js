@@ -320,7 +320,7 @@ function DisplayHelp (args)
         Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
         Sys.INFO ("      --port               Arweave gateway port.");
         Sys.INFO ("      --proto              Arweave gateway protocol, ie. 'https'.");
-        Sys.INFO ("      --timeout-ms         HTTP request timeout. Default is 25000.");
+        Sys.INFO ("      --timeout-ms         HTTP request timeout. Default is 100000.");
         Sys.INFO ("      --concurrent-ms      Interval between concurrent requests. Default is 50. Increase if issues.");
         Sys.INFO ("      --retry-ms           Delay between retries upon errors. Default is 1000.");
         Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 5.");

@@ -57,7 +57,7 @@ const Config =
     ArweaveHost            : "arweave.net",
     ArweavePort            : 443,
     ArweaveProto           : "https",
-    ArweaveTimeout_ms      : 25000,   
+    ArweaveTimeout_ms      : 100000,   
     ManualDest             : false,
           
     Recursive              : false,
