@@ -66,6 +66,7 @@ const Commands =
     "console"     : Console,
     "exit"        : Sys.EXIT,
     "quit"        : Sys.EXIT,
+    "set"         : SetSetting,
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,
@@ -296,6 +297,8 @@ function DisplayHelp (args)
         Sys.INFO ("CONSOLE:");
         Sys.INFO ("");
         Sys.INFO ("      connect [URL]        Connect to an Arweave-node or gateway.")
+        Sys.INFO ("      set [CONF] [VALUE]   Set a config key to desired value. Case-sensitive.");
+        Sys.INFO ("                           Use 'GET CONFIG' to get a list of config keys and their values.");
         Sys.INFO ("      exit                 Exit the console.")        
         Sys.INFO ("");
         Sys.INFO ("OPTIONS:");
@@ -332,6 +335,34 @@ function DisplayHelp (args)
 }
 
 
+function SetSetting (args)
+{
+
+    if (!args.RequireAmount (2, "USAGE: SET config-key value") )
+        return false;
+
+    const key   = args.Pop ();
+    const value = args.Pop ();
+
+    if (key == "ConfigVersion" || key == "AppVersion")
+    {        
+        Sys.ERR (Settings.IsForceful () ? `What part of "won't change that" did you not understand?` : "Nope, won't change that.");
+        return false;
+    }
+
+    if (Object.keys (Settings.Config)?.includes (key) )
+    {
+        Settings.Config[key] = value;
+        Sys.INFO (key + " set to " + value + ".");
+        return true;
+    }
+    else
+    {
+        Sys.ERR ("Config setting '" + key + "' does not exist. This is case-sensitive.");
+        return false;    
+    }
+        
+}
 
 
 function DisplayVersion (argv)

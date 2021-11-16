@@ -6,6 +6,11 @@
 // settings.js - 2021-10-17 -> 2021-10-26_01
 //
 
+const Package  = require ("./package.json");
+
+
+const CONFIG_VERSION = 1;
+
 
 // Whether to allow the program to access the system,
 // restricting fopen and SYS if set to false.
@@ -49,7 +54,9 @@ const OutputFormats =
 
 const Config =
 {
-    
+    ConfigVersion          : CONFIG_VERSION,
+    AppVersion             : Package.version,
+
     LogLevel               : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
     MsgOut                 : OutputDests.STDOUT,
     ErrOut                 : OutputDests.STDERR,
@@ -75,7 +82,7 @@ const Config =
     CSVReplacePeriodWith   : "#!#",
 
     VerifyDefaultFlags     : "SUMMARY,NOT-VERIFIED",
-    VerifyDefaultFlags_Num : "SUMMARY,ALL",
+    VerifyDefaultFlags_NUM : "SUMMARY,ALL",
 
     Force                  : false,
       

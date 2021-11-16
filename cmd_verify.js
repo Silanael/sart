@@ -113,6 +113,7 @@ const ANSI_ERROR     = "\033[31m";
 const ANSI_PENDING   = "\033[33m";
 const ANSI_CLEAR     = "\033[0m";
 const ANSI_UNDERLINE = "\033[4m";
+const ANSI_RED       = "\033[31m";
 
 
 
@@ -128,20 +129,33 @@ function Help (args)
     Sys.INFO ("   verify files <Drive-ID> [OUTPUT] (NUMERIC) [PARAMS]");
     Sys.INFO ("");
     Sys.INFO ("'OUTPUT' is optional and can be any combination of following:");
-    Sys.INFO ("   summary,ok,not-ok,failed,missing,pending,unknown,all,all-separate,filtered,processed");
-    Sys.INFO ("");
-    Sys.INFO ("'all' lists all files matching the filter in one go, while 'all-separate'");
-    Sys.INFO ("outputs separate lists for healthy, failed, missing and unknown.");
-    Sys.INFO ("'processed' gives a list of all encountered files, even those that don't");
-    Sys.INFO ("match the extension filter. ");
-    Sys.INFO ("");
-    Sys.INFO ("Optional parameter: 'EXTENSION ext' - filter processed files by extension.");
+    Sys.INFO ("")
+    Sys.INFO ("VERIFIED         Files that are confirmed to be good.");
+    Sys.INFO ("FAILED           Failed files, usually Data TX is missing.");
+    Sys.INFO ("PENDING          Files still waiting to be mined.");
+    Sys.INFO ("MISSING          Missing files when using NUMERIC mode.");
+    Sys.INFO ("ERROR            Files that could not be analyzed due to errors. Connection faults etc.");
+    Sys.INFO ("")
+    Sys.INFO ("ALL              All entries in one listing (FILTERED + ERROR)");
+    Sys.INFO ("ALL-SEPARATE     All entries in separate listings.");    
+    Sys.INFO ("NOT-VERIFIED     FAILED, MISSING, PENDING and ERROR");
+    Sys.INFO ("REUPLOAD-NEEDED  FAILED and MISSING files.")
+    Sys.INFO ("UNKNOWN          PENDING and ERROR.");
+    Sys.INFO ("FILTERED         All encountered files matching the filter (EXTENSION etc.)");
+    Sys.INFO ("PROCESSED        All encountered files. May contain duplicate filenames.");
+    Sys.INFO ("")
+    Sys.INFO ("***")
+    Sys.INFO ("")
+    Sys.INFO ("'EXTENSION ext' - filter processed files by extension. Optional.");
     Sys.INFO ("The extension-filter is case-sensitive.");
     Sys.INFO ("");
-    Sys.INFO ("'NUMERIC' mode is designed to be used with numbered filenames,")
-    Sys.INFO ("listing missing files along with the regular output.")
+    Sys.INFO ("'NUMERIC' mode is designed to be used with numbered filenames (1.png, 2.png etc.),")
+    Sys.INFO ("listing missing files along with the regular output. Do note that this mode lists");
+    Sys.INFO ("a filename as good if ANY healthy entry is found using that name, as opposed to");
+    Sys.INFO ("listing the state of the newest entry. This mode is meant for files that will not");
+    Sys.INFO ("be updated, such as NFTs. ");
     Sys.INFO ("")
-    Sys.INFO ("'RANGE first-last' is an optional parameter for this mode.");
+    Sys.INFO ("'RANGE first-last' is an optional parameter for NUMERIC mode.");
     Sys.INFO ("If omitted, the range is autodetected.");
     Sys.INFO ("");
     Sys.INFO ("'NO-PRUNE' disables the default behaviour of only displaying the newest")
@@ -154,13 +168,19 @@ function Help (args)
     
     Sys.INFO ("");
     Sys.INFO ("EXAMPLES:")
-    Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 summary,failed");
+    Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 summary,verified");
+    Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 not-verified");
     Sys.INFO ("   verify files <NFT-drive-id> numeric");
     Sys.INFO ("   verify files <NFT-drive-id> numeric range 1-1000 extension jpg");
     Sys.INFO ("   verify files <NFT-drive-id> numeric");
     Sys.INFO ("");
     Sys.INFO ("");
     Sys.INFO (Sys.ANSI (ANSI_UNDERLINE) + "Private drives are not yet supported!" + Sys.ANSI (ANSI_CLEAR));
+    Sys.INFO ("");
+    Sys.INFO (Sys.ANSI (ANSI_RED) + "CAUTION: This version doesn't yet track number of confirmation, so it is possible that");
+    Sys.INFO ("Files that are shown as VERIFIED may drop from the chain if it works. Before this tracking");
+    Sys.INFO ("is implemented, it is advised to run the verify process multiple times to be certain.");
+    Sys.INFO (Sys.ANSI (ANSI_CLEAR));
 }
 
 
@@ -380,7 +400,7 @@ async function Handler_Uploads (args)
     // Autoset listmode
     if (list_mode == null)
     {
-        list_mode = numeric_mode ? Settings.Config.VerifyDefaultFlags_Num : Settings.Config.VerifyDefaultFlags;
+        list_mode = numeric_mode ? Settings.Config.VerifyDefaultFlags_NUM : Settings.Config.VerifyDefaultFlags;
         Sys.VERBOSE ("Autoset list mode to '" + list_mode + "'.");
     }
 
