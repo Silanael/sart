@@ -221,7 +221,7 @@ class Query
     
     _ParseEntries ()
     {
-        this.Edges.forEach (edge => this.Entries.push
+        this.Edges?.forEach (edge => this.Entries.push
         (
             new Entry (edge)            
         ));    
