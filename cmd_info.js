@@ -21,6 +21,7 @@ const Package      = require ('./package.json');
 const SUBCOMMANDS = 
 {
     "tx"     : Handler_TX,
+    "drive"  : Handler_Drive,
     "sart"   : Handler_SART,
     "author" : Handler_Author,
 };
@@ -31,12 +32,18 @@ function Help (args)
     Sys.INFO ("INFO USAGE");
     Sys.INFO ("----------");
     Sys.INFO ("");
-    Sys.INFO ("Show transaction info:")
+    Sys.INFO ("Transaction info:")
     Sys.INFO ("   info <txid>");
     Sys.INFO ("");
-    Sys.INFO ("Show transaction tags:")
+    Sys.INFO ("Transaction tags:")
     Sys.INFO ("   info <txid> tags");    
     Sys.INFO ("");
+    Sys.INFO ("ArFS drive info")
+    Sys.INFO ("   info drive <drive-id>"); 
+    Sys.INFO ("");
+    Sys.INFO ("Program/author info:")
+    Sys.INFO ("   info [sart/author]");
+    Sys.INFO ("");    
 }
 
 
@@ -257,6 +264,45 @@ may never see the light of day...
 
     Sys.OUT_OBJ (info);
 
+}
+
+
+async function Handler_Drive (args)
+{
+    if (! args.RequireAmount (1, "Drive-ID required") )
+        return false;
+
+    const drive_id = args.Pop ();
+
+    if (! Util.IsArFSID (drive_id) )
+        return Sys.ERR ("Not a valid ArFS Drive-ID: " + drive_id);
+
+    else
+    {
+        const drive_entity = await ArFS.GetDriveEntity (drive_id);
+
+        if (drive_entity != null)
+        {
+            if (drive_entity.IsPublic)
+            {
+                try
+                {
+                    const metadata = JSON.parse (await Arweave.GetTxStrData (drive_entity.TXID) );
+                    if (metadata != null)
+                    {
+                        drive_entity.Name         = metadata.name;
+                        drive_entity.RootFolderID = metadata.rootFolderId;
+                    }
+                }
+                catch (Exception) { Sys.ON_EXCEPTION (exception, "INFO (Drive)"); }
+            }
+            Sys.OUT_OBJ (drive_entity);
+            return true;
+        }
+        
+        else
+            return Sys.ERR ("Failed to get ArFS-entity for drive " + drive_id + ".");
+    }
 }
 
 
