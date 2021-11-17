@@ -611,6 +611,14 @@ class ArFSEntity
         else
             return this._SetInvalid ("Failed to fetch newest metadata.");
         
+
+        // For drives only
+        if (this.ArFSEntityType == "drive" && Util.StrCmp (entry.GetTag (TAG_DRIVEPRIVACY), ARFSDRIVEPRIVACY_PRIVATE) )
+        {
+            this._SetInvalid ("Private drives not yet supported.");
+            return false;
+        }
+
         
         // Get ArFS entity metadata from the transaction data
         const metadata = await GetMetaTXJSON (this.MetaTXID_Latest);
