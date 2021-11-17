@@ -327,7 +327,7 @@ function DisplayHelp (args)
         Sys.INFO ("      --timeout-ms         HTTP request timeout. Default is 100000.");
         Sys.INFO ("      --concurrent-ms      Interval between concurrent requests. Default is 50. Increase if issues.");
         Sys.INFO ("      --retry-ms           Delay between retries upon errors. Default is 1000.");
-        Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 5.");
+        Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 2.");
         Sys.INFO ("  -f, --format             Output data format. Valid formats: txt, json, csv");
         Sys.INFO ("");
     }
@@ -347,7 +347,7 @@ function SetSetting (args)
 
     if (key == "ConfigVersion" || key == "AppVersion")
     {        
-        Sys.ERR (Settings.IsForceful () ? `What part of "won't change that" did you not understand?` : "Nope, won't change that.");
+        Sys.ERR (Settings.FUP++ < 1 ? "Nope, won't change these." : Settings.FUP == 2 ? `What part of "Nope, won't change these" did you not understand?` : "..." );
         return false;
     }
 
@@ -379,7 +379,7 @@ async function Testing (argv)
     Sys.INFO (num);
 
     // GetEntriesByTag
-    
+    Sys.INFO (isNaN ("foo") );
 }
 
 

@@ -150,7 +150,7 @@ Option           | Alt | Description
 --timeout-ms     |     | HTTP request timeout. Default is 100000.
 --concurrent-ms  |     | Interval between concurrent requests. Default is 50. Increase if issues.
 --retry-ms       |     | Delay between retries upon errors. Default is 1000.
---retries        |     | Amount of retries for failed data fetch per entry. Default is 5.
+--retries        |     | Amount of retries for failed data fetch per entry. Default is 2.
 --format         | -f  | Output data format. Valid formats: txt, json, csv
 
 
@@ -163,7 +163,7 @@ Verify success of file uploads:
 Private drives are not yet supported!
 
 **CAUTION: This version doesn't yet track number of confirmation, so it is possible that
-  Files that are shown as VERIFIED may drop from the chain if it works. Before this tracking
+  files that are shown as VERIFIED may drop from the chain if it works. Before this tracking
   is implemented, it is advised to run the verify process multiple times to be certain.**
 
 
@@ -184,7 +184,7 @@ ALL             | All entries in one listing (FILTERED + ERROR)
 ALL-SEPARATE    | All entries in separate listings.
 NOT-VERIFIED    | FAILED, MISSING, PENDING and ERROR
 UPLOAD-NEEDED   | FAILED and MISSING files.
-UNKNOWN         | PENDING and ERROR.
+UNKNOWN         | PENDING and ERROR, +MISSING if ERRORs are present.
 FILTERED        | All encountered files matching the filter (EXTENSION etc.)
 PROCESSED       | All encountered files. May contain duplicate filenames.
 

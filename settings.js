@@ -18,6 +18,8 @@ const SystemAccess  = true;
 
 const ConsoleActive = false;
 
+let FUP = 0;
+
 
 const LogLevels =
 {
@@ -72,7 +74,7 @@ const Config =
     AllowWildcards         : true,
     ConcurrentDelay_ms     : 50,
     ErrorWaitDelay_ms      : 1000,
-    ErrorRetries           : 5,
+    ErrorRetries           : 2,
       
     OutputFields           : null,
     OutputFormat           : OutputFormats.TXT,
@@ -214,7 +216,8 @@ module.exports =
     LogLevels,
     OutputFormats,
     OutputDests,
-    ConsoleActive, 
+    ConsoleActive,
+    FUP, 
     GetHostString,
     GetGQLHostString,
     IsMSGOutputAllowed,

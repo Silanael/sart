@@ -133,14 +133,14 @@ function Help (args)
     Sys.INFO ("VERIFIED         Files that are confirmed to be good.");
     Sys.INFO ("FAILED           Failed files, usually Data TX is missing.");
     Sys.INFO ("PENDING          Files still waiting to be mined.");
-    Sys.INFO ("MISSING          Missing files when using NUMERIC mode.");
+    Sys.INFO ("MISSING          Missing files when using NUMERIC mode. Not valid if there are ERRORs.");
     Sys.INFO ("ERROR            Files that could not be analyzed due to errors. Connection faults etc.");
     Sys.INFO ("")
     Sys.INFO ("ALL              All entries in one listing (FILTERED + ERROR)");
     Sys.INFO ("ALL-SEPARATE     All entries in separate listings.");    
     Sys.INFO ("NOT-VERIFIED     FAILED, MISSING, PENDING and ERROR");
     Sys.INFO ("UPLOAD-NEEDED    FAILED and MISSING files.")
-    Sys.INFO ("UNKNOWN          PENDING and ERROR.");
+    Sys.INFO ("UNKNOWN          PENDING and ERROR, +MISSING if ERRORs are present.");
     Sys.INFO ("FILTERED         All encountered files matching the filter (EXTENSION etc.)");
     Sys.INFO ("PROCESSED        All encountered files. May contain duplicate filenames.");
     Sys.INFO ("")
@@ -189,6 +189,7 @@ function Help (args)
 class Results
 {
     Sorted = false;
+    Errors = false;
 
     FileLists = 
     {
@@ -196,7 +197,7 @@ class Results
         Filtered          : [],
         Verified          : [],
         "Not-Verified"    : [],
-        "Upload-Needed" : [],
+        "Upload-Needed"   : [],
         Failed            : [],
         Error             : [],
         Pending           : [],
@@ -209,6 +210,8 @@ class Results
 
     Summary = {};
 
+    HasFetchErrors () { return this.Errors; }
+
 
     Add (file, filter_ext = null)
     {    
@@ -217,7 +220,12 @@ class Results
         if (filter_ext == null || file.Filename == null || file.Filename?.endsWith (filter_ext) )
         {            
             this.FileLists.Filtered.push (file);
-            if (file.Error) this.FileLists.Error.push (file);
+
+            if (file.Error)
+            {
+                this.FileLists.Error.push (file);
+                this.Errors = true;
+            }
 
             if (file.Healthy)
                 this.FileLists.Verified.push (file);            
@@ -229,7 +237,7 @@ class Results
                 if (file.Failed || file.Missing)
                     this.FileLists['Upload-Needed'].push (file);
 
-                if (file.Error || file.Pending)
+                if (file.Error || file.Pending || file.Unknown)
                     this.FileLists.Unknown.push (file);
             }
                 
@@ -272,7 +280,7 @@ class Results
                         newer_found = true;
                         last_pruned = src.FileID;
                         Sys.VERBOSE ("Newer entry for filename '" + ref.Filename + "' exists: " + ref.FileID + ", pruning " + src.FileID + " .", "PRUNE");
-                        break;
+                        break;let has_errors
                     }
                 }                
             }
@@ -640,6 +648,7 @@ class File
     Failed         = false;
     Missing        = false;
     Error          = false;
+    Unknown        = false;
     
     StatusText     = "?????";
     DetailedStatus = null;    
@@ -678,6 +687,7 @@ class File
         f.Failed         = false;
         f.Missing        = true;
         f.Error          = false;
+        f.Unknown        = false;
 
         f.Filename       = filename;
         f.StatusText     = "MISS";
@@ -685,6 +695,29 @@ class File
         f.DataOK         = false;
         f.MetaText       = " - ";
         f.DataText       = " - ";
+
+        return f;
+    }
+
+    static CreateUnknown (filename)
+    {
+        const f = new File (null, null);
+
+        f.Analyzed       = true;
+        f.Healthy        = false;
+        f.Pending        = false;
+        f.Failed         = false;
+        f.Missing        = false;
+        f.Error          = false;
+        f.Unknown        = true;
+
+        f.Filename       = filename;
+        f.StatusText     = "UNKNOWN";
+        f.MetaOK         = false;
+        f.DataOK         = false;
+        f.MetaText       = " - ";
+        f.DataText       = " - ";
+        f.DetailedStatus = "Unable to determine state while fetch-errors are present."
 
         return f;
     }
@@ -698,6 +731,7 @@ class File
         this.Pending        = false;
         this.Failed         = false;
         this.Missing        = false;
+        this.Unknown        = false;
         this.MetaOK         = false;
         this.DataOK         = false;
         this.StatusText     = "???"
@@ -728,8 +762,10 @@ class File
         }
 
         Sys.ERR ("Could not analyze file " + this.FileID + " in " + tries_max + " attempts. Giving up.");
+
         this.Healthy = false;
         this.Error   = true;
+
         return this;
     }
 
@@ -897,10 +933,10 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
     
 
     for (const fn of all_results.FileLists.Processed)
-    {                
-        num = new Number (Util.StripExtension (fn.Filename) );
-
-        if (!isNaN (num) && (filter_ext == null || fn.Filename?.endsWith (filter_ext)) )
+    {         
+        const no_ext = Util.StripExtension (fn.Filename);    
+        
+        if (no_ext != null && !isNaN ( (num = Number(no_ext)) ) && (filter_ext == null || fn.Filename?.endsWith (filter_ext)) )
         {
             found = true;
 
@@ -924,7 +960,7 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
         }
         else
         {
-            if (fn.Error)
+            if (fn.Error == true)
                 results.Add (fn);
 
             else
@@ -947,11 +983,15 @@ function GenerateNumericList (all_results, min = -1, max = -1, filter_ext)
 
 
     let file;
+    
+    const errors = all_results.HasFetchErrors ();
 
     // TODO pre-alloc?  
     for (let C = min; C <= max; ++C)
     {
-        file = filetable[C] != null ? filetable[C] : File.CreateMissing (`${C}` + (filter_ext != null ? filter_ext : "") );
+        file = filetable[C] != null ? filetable[C] 
+                                    : errors == true ? File.CreateUnknown (`${C}` + (filter_ext != null ? filter_ext : "") )
+                                                     : File.CreateMissing (`${C}` + (filter_ext != null ? filter_ext : "") );
 
         results.Numeric.push (file);
         results.Add (file);
