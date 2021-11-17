@@ -408,7 +408,7 @@ class TXQuery extends Query
 }
 
 
-class DriveOwnerQuery extends TXQuery
+class DriveEntityQuery extends TXQuery
 {
    
    /* Override */ async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
@@ -438,9 +438,40 @@ class DriveOwnerQuery extends TXQuery
 
         if (this.GetEntriesAmount () == 1)
         {
-            const owner = this.GetEntry (0)?.GetOwner ();
-            Sys.VERBOSE ("Fetched drive owner: " + owner,  drive_id);
-            return owner;
+            const entry = this.GetEntry (0);
+
+            if (entry != null)
+            {
+                const entity = 
+                {
+                    Entry:     entry,
+                    Owner:     entry.GetOwner (),
+                    TXID:      entry.GetTXID  (),
+                    Privacy:   entry.GetTag   ("Drive-Privacy"),
+                    Drive_ID:  entry.GetTag   ("Drive-Id"),
+                }
+
+                entity.IsPublic = entity.Privacy == "public";
+
+                if (Settings.IsDebug () )
+                {
+                    Sys.DEBUG ("Fetched drive entity for Drive-ID: " + drive_id + " :");
+                    Sys.DEBUG (entity);
+                }
+                
+                if (Settings.IsVerbose () )
+                {
+                    Sys.VERBOSE ("Fetched drive entity. Owner:"  + entity.owner 
+                                 + " Privacy:"                   + entity.Privacy, 
+                                 + " TXID:"                      + entity.TXID, 
+                                 drive_id);
+                }
+                return entity;
+            }
+            else
+                Sys.ERR ("Program error at GQL.DriveEntityQuery.");
+                
+            return null;
         }
 
         else
@@ -536,5 +567,5 @@ function GetGQLValueStr (value)
 
 
 module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
-                   Query, TXQuery, DriveOwnerQuery, LatestQuery, Entry, Tag,
+                   Query, TXQuery, DriveOwnerQuery: DriveEntityQuery, LatestQuery, Entry, Tag,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

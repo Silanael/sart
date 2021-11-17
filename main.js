@@ -374,12 +374,10 @@ function DisplayVersion (argv)
 
 async function Testing (argv)
 { 
- 
-    num = new Number (argv.Pop ());
-    Sys.INFO (num);
+    const entity = await ArFS.GetDriveEntity (argv.Pop () );
 
-    // GetEntriesByTag
-    Sys.INFO (isNaN ("foo") );
+    Sys.INFO (entity);
+ 
 }
 
 

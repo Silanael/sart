@@ -1331,21 +1331,21 @@ class ArFSFile extends ArFSItem
 
 
 
-async function GetDriveOwner (drive_id)
+
+
+async function GetDriveEntity (drive_id)
 {
     if (Util.IsArFSID (drive_id) )
     {
-        Sys.VERBOSE ("Fetching owner for " + drive_id + " ...");
+        Sys.VERBOSE ("Fetching drive entity for " + drive_id + " ...");
         const query = new GQL.DriveOwnerQuery (Arweave);
-        const owner = await query.Execute (drive_id);
+        const entity = await query.Execute (drive_id);
         
-        return owner;
+        return entity;
     }
     else
-        Sys.ERR ("Not a Drive ID: " + drive_id, "ArFS:GetDriveOwner");
+        Sys.ERR ("Not a Drive ID: " + drive_id, "ArFS:GetDriveEntity");
 }
-
-
 
 
 
@@ -1803,4 +1803,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveOwner };
+module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity };

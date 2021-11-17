@@ -73,7 +73,8 @@ const Config =
     DisplayAll             : false,    
     AllowWildcards         : true,
     ConcurrentDelay_ms     : 50,
-    ErrorWaitDelay_ms      : 1000,
+    ErrorWaitDelay_ms      : 3000,
+    ErrorWaitVariationP    : 1.0,
     ErrorRetries           : 2,
       
     OutputFields           : null,

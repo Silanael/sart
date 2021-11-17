@@ -431,9 +431,17 @@ async function Handler_Uploads (args)
         Sys.VERBOSE ("Autoset numeric mode on.");
     }
 
-    // Extract drive owner
-    const owner = await ArFS.GetDriveOwner (drive_id);
-    
+
+    // Acquire drive info
+    const drive_entity = await ArFS.GetDriveEntity (drive_id);
+
+    if (drive_entity == null)
+        return Sys.ERR ("Failed to fetch drive info for " + drive_id + ".");
+
+    else if (!drive_entity.IsPublic)
+        return Sys.ERR ("Sorry, support for private drives is not yet implemented.");
+
+    const owner = drive_entity.Owner;    
     if (owner == null && ! Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .") )        
         return false;
 
@@ -756,7 +764,12 @@ class File
             else
             {            
                 --tries_remaining;
-                await Util.Delay (Settings.Config.ErrorWaitDelay_ms != null ? Settings.Config.ErrorWaitDelay_ms : 1000);
+
+                const delay = Settings.Config.ErrorWaitDelay_ms + 
+                    Math.floor (Math.random () * (Settings.Config.ErrorWaitDelay_ms * Settings.Config.ErrorWaitVariationP) );
+
+                await Util.Delay (delay > 0 ? delay : 1000);
+
                 Sys.VERBOSE ("Retrying File-ID:" + this.FileID + ", attempt " + (tries_max - tries_remaining + 1) );
             }
         }
@@ -1028,7 +1041,19 @@ async function Handler_Uploads_Old (args)
     if (listmode_flags <= 0)
         return Sys.ERR_ABORT ("Unknown list mode '" + list_mode + "'. Valid modes: " + LISTMODES_VALID );
 
-    const owner          = await ArFS.GetDriveOwner (drive_id);
+
+
+    // Acquire drive info
+    const drive_entity = await ArFS.GetDriveEntity (drive_id);
+
+    if (drive_entity == null)
+        return Sys.ERR ("Failed to fetch drive info for " + drive_id + ".");
+
+    else if (!drive_entity.IsPublic)
+        return Sys.ERR ("Private drive support not yet implemented.");
+
+
+    const owner = drive_entity.Owner;
     
     if (owner == null && ! Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .") )
         return false;
