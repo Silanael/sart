@@ -155,13 +155,15 @@ async function ListAddress (args, address = null)
         
     }
 
-    Sys.VERBOSE ("Getting transactions.. ");
+    Sys.INFO ("Getting transactions for " + address + " ...");
     Sys.DEBUG ("With query args:");
     Sys.DEBUG (query_args);
 
     const query = await Arweave.GetTXs (query_args);
 
-    
+    size_bytes_total  = 0;
+    fee_winston_total = 0;
+    qty_winston_total = 0;
 
     // Print the results if any.    
     let e;
@@ -177,9 +179,19 @@ async function ListAddress (args, address = null)
                 const d = e.HasData      () ? "D" : "-";
                 const t = e.HasTransfer  () ? "T" : "-";
                 const r = e.HasRecipient () ? "R" : "-";
-                const flags = d+t+r;                
-                Sys.INFO (e.GetTXID () + " " + Util.GetDate (e.GetBlockTime ()) + " " + flags + " " + Analyze.GetTXEntryDescription (e) );
+                const flags = d+t+r;
+
+                size_bytes_total   += e.GetDataSize_B  ();
+                fee_winston_total  += e.GetFee_Winston ();
+                qty_winston_total  += e.GetQTY_Winston ();
+
+                Sys.OUT_TXT (e.GetTXID () + " " + Util.GetDate (e.GetBlockTime () ) + " " + flags + " " + Analyze.GetTXEntryDescription (e) );
             }
+            Sys.INFO ("---");
+            Sys.INFO ("Listed " + amount + " transactions with total of " 
+                      + Arweave.WinstonToAR (qty_winston_total)      + " AR transferred, "
+                      + Util.GetSizeStr     (size_bytes_total, true) + " of data stored and "
+                      + Arweave.WinstonToAR (fee_winston_total)      + " AR spent in transaction fees.");
         }
         else
             Sys.INFO ("Address " + address + " has no transactions.");

@@ -65,7 +65,9 @@ class Entry
     Tags           = null;
     Timestamp      = null;
     Fee_AR         = null;
+    Fee_Winston    = null;
     Quantity_AR    = null;
+    Quantity_Winston= null;
     DataSize_Bytes = null;
     Recipient      = null;
     
@@ -74,14 +76,16 @@ class Entry
     { 
         if (edge != null)
         {
-            this.TXID           = edge.node?.id,
-            this.Owner          = edge.node?.owner?.address,
-            this.BlockHeight    = edge.node?.block?.height,
-            this.Tags           = edge.node?.tags != null ? edge.node?.tags : [];
-            this.Timestamp      = edge.node?.block?.timestamp
-            this.Fee_AR         = edge.node?.fee?.ar;
-            this.Quantity_AR    = edge.node?.quantity?.ar;
-            this.DataSize_Bytes = edge.node?.data?.size;
+            this.TXID             = edge.node?.id,
+            this.Owner            = edge.node?.owner?.address,
+            this.BlockHeight      = edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null;
+            this.Tags             = edge.node?.tags              != null ? edge.node?.tags : [];
+            this.Timestamp        = edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null;
+            this.Fee_Winston      = edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null;
+            this.Fee_AR           = edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null;
+            this.Quantity_Winston = edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null;
+            this.Quantity_AR      = edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null;
+            this.DataSize_Bytes   = edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null;
         }
     }
 
@@ -91,13 +95,15 @@ class Entry
     GetBlockHeight ()    { return this.BlockHeight;                                              }
     GetBlockTime   ()    { return this.Timestamp;                                                }
     GetDate        ()    { return this.Timestamp != null ? Util.GetDate (this.Timestamp) : null; }
-    GetFee_AR      ()    { return this.Fee_AR         != null ? this.Fee_AR          : 0;        }
-    GetQTY_AR      ()    { return this.Quantity_AR    != null ? this.Quantity_AR     : 0;        }
-    GetDataSize_B  ()    { return this.DataSize_Bytes != null ? this.DataSize_Bytes  : 0;        }
+    GetFee_AR      ()    { return this.Fee_AR           != null ? this.Fee_AR           : 0;     }
+    GetQTY_AR      ()    { return this.Quantity_AR      != null ? this.Quantity_AR      : 0;     }
+    GetFee_Winston ()    { return this.Fee_Winston      != null ? this.Fee_Winston      : 0;     }
+    GetQTY_Winston ()    { return this.Quantity_Winston != null ? this.Quantity_Winston : 0;     }    
+    GetDataSize_B  ()    { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;     }
     GetRecipient   ()    { return this.Recipient;                                                }
-    HasFee         ()    { return this.Fee_AR         != null && this.Fee_AR         > 0;        }
-    HasTransfer    ()    { return this.Quantity_AR    != null && this.Quantity_AR    > 0;        }
-    HasData        ()    { return this.DataSize_Bytes != null && this.DataSize_Bytes > 0;        }
+    HasFee         ()    { return this.Fee_AR           != null && this.Fee_AR         > 0;      }
+    HasTransfer    ()    { return this.Quantity_AR      != null && this.Quantity_AR    > 0;      }
+    HasData        ()    { return this.DataSize_Bytes   != null && this.DataSize_Bytes > 0;      }
     HasRecipient   ()    { return this.Recipient != null;                                        }    
     HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null;                   }
     IsMined        ()    { return this.BlockHeight != null && this.BlockHeight >= 0;             }
@@ -428,8 +434,8 @@ class TXQuery extends Query
                   owner    { address },
                   block    { id,height,timestamp },
                   tags     { name, value },
-                  fee      { ar },
-                  quantity { ar },
+                  fee      { ar, winston },
+                  quantity { ar, winston },
                   data     { size, type },
                   recipient
                 }

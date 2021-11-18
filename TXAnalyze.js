@@ -192,7 +192,9 @@ const PATTERNS =
     new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*")                                          .WithDescription ("ArDrive"),
     new Pattern     ().WithRequirement ("ArFS", ".*")                                                       .WithDescription ("ArFS"),
     
-    new Pattern     ().WithRequirement ("page:url", ".*")         .WithRequirement ("page:timestamp", ".*") .WithDescription ("Archived webpage"),
+    new Pattern     ().WithRequirement      ("page:url", ".*")         .WithRequirement      ("page:timestamp", ".*")    .WithDescription ("Archived webpage"),
+    new Pattern     ().WithRequirementExact ("App-Name", "ArConnect")  .WithRequirementExact ("Type", "Fee-Transaction") .WithDescription ("ArConnect-fee"),
+    new Pattern     ().WithRequirementExact ("App-Name", "argora")                                                       .WithDescription ("Argora"),
     new Pattern_SPS (),
     new Pattern_PathManifest ()
 ];

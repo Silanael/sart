@@ -186,7 +186,8 @@ async function OwnerToAddress (owner)
 
 function WinstonToAR (winston_amount)
 {
-    const arweave  = Init (true);
+    // TODO: Make more reasonable.
+    const arweave  = Arweave_Instance != null ? Arweave_Instance : ArweaveLib.init ();
     return arweave != null ? arweave.ar.winstonToAr (winston_amount) : null;
 }
 
@@ -419,7 +420,7 @@ async function GetTXs ( args = {address: null, tags: null, first: null, sort: nu
     
     try
     { 
-        Sys.INFO ("Fetching transactions...");
+        Sys.VERBOSE ("Querying for transactions..");
         const success = await query.ExecuteReqOwner (args);
 
         if (success)
