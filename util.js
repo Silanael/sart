@@ -94,6 +94,7 @@ function IsArFSID       (str)          { return str != null && str.length == 36 
 function GetUNIXTime    ()             { return new Date ().getTime (); }
 function GetVersion     ()             { return Package.version; }
 function GetVersionStr  ()             { return "v" + Package.version + " [" + Package.versiondate + "]"; }
+function GetDummyDate   ()             { return "????-??-?? ??:??:??"; }
 function StripExtension (filename)     { return filename != null ? Path.parse (filename)?.name : null; }
 function IsTTY          ()             { return process.stdout.isTTY; }
 function IsOutputPiped  ()             { return !this.IsTTY (); }
@@ -106,7 +107,7 @@ function ContainsString (str, strings, case_insensitive = true, trim = true)
 {
     if (trim)
         str = str.trim ();
-        
+
     if (case_insensitive)
         return strings.find ( (v) => v.toLowerCase () == str.toLowerCase () ) != null;
 
@@ -472,4 +473,4 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
 module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate };

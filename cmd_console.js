@@ -10,7 +10,7 @@
 // External imports
 const TTY      = require ('tty');
 const FS       = require ('fs');
-const ReadLine = require ('node:readline');
+const ReadLine = require ('readline');
 
 
 // Imports
@@ -51,7 +51,7 @@ async function HandleCommand (args)
     PrintEmptyLine ();
     PrintLine ("!!! DEVELOPMENT VERSION !!!")    
     PrintEmptyLine ();
-    
+
     PrintPrompt    ();
 
     const input = ReadLine.createInterface ( {input: process.stdin, output: null} );

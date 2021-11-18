@@ -16,6 +16,14 @@ const FIELD_RECURSIVE    = "__SART-RECURSIVE"
 const FIELD_ANSI         = "__ANSI";
 const FIELD_VALUE_SPACER = 2;
 
+const ANSI_ERROR     = "\033[31m";
+const ANSI_PENDING   = "\033[33m";
+const ANSI_CLEAR     = "\033[0m";
+const ANSI_UNDERLINE = "\033[4m";
+const ANSI_RED       = "\033[31m";
+
+
+
 
 // Variables
 const IsPiped = !process.stdout.isTTY;
@@ -26,7 +34,8 @@ const IsPiped = !process.stdout.isTTY;
 function ERR_MISSING_ARG   (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj); };
 function ANSI              (code)                   { return Settings.IsANSIAllowed () ? code : "" };
-
+function ANSIRED           ()                       { return ANSI (ANSI_RED)   };
+function ANSICLEAR         ()                       { return ANSI (ANSI_CLEAR) };
 
 
 function ErrorHandler (error)
@@ -105,30 +114,70 @@ function OUT_TXT_RAW (str)
 }
 
 
-function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null} ) 
+function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], header: true } ) 
 {
 
     if (obj == null)
         return false;
 
 
+    // Default values
+    if (opts.indent == null)             opts.indent = 0;
+    if (opts.recursive_fields == null)   opts.recursive_fields = [];        
+    if (opts.header == null)             opts.header = true;
+
+
     switch (Settings.Config.OutputFormat) 
     {        
         case Settings.OutputFormats.JSON:
-            
-            if (obj != null)
-            {
-                try               { OUT_TXT (JSON.stringify (obj) ); }
-                catch (exception) { ON_EXCEPTION (exception, "Sys.OUT_OBJ (" + obj?.name + ")"); }
+       
+            try
+            { 
+                OUT_TXT (JSON.stringify (obj) ); 
             }
-            else
-            {
+            catch (exception) 
+            { 
+                ON_EXCEPTION (exception, "Sys.OUT_OBJ (" + obj?.name + ")"); 
                 ERR ("Unable to convert object " + obj + " to JSON - trying to print it as-is:");
-                OUT_TXT (obj);
-            }            
+                OUT_TXT (obj);                    
+            }           
             break;
 
 
+        case Settings.OutputFormats.CSV:
+
+
+            // Header
+            if (opts.header)
+            {
+                let header = null;
+                for (const e of Object.entries (obj) )
+                {
+                    const var_str = !Settings.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
+
+                    if (! var_str.startsWith ("__") )
+                        header = header != null ? header + "," + var_str : var_str;
+                }
+                OUT_TXT (header);
+            }
+
+
+
+            // Data
+            let line = null;
+            for (const e of Object.entries (obj) )
+            {                                
+                let val = e[1] != null ? e[1].toString () : "";
+                                                
+                if (val == "[object Object]") // Too ugly to be listed like this.
+                    val = "<OBJECT>";
+
+                val = val.replace (',', Settings.Config.CSVReplacePeriodWith);
+
+                line = line != null ? line + "," + val : val;
+            }
+            OUT_TXT (line);
+            break;
 
         // Text
         default:
@@ -166,17 +215,23 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null} )
                 }
 
                 // Value is an object that's set to recursive display
-                else if (val != null && val[FIELD_RECURSIVE] == true)
+                else if (val != null && (val[FIELD_RECURSIVE] == true || (opts != null && opts.recursive_fields?.includes (field)) ) )
                 {
-                    OUT_TXT ( (var_str).padStart(opts.indent) + " ".repeat (FIELD_VALUE_SPACER) + "-----" );
+                    OUT_TXT ( (var_str).padStart(opts.indent)
+                                + " ".repeat (longest_len - var_str.length) 
+                                + " ".repeat (FIELD_VALUE_SPACER)
+                                + "-----" );
                     OUT_OBJ (e[1], { indent: opts.indent + longest_len + FIELD_VALUE_SPACER } )
                 }
 
                 // Display the field-value pair.
                 else
                 {
-                    const val_str = val != null ? val.toString () : "-";
+                    let val_str = val != null ? val.toString () : "-";
                     
+                    if (val_str == "[object Object]") // Too ugly to be listed like this.
+                        val_str = "<OBJECT>";
+
                     OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
                             + " ".repeat (FIELD_VALUE_SPACER) + val_str);
                 }
@@ -373,6 +428,8 @@ module.exports =
     OUT_OBJ,
     SET_RECURSIVE_OUT,
     ANSI,
+    ANSIRED,
+    ANSICLEAR,
     INFO,
     VERBOSE,
     DEBUG,

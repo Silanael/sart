@@ -282,21 +282,64 @@ async function Handler_Drive (args)
         const drive_entity = await ArFS.GetDriveEntity (drive_id);
 
         if (drive_entity != null)
-        {
+        {            
             if (drive_entity.IsPublic)
             {
                 try
                 {
-                    const metadata = JSON.parse (await Arweave.GetTxStrData (drive_entity.TXID) );
+                    const metadata = JSON.parse (await Arweave.GetTxStrData (drive_entity.TXID_Latest) );
                     if (metadata != null)
                     {
                         drive_entity.Name         = metadata.name;
-                        drive_entity.RootFolderID = metadata.rootFolderId;
+                        drive_entity.RootFolderID = metadata.rootFolderId;                        
                     }
                 }
                 catch (Exception) { Sys.ON_EXCEPTION (exception, "INFO (Drive)"); }
             }
-            Sys.OUT_OBJ (drive_entity);
+
+            
+            // Generate history
+            if (drive_entity.Query != null)
+            {
+                const query          = drive_entity.Query;                
+                const sort_oldfirst  = query.Sort != GQL.SORT_NEWEST_FIRST;
+                const entries        = query.GetEntriesForOwner (drive_entity.Owner);
+                const entries_amount = entries != null ? entries.length : 0;
+
+                let history = {};                
+
+                let index = sort_oldfirst ? 0 : entries_amount - 1;
+                let e, txid, msg, date;
+
+                for (let C = 0; C < entries_amount; C++)
+                {
+                    e    = entries[C];
+                    txid = e?.GetTXID ();
+
+                    if (e != null && txid != null)
+                    {
+                        date = e.GetDate ();
+                        msg  = (date != null ? date : Util.GetDummyDate () ) + " - "; 
+
+                        if (C == 0)
+                            msg += "Drive created.";                            
+                        else
+                            msg += "Drive modified.";
+
+                        history[txid] = msg;
+                    }
+                    else
+                        Sys.ERR ("Program error at cmd_info.Handler_Drive.");
+
+                    if (sort_oldfirst) ++index;
+                    else               --index;
+                }
+                
+                drive_entity.History = history;
+            }
+            
+
+            Sys.OUT_OBJ (drive_entity, { recursive_fields: ["History"] } );
             return true;
         }
         

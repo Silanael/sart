@@ -86,20 +86,21 @@ class Entry
     }
 
 
-    GetTXID        ()    { return this.TXID;                                              }
-    GetOwner       ()    { return this.Owner;                                             }
-    GetBlockHeight ()    { return this.BlockHeight;                                       }
-    GetBlockTime   ()    { return this.Timestamp;                                         }
-    GetFee_AR      ()    { return this.Fee_AR         != null ? this.Fee_AR          : 0; }
-    GetQTY_AR      ()    { return this.Quantity_AR    != null ? this.Quantity_AR     : 0; }
-    GetDataSize_B  ()    { return this.DataSize_Bytes != null ? this.DataSize_Bytes  : 0; }
-    GetRecipient   ()    { return this.Recipient;                                         }
-    HasFee         ()    { return this.Fee_AR         != null && this.Fee_AR         > 0; }
-    HasTransfer    ()    { return this.Quantity_AR    != null && this.Quantity_AR    > 0; }
-    HasData        ()    { return this.DataSize_Bytes != null && this.DataSize_Bytes > 0; }
-    HasRecipient   ()    { return this.Recipient != null;                                 }    
-    HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null;            }
-    IsMined        ()    { return this.BlockHeight != null && this.BlockHeight >= 0;      }
+    GetTXID        ()    { return this.TXID;                                                     }
+    GetOwner       ()    { return this.Owner;                                                    }
+    GetBlockHeight ()    { return this.BlockHeight;                                              }
+    GetBlockTime   ()    { return this.Timestamp;                                                }
+    GetDate        ()    { return this.Timestamp != null ? Util.GetDate (this.Timestamp) : null; }
+    GetFee_AR      ()    { return this.Fee_AR         != null ? this.Fee_AR          : 0;        }
+    GetQTY_AR      ()    { return this.Quantity_AR    != null ? this.Quantity_AR     : 0;        }
+    GetDataSize_B  ()    { return this.DataSize_Bytes != null ? this.DataSize_Bytes  : 0;        }
+    GetRecipient   ()    { return this.Recipient;                                                }
+    HasFee         ()    { return this.Fee_AR         != null && this.Fee_AR         > 0;        }
+    HasTransfer    ()    { return this.Quantity_AR    != null && this.Quantity_AR    > 0;        }
+    HasData        ()    { return this.DataSize_Bytes != null && this.DataSize_Bytes > 0;        }
+    HasRecipient   ()    { return this.Recipient != null;                                        }    
+    HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null;                   }
+    IsMined        ()    { return this.BlockHeight != null && this.BlockHeight >= 0;             }
     GetTags        ()    { return this.Tags; }
 
   
@@ -153,6 +154,7 @@ class Query
     Edges         = null;
     Entries       = [];
     EntriesAmount = null;
+    Sort          = null;
 
 
     // How does one make these things protected?
@@ -206,6 +208,121 @@ class Query
     GetEntry         (index)      { return this.Entries[index];                            }
     DidQuerySucceed  ()           { return this.Results?.status == HTTP_STATUS_OK;         }
     
+
+    GetOldestEntry ()
+    {
+        if (this.Entries == null)
+        {
+            Sys.ERR ("No entries present. Has query been executed?", "Query");
+            return null;
+        }
+
+        else if (this.Entries.length <= 0)
+            return null;
+
+        else if (this.Entries.length == 1)
+            return this.GetEntry (0);
+
+        else
+        {
+
+            let oldest = this.Sort == SORT_OLDEST_FIRST ? this.GetEntry (0)
+                                                        : this.Sort == SORT_NEWEST_FIRST ? this.GetEntry (this.Entries.length - 1)
+                                                                                         : null;
+
+            Sys.DEBUG ("Initial set oldest to " + (oldest == null ? oldest.GetTXID () : null ) );
+
+            const debug = Settings.IsDebug ();
+
+            for (const e of this.Entries)
+            {
+                if (oldest == null || e.GetBlockHeight () < oldest.GetBlockHeight () )
+                {
+                    if (debug)
+                        Sys.DEBUG (e.GetTXID + " at block height " + e.GetBlockHeight () + " is older than " 
+                                    + (oldest != null ? oldest.GetTXID () + " at " + oldest.GetBlockHeight () : null) );
+                    oldest = e;                    
+                }
+            }
+            
+            if (oldest == null)
+                Sys.ERR ("Could not determine oldest entry out of " + this.Entries?.length + " entries!", GQL.Query);
+
+            else
+                Sys.VERBOSE ("Determined that " + oldest.GetTXID () + " at block height " + oldest.GetBlockHeight () + " is the oldest entry.");
+
+            return oldest;
+        }
+    }          
+
+
+    GetNewestEntry (owner = null)
+    {
+        if (this.Entries == null)
+        {
+            Sys.ERR ("No entries present. Has query been executed?", "Query");
+            return null;
+        }
+
+        else if (this.Entries.length <= 0)
+            return null;
+
+        else if (this.Entries.length == 1)
+            return this.GetEntry (0);
+
+        else
+        {
+            let newest = this.GetOldestEntry ();
+            const debug = Settings.IsDebug ();
+
+            for (const e of this.Entries)
+            {
+                if (owner != null && e.GetOwner () != owner)
+                {
+                    Sys.WARN (`Found an entry that doesn't match the owner ${owner}
+TXID: ${e.GetTXID ()}  at address ${e.GetOwner ()}
+${Sys.ANSIRED()}Possible hostile collision attempt from ${e.GetOwner ()}.${Sys.ANSICLEAR()}`);
+                    Sys.DEBUG (e);
+                }
+
+                else if (newest == null || (e.GetBlockHeight () > newest.GetBlockHeight () ) )
+                {
+                    if (debug)
+                        Sys.DEBUG (e.GetTXID + " at block height " + e.GetBlockHeight () + " is newer than " 
+                                    + (newest != null ? newest.GetTXID () + " at " + newest.GetBlockHeight () : null) );
+                    newest = e;                    
+                }
+            }
+            
+            if (newest == null)
+                Sys.ERR ("Could not determine oldest entry out of " + this.Entries?.length + " entries!", GQL.Query);
+
+            else
+                Sys.VERBOSE ("Determined that " + newest.GetTXID () + " at block height " + newest.GetBlockHeight () + " is the newest entry.");
+
+            return newest;
+        }
+    }
+
+    GetEntriesForOwner (owner)
+    {
+        if (owner == null)
+        {
+            Sys.ERR ("Null parameter given!", "Query.GetEntriesForOwner");
+            return [];
+        }
+
+        const res = [];
+
+        for (const e of this.Entries)
+        {
+            if (e.GetOwner () == owner)
+                res.push (e);
+        }
+
+        return res;
+    }
+
     GetEntriesByTag (tag, value = null)
     {        
         return this.Entries != null ? Entry.GetEntriesByTag (this.Entries, tag, value) : [];        
@@ -331,7 +448,8 @@ class TXQuery extends Query
        
        const desired_amount = config.first != undefined ? config.first : 0;
        const fetch_amount   = config.first != undefined ? config.first : GQL_MAX_RESULTS;
-       
+
+       this.Sort = config.sort;
 
        Sys.DEBUG ("Starting to fetch transactions..", __TAG);        
        do
@@ -421,12 +539,13 @@ class DriveEntityQuery extends TXQuery
    /** Retrieve drive's owner address. */
    async Execute (drive_id)
    {       
+        this.Sort = SORT_OLDEST_FIRST;
+
         await super.ExecuteOnce
         (
             TXQuery.CreateTxQuery 
-            ({                     
-                    first:  1,                     
-                    sort:   SORT_OLDEST_FIRST,
+            ({                                                           
+                    sort: this.Sort,
                     tags:   
                     [ 
                         Tag.QUERYTAG ("Entity-Type",  "drive"),
@@ -436,22 +555,30 @@ class DriveEntityQuery extends TXQuery
             })
         );
 
-        if (this.GetEntriesAmount () == 1)
+        if (this.GetEntriesAmount () > 0)
         {
-            const entry = this.GetEntry (0);
+            const first_entry  = this.GetOldestEntry  ();
+            const owner        = first_entry.GetOwner ();
+            const newest_entry = this.GetNewestEntry  (owner);
 
-            if (entry != null)
+            if (first_entry != null)
             {
                 const entity = 
-                {
-                    Entry:     entry,
-                    Owner:     entry.GetOwner (),
-                    TXID:      entry.GetTXID  (),
-                    Privacy:   entry.GetTag   ("Drive-Privacy"),
-                    Drive_ID:  entry.GetTag   ("Drive-Id"),
+                {                                        
+                    Privacy:    first_entry.GetTag   ("Drive-Privacy"),
+                    Drive_ID:   first_entry.GetTag   ("Drive-Id"),
+                    Owner:      owner,                    
                 }
 
                 entity.IsPublic = entity.Privacy == "public";
+
+                entity.Operations   = this.GetEntriesAmount ();
+                entity.TXID_Created = first_entry?.GetTXID  ();
+                entity.TXID_Latest  = newest_entry?.GetTXID ();
+
+                entity.FirstEntry  = first_entry;
+                entity.NewestEntry = newest_entry;
+                entity.Query = this;
 
                 if (Settings.IsDebug () )
                 {
@@ -466,6 +593,9 @@ class DriveEntityQuery extends TXQuery
                                  + " TXID:"                      + entity.TXID, 
                                  drive_id);
                 }
+                
+                
+
                 return entity;
             }
             else
@@ -484,19 +614,23 @@ class DriveEntityQuery extends TXQuery
 
 
 
+
+
 class LatestQuery extends TXQuery
 {
    
    /** Retrieve drive's owner address. */
    async Execute (tags = [], address = null)
    {       
+       this.Sort = SORT_NEWEST_FIRST;
+
         await super.ExecuteOnce
         (
             TXQuery.CreateTxQuery 
             ({                     
                     first:  1,
                     owner:  address,                     
-                    sort:   SORT_NEWEST_FIRST,
+                    sort:   this.Sort,
                     tags:   tags,                                        
             })
         );
@@ -567,5 +701,5 @@ function GetGQLValueStr (value)
 
 
 module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
-                   Query, TXQuery, DriveOwnerQuery: DriveEntityQuery, LatestQuery, Entry, Tag,
+                   Query, TXQuery, DriveEntityQuery, LatestQuery, Entry, Tag,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

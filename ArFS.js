@@ -1345,8 +1345,8 @@ async function GetDriveEntity (drive_id)
 {
     if (Util.IsArFSID (drive_id) )
     {
-        Sys.VERBOSE ("Fetching drive entity for " + drive_id + " ...");
-        const query = new GQL.DriveOwnerQuery (Arweave);
+        Sys.VERBOSE ("Fetching drive info for " + drive_id + " ...");
+        const query = new GQL.DriveEntityQuery (Arweave);
         const entity = await query.Execute (drive_id);
         
         return entity;
@@ -1366,9 +1366,11 @@ async function GetDriveEntity (drive_id)
 // Gets and parses the ArFS metadata from the metadata TX data.
 // Should be in JSON-format. A bug in the old ArDrive software
 // caused these to be the wrong Content-Type so not checking for that.
-async function GetMetaTXJSON (txid)
+async function GetMetaTXJSON (txid, is_public = true)
 {
-
+    if (!is_public)
+        return null;
+        
     const data = await Arweave.GetTxStrData (txid);
 
     if (data != null)
