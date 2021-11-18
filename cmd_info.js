@@ -296,24 +296,17 @@ async function Handler_Drive (args)
                 }
                 catch (Exception) { Sys.ON_EXCEPTION (exception, "INFO (Drive)"); }
             }
-
             
             // Generate history
-            if (drive_entity.Query != null)
-            {
-                const query          = drive_entity.Query;                
-                const sort_oldfirst  = query.Sort != GQL.SORT_NEWEST_FIRST;
-                const entries        = query.GetEntriesForOwner (drive_entity.Owner);
-                const entries_amount = entries != null ? entries.length : 0;
-
+            if (drive_entity.Entries != null)
+            {                
                 let history = {};                
 
-                let index = sort_oldfirst ? 0 : entries_amount - 1;
-                let e, txid, msg, date;
+                let txid, msg, date, index = 0;
 
-                for (let C = 0; C < entries_amount; C++)
-                {
-                    e    = entries[C];
+                // These are sorted with oldest first by GetEntriesForOwner.
+                for (const e of drive_entity.Entries)
+                {                    
                     txid = e?.GetTXID ();
 
                     if (e != null && txid != null)
@@ -321,7 +314,7 @@ async function Handler_Drive (args)
                         date = e.GetDate ();
                         msg  = (date != null ? date : Util.GetDummyDate () ) + " - "; 
 
-                        if (C == 0)
+                        if (index == 0)
                             msg += "Drive created.";                            
                         else
                             msg += "Drive modified.";
@@ -331,8 +324,7 @@ async function Handler_Drive (args)
                     else
                         Sys.ERR ("Program error at cmd_info.Handler_Drive.");
 
-                    if (sort_oldfirst) ++index;
-                    else               --index;
+                    ++index;
                 }
                 
                 drive_entity.History = history;

@@ -312,17 +312,40 @@ ${Sys.ANSIRED()}Possible hostile collision attempt from ${e.GetOwner ()}.${Sys.A
             return [];
         }
 
-        const res = [];
+        const entries_amount = this.Entries != null ? this.Entries.length : 0;
 
-        for (const e of this.Entries)
+        const res = [];
+        let e;
+
+        if (this.Sort == SORT_OLDEST_FIRST)
         {
-            if (e.GetOwner () == owner)
-                res.push (e);
+            for (let C = 0; C < entries_amount; ++C)
+            {
+                e = this.GetEntry (C);
+
+                if (e.GetOwner () == owner)
+                    res.push (e);
+            }
         }
+
+        else if (this.Sort == SORT_NEWEST_FIRST)
+        {
+            for (let C = entries_amount - 1; C >= 0; --C)
+            {
+                e = this.GetEntry (C);
+
+                if (e.GetOwner () == owner)
+                    res.push (e);
+            }
+        }
+        
+        else
+            Sys.ERR ("Sort not set for query, cannot reliable sort entries!");
 
         return res;
     }
 
+    
     GetEntriesByTag (tag, value = null)
     {        
         return this.Entries != null ? Entry.GetEntriesByTag (this.Entries, tag, value) : [];        
@@ -570,15 +593,22 @@ class DriveEntityQuery extends TXQuery
                     Owner:      owner,                    
                 }
 
+                const entries = this.GetEntriesForOwner (owner);
+
                 entity.IsPublic = entity.Privacy == "public";
 
-                entity.Operations   = this.GetEntriesAmount ();
+                entity.Operations   = entries != null ? entries.length : -1;
                 entity.TXID_Created = first_entry?.GetTXID  ();
                 entity.TXID_Latest  = newest_entry?.GetTXID ();
 
                 entity.FirstEntry  = first_entry;
                 entity.NewestEntry = newest_entry;
-                entity.Query = this;
+                entity.Entries     = entries;
+                entity.Query       = this;
+
+                if (entity.Operations <= 0)
+                    Sys.ERR ("Something went wrong - couldn't get entries matching owner " + owner);
+
 
                 if (Settings.IsDebug () )
                 {
