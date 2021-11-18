@@ -183,7 +183,7 @@ class Query
         {
             this.Results  = await RunGQLQuery (this.Arweave, this.Query)
                      
-            this.Edges         = this.Results?.data?.data.transactions.edges;
+            this.Edges         = this.Results?.data?.data?.transactions?.edges;
             this.EntriesAmount = this.Edges != null ? this.Edges.length : 0;
             this._ParseEntries ();
         }
@@ -381,18 +381,19 @@ class TXQuery extends Query
     }
 
 
-    static CreateTxQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, owner: undefined, tags: [], sort: SORT_DEFAULT} )
+    static CreateTxQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, owner: undefined, tags: [], sort: SORT_DEFAULT, id:null } )
     {
     
         // No proper query arguments given
-        if (config.cursor == undefined && config.owner == undefined && config.tags.length <= 0)
+        if (config.cursor == undefined && config.owner == undefined && config.tags?.length <= 0)
             Sys.ERR_OVERRIDABLE ("No proper query terms given, would fetch the entire blockchain.", __TAG);
 
 
         const cursor_str = config.cursor != undefined ? `after:  "${config.cursor}" ,` : "";                                                      
         const owner_str  = config.owner  != undefined ? `owners: "${config.owner}"  ,` : "";
         const sort_str   = config.sort   != undefined ? `sort:    ${config.sort}    ,` : "";
-        
+        const id_str     = config.id     != undefined ? `ids:    "${config.id}"     ,` : "";
+
         if (config.first == null)
             config.first = GQL_MAX_RESULTS;
 
@@ -411,6 +412,7 @@ class TXQuery extends Query
             transactions
             (             
               first:${config.first},
+              ${id_str}
               ${sort_str}
               ${cursor_str}
               ${owner_str}
@@ -440,7 +442,7 @@ class TXQuery extends Query
    
 
    /* Returns true if desired amount of entries was gotten, false if not. Owner must be specified. */
-   async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
+   async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT, id: null} )
    {
         if (config?.owner != null)
         {
@@ -454,7 +456,7 @@ class TXQuery extends Query
   
 
    /* Returns true if desired amount of entries was gotten, false if not */
-   async Execute ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
+   async Execute ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT, id: null} )
    {    
 
        if (config.owner != null && !Util.IsArweaveHash (config.owner) ) // TODO: Add error
@@ -676,6 +678,39 @@ class LatestQuery extends TXQuery
    }
 }
 
+class ByTXQuery extends TXQuery
+{
+   
+    /** Retrieve drive's owner address. */
+    async Execute (txid, owner = null)
+    {       
+        this.Sort = SORT_OLDEST_FIRST;
+
+        await super.ExecuteOnce
+        (
+            TXQuery.CreateTxQuery 
+            ({                     
+                    first:  1,
+                    id:     txid,
+                    owner:  owner,                     
+                    sort:   this.Sort,                                                            
+            })
+        );
+
+        const amount = this.GetEntriesAmount ();
+
+        if (amount == 1)        
+            return this.GetEntry (0);
+
+        else if (amount == 0)
+            Sys.VERBOSE ("GQL: Could not find TX", txid);
+        
+        else        
+            Sys.ERR ("Invalid amounts of entries returned for a TX-query: " + amount, TXID);
+            
+        return null;        
+    }
+}
 
 
 
@@ -731,5 +766,5 @@ function GetGQLValueStr (value)
 
 
 module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
-                   Query, TXQuery, DriveEntityQuery, LatestQuery, Entry, Tag,
+                   Query, TXQuery, DriveEntityQuery, LatestQuery, Entry, Tag, ByTXQuery,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

@@ -374,9 +374,8 @@ function DisplayVersion (argv)
 
 async function Testing (argv)
 { 
-    const entity = await ArFS.GetDriveEntity (argv.Pop () );
-
-    Sys.INFO (entity);
+    const status = await Arweave.GetTXStatus (argv.Pop() );
+    Sys.INFO (status);
  
 }
 

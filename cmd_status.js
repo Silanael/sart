@@ -110,7 +110,7 @@ async function HandleCommand (args)
         //    await Handler_ArFS (args, target);
 
         else
-            return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is. Valid commands are: " + SUBCOMMANDS.toString() );
+            return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is. Valid commands are: " + Util.KeysToStr (SUBCOMMANDS) );
     
         return false;
     }

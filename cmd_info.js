@@ -274,35 +274,36 @@ async function Handler_Drive (args)
 
     const drive_id = args.Pop ();
 
+
+
     if (! Util.IsArFSID (drive_id) )
         return Sys.ERR ("Not a valid ArFS Drive-ID: " + drive_id);
 
     else
     {
         const drive_entity = await ArFS.GetDriveEntity (drive_id);
+        let metadata_latest = null;
 
         if (drive_entity != null)
         {            
-            if (drive_entity.IsPublic)
+            metadata_latest = await __FetchMeta (drive_entity.TXID_Latest, drive_entity.IsPublic) ;
+
+            if (metadata_latest != null)
             {
-                try
-                {
-                    const metadata = JSON.parse (await Arweave.GetTxStrData (drive_entity.TXID_Latest) );
-                    if (metadata != null)
-                    {
-                        drive_entity.Name         = metadata.name;
-                        drive_entity.RootFolderID = metadata.rootFolderId;                        
-                    }
-                }
-                catch (Exception) { Sys.ON_EXCEPTION (exception, "INFO (Drive)"); }
+                drive_entity.Name         = metadata_latest.name;
+                drive_entity.RootFolderID = metadata_latest.rootFolderId;                        
             }
-            
+                        
+            const entries_amount = drive_entity.Entries != null ? drive_entity.Entries.length : 0;
+
             // Generate history
-            if (drive_entity.Entries != null)
+            if (entries_amount > 0)
             {                
                 let history = {};                
 
-                let txid, msg, date, index = 0;
+                let txid, msg, date, index = 0, meta;
+                let t_name = null;
+                let t_rfid = null;
 
                 // These are sorted with oldest first by GetEntriesForOwner.
                 for (const e of drive_entity.Entries)
@@ -314,10 +315,45 @@ async function Handler_Drive (args)
                         date = e.GetDate ();
                         msg  = (date != null ? date : Util.GetDummyDate () ) + " - "; 
 
-                        if (index == 0)
-                            msg += "Drive created.";                            
+                        if (entries_amount == 1 || index + 1 == entries_amount)
+                            meta = metadata_latest;
                         else
-                            msg += "Drive modified.";
+                            meta = await __FetchMeta (e.GetTXID (), drive_entity.IsPublic);
+                        
+                        if (index == 0)
+                        {
+                            msg += "Drive created" + (meta != null ? " with name " + meta.name + " and Root Folder ID " + meta.rootFolderId : "") + ".";  
+                            t_name = meta?.name;
+                            t_rfid = meta?.rootFolderId;
+                        }
+                        else
+                        {
+                            if (t_name != meta?.name)
+                            {
+                                t_name = meta?.name;
+                                msg += "Drive renamed to '" + t_name + "'";
+                                if (t_rfid =! meta?.rootFolderId)
+                                {
+                                    t_rfid = meta?.rootFolderId;
+                                    msg += " and Root Folder ID changed to " + t_rfid + ".";
+                                }
+                                else
+                                    msg += ".";
+                            }
+                            else if (t_rfid != meta?.rootFolderId)
+                            {
+                                t_rfid = meta?.rootFolderId;
+                                msg += "Root Folder ID changed to " + t_rfid + ".";                                
+                            }
+                            else
+                                msg += "Drive modified.";
+                                                        
+                        }
+
+                        if (Settings.IsDebug () && meta != null)
+                        {
+                            try { msg += " JSON:" + JSON.stringify (meta); } catch (e) { Sys.ON_EXCEPTION (e, "INFO.Drive"); }                            
+                        }
 
                         history[txid] = msg;
                     }
@@ -340,7 +376,20 @@ async function Handler_Drive (args)
     }
 }
 
+async function __FetchMeta (txid, is_public)
+{
+    if (!is_public)
+        return null;
 
+    try
+    {
+        const meta = JSON.parse (await Arweave.GetTxStrData (txid) );
+        return meta;        
+    }
+    catch (Exception) { Sys.ON_EXCEPTION (exception, "INFO (Drive)"); }   
+    
+    return null;
+}
 
 
 

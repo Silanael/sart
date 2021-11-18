@@ -317,7 +317,32 @@ async function GetTXStatus (txid)
 {
     const arweave  = await Init ();    
     
-    try               { let txstatus = await arweave.transactions.getStatus (txid); return txstatus; }
+    try               
+    { 
+        let txstatus = await arweave.transactions.getStatus (txid);
+        
+        // Currently (2021-11-18), the gateway doesn't return TX-status for transactions
+        // that are contained inside bundles, yet a GQL-query is able to fetch them.
+        if (txstatus != null && txstatus.status == TXSTATUS_NOTFOUND)
+        {
+            Sys.DEBUG ("arweave.transactions.getStatus returned 404, trying with a GQL-query..", txid);
+            
+            const query = new GQL.ByTXQuery (this);
+            const res = await query.Execute (txid);
+
+            if (res != null)
+            {
+                if (res.IsMined () )
+                    return { status: TXSTATUS_OK, confirmed: {} };
+                else 
+                    return { status: TXSTATUS_PENDING, confirmed: null };
+            }
+            else
+                return { status: TXSTATUS_NOTFOUND, confirmed: null };
+        }
+
+        return txstatus; 
+    }
     catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")", GetHostStr (arweave) ); tx = null;  }
 
     return null;
