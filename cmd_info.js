@@ -82,6 +82,9 @@ async function HandleCommand (args)
             await Handler_TX (args, info, tx);
     }
 
+    else if (target.toUpperCase () == "SILANAEL")
+        await Handler_Author (args);
+
     else
         return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is.");
   

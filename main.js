@@ -67,6 +67,7 @@ const Commands =
     "exit"        : Sys.EXIT,
     "quit"        : Sys.EXIT,
     "set"         : SetSetting,
+    "date"        : function (args) { Sys.INFO (Util.GetDate () + " local, " + Util.GetDate (null, null, true) + " UTC." ); return true; },
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,
@@ -93,9 +94,9 @@ const Flags =
     "--msg-stderr"      : { "F": function () { Settings.SetMsg (); 
                                                Settings.Config.MsgOut = Settings.OutputDests.STDERR },    "A":false },    
     "--verbose-stderr"  : { "F": function () { Settings.SetVerbose (); 
-                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR; },    "A":false },
+                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR; },   "A":false },
     "--debug-stderr"    : { "F": function () { Settings.SetDebug  (); 
-                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR; },    "A":false },
+                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR; },   "A":false },
     "--no-ansi"         : { "F": function () { Settings.Config.ANSIAllowed = false;}, "A":false },
     "-a"                : { "F": Settings.SetDisplayAll, "A":false },
     "--all"             : { "F": Settings.SetDisplayAll, "A":false },
@@ -374,9 +375,6 @@ function DisplayVersion (argv)
 
 async function Testing (argv)
 { 
-    const status = await Arweave.GetTXStatus (argv.Pop() );
-    Sys.INFO (status);
- 
 }
 
 

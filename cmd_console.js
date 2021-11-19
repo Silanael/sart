@@ -48,9 +48,9 @@ async function HandleCommand (args)
     // Banner
     PrintBanner ();
 
-    PrintEmptyLine ();
-    PrintLine ("!!! DEVELOPMENT VERSION !!!")    
-    PrintEmptyLine ();
+    // Info message
+    PrintInfoMessage ();
+
 
     PrintPrompt    ();
 
@@ -111,6 +111,21 @@ function PrintPrompt ()
 
 
 
+function PrintInfoMessage ()
+{    
+    const now = new Date ();
+
+    if (now.getMonth () * 32 + now.getDate () == 340)
+        Sys.INFO (Buffer.from ("52656D656D626572207468652046616C6C656E2E", 'hex').toString () );    
+
+    else
+        PrintLine ("!!! DEVELOPMENT VERSION !!!")    
+
+    PrintEmptyLine ();
+    
+    
+        
+}
 
 function PrintBanner ()
 {

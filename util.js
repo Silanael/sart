@@ -343,19 +343,23 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
 
 
 
-function GetDate (unixtime = null, date_time_spacer_chr = ' ')
+function GetDate (unixtime = null, date_time_spacer_chr = ' ', utc = false)
 {         
+    if (date_time_spacer_chr == null)
+        date_time_spacer_chr = ' ';
+
     const t = unixtime != null ? new Date (unixtime * 1000) : new Date ();
 
-    const y   = t.getFullYear ();
-    const m   = String (t.getMonth   () + 1 ) .padStart (2, '0'); // Fucking JavaScript.
-    const d   = String (t.getDate    ()     ) .padStart (2, '0');
-    const h   = String (t.getHours   ()     ) .padStart (2, '0');
-    const min = String (t.getMinutes ()     ) .padStart (2, '0');
-    const s   = String (t.getSeconds ()     ) .padStart (2, '0');
+    const y   = !utc ? t.getFullYear (): t.getUTCFullYear ();
+    const m   = String ( (!utc ? t.getMonth   () : t.getUTCMonth   ()) + 1 ) .padStart (2, '0'); // Fucking JavaScript.
+    const d   = String ( (!utc ? t.getDate    () : t.getUTCDate    ())     ) .padStart (2, '0');
+    const h   = String ( (!utc ? t.getHours   () : t.getUTCHours   ())     ) .padStart (2, '0');
+    const min = String ( (!utc ? t.getMinutes () : t.getUTCMinutes ())     ) .padStart (2, '0');
+    const s   = String ( (!utc ? t.getSeconds () : t.getUTCSeconds ())     ) .padStart (2, '0');
 
     return y + "-" + m + "-" + d + date_time_spacer_chr + h + ":" + min + ":" + s;
 }
+
 
 
 
