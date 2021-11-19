@@ -1346,8 +1346,8 @@ async function GetDriveEntity (drive_id)
     if (Util.IsArFSID (drive_id) )
     {
         Sys.VERBOSE ("Fetching drive info for " + drive_id + " ...");
-        const query = new GQL.DriveEntityQuery (Arweave);
-        const entity = await query.Execute (drive_id);
+        const query = new GQL.ArFSEntityQuery (Arweave);
+        const entity = await query.Execute (drive_id, "drive");
         
         return entity;
     }
@@ -1813,4 +1813,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity };
+module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetIDTag };

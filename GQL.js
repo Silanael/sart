@@ -11,7 +11,7 @@
 const Settings = require ('./settings.js');
 const Sys      = require ('./sys.js');
 const Util     = require ('./util.js');
-
+const ArFSDefs = require ('./ArFS_DEF.js');
 
 
 
@@ -557,7 +557,7 @@ class TXQuery extends Query
 }
 
 
-class DriveEntityQuery extends TXQuery
+class ArFSEntityQuery extends TXQuery
 {
    
    /* Override */ async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT} )
@@ -567,8 +567,7 @@ class DriveEntityQuery extends TXQuery
    }
    
 
-   /** Retrieve drive's owner address. */
-   async Execute (drive_id)
+   async Execute (arfs_id, entity_type)
    {       
         this.Sort = SORT_OLDEST_FIRST;
 
@@ -579,8 +578,8 @@ class DriveEntityQuery extends TXQuery
                     sort: this.Sort,
                     tags:   
                     [ 
-                        Tag.QUERYTAG ("Entity-Type",  "drive"),
-                        Tag.QUERYTAG ("Drive-Id",     drive_id),                        
+                        Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE,           entity_type),
+                        Tag.QUERYTAG (ArFSDefs.GetIDTag (entity_type),   arfs_id),                        
                     ],                     
                     
             })
@@ -592,22 +591,117 @@ class DriveEntityQuery extends TXQuery
             const owner        = first_entry.GetOwner ();
             const newest_entry = this.GetNewestEntry  (owner);
 
+            const entries = this.GetEntriesForOwner (owner);
+
+
             if (first_entry != null)
             {
                 const entity = 
-                {                                        
-                    Privacy:    first_entry.GetTag   ("Drive-Privacy"),
-                    Drive_ID:   first_entry.GetTag   ("Drive-Id"),
-                    Owner:      owner,                    
+                {        
+                    "Entity-Type": entity_type,
+                    "ArFS-ID":     arfs_id,
+                    Owner:         owner,
+                    TXID_Created:  first_entry ?.GetTXID (),
+                    TXID_Latest:   newest_entry?.GetTXID (),                    
+                    Operations:    entries?.length,
+                    IsEncrypted:   first_entry?.HasTag (ArFSDefs.TAG_CIPHER),
                 }
 
-                const entries = this.GetEntriesForOwner (owner);
 
-                entity.IsPublic = entity.Privacy == "public";
+                if (entity.IsEncrypted)
+                    entity.Cipher = first_entry?.GetTag (ArFSDefs.TAG_CIPHER);
 
-                entity.Operations   = entries != null ? entries.length : -1;
-                entity.TXID_Created = first_entry?.GetTXID  ();
-                entity.TXID_Latest  = newest_entry?.GetTXID ();
+
+                // Just some verification for odd edge-cases.
+                for (const c of entries)
+                {
+                    const enc    = c.HasTag (ArFSDefs.TAG_CIPHER);
+                    const cipher = c.GetTag (ArFSDefs.TAG_CIPHER);
+
+                    if (entity.IsEncrypted != enc || entity.Cipher != cipher)
+                    {
+                        Sys.ERR ("Inconsistency between metadata-updates regarding " + ArFSDefs.TAG_CIPHER + ".", arfs_id);
+                        
+                        entity.Errors = Util.Append (entity.Errors, "Inconsistency in cipher.", " ");
+                    }                    
+                }
+
+
+                entity.IsPublic = entity.IsEncrypted != null ? ! entity.IsEncrypted 
+                                                             : entity.Privacy == "private" ? false : true;
+
+
+                // Could maybe move files between drives in the future?
+                entity.DriveID = newest_entry.GetTag (ArFSDefs.TAG_DRIVEID);
+
+                if (newest_entry.HasTag (ArFSDefs.TAG_FOLDERID) )
+                    entity.FolderID = newest_entry.GetTag (ArFSDefs.TAG_FOLDERID);
+
+                if (newest_entry.HasTag (ArFSDefs.TAG_PARENTFOLDERID) )
+                    entity.ParentFolderID = newest_entry.GetTag (ArFSDefs.TAG_PARENTFOLDERID);
+
+                if (newest_entry.HasTag (ArFSDefs.TAG_FILEID) )
+                    entity.FileID = newest_entry.GetTag (ArFSDefs.TAG_FILEID);
+
+
+                
+                if (entity.DriveID == null)
+                {
+                    Sys.ERR ("Drive ID missing.", arfs_id);
+                    entity.Errors = Util.Append (entity.Errors, "Drive-ID missing.", " ");
+                }
+
+
+
+                // Entity-Type -specific stuff.
+                switch (entity_type)
+                {
+                    case ArFSDefs.ENTITYTYPE_FILE:
+                        if (entity.FileID == null)
+                        {                                                        
+                            const err = "File ID missing.";
+                            Sys.ERR (err, arfs_id);
+                            entity.Errors = Util.Append (entity.Errors, err, " ");                            
+                        }
+
+                        if (entity.ParentFolderID == null)
+                        {
+                            const err = "Parent-folder ID missing.";
+                            Sys.ERR (err, arfs_id);
+                            entity.Errors = Util.Append (entity.Errors, err, " ");
+                        }
+                        break;
+
+                    case ArFSDefs.ENTITYTYPE_FOLDER:
+                        if (entity.FolderID == null)
+                        {                                                        
+                            const err = "Folder ID missing.";
+                            Sys.ERR (err, arfs_id);
+                            entity.Errors = Util.Append (entity.Errors, err, " ");                            
+                        }
+
+                        if (entity.ParentFolderID == null)
+                        {
+                            const err = "Parent-folder ID missing.";
+                            Sys.ERR (err, arfs_id);
+                            entity.Errors = Util.Append (entity.Errors, err, " ");
+                        }                        
+                        break;
+
+                        
+                    case ArFSDefs.ENTITYTYPE_DRIVE:                        
+                        entity.Privacy     = newest_entry.GetTag (ArFSDefs.TAG_DRIVEPRIVACY);
+                        entity.AuthMode    = newest_entry.GetTag (ArFSDefs.TAG_DRIVEAUTHMODE)
+                        break;
+
+                    default:
+                        Sys.ERR ("Unknown Entity-Type " + entity_type + " at ArFSEntityQuery.");
+                        break;
+                }
+                
+                
+                
+
 
                 entity.FirstEntry  = first_entry;
                 entity.NewestEntry = newest_entry;
@@ -620,7 +714,7 @@ class DriveEntityQuery extends TXQuery
 
                 if (Settings.IsDebug () )
                 {
-                    Sys.DEBUG ("Fetched drive entity for Drive-ID: " + drive_id + " :");
+                    Sys.DEBUG ("Fetched drive entity for Drive-ID: " + arfs_id + " :");
                     Sys.DEBUG (entity);
                 }
                 
@@ -629,7 +723,7 @@ class DriveEntityQuery extends TXQuery
                     Sys.VERBOSE ("Fetched drive entity. Owner:"  + entity.owner 
                                  + " Privacy:"                   + entity.Privacy, 
                                  + " TXID:"                      + entity.TXID, 
-                                 drive_id);
+                                 arfs_id);
                 }
                 
                 
@@ -644,7 +738,7 @@ class DriveEntityQuery extends TXQuery
 
         else
         {
-            Sys.ERR ("Failed to retrieve owner for Drive-ID: " + drive_id);
+            Sys.ERR ("Failed to retrieve owner for Drive-ID: " + arfs_id);
             return null;
         }
    }
@@ -772,5 +866,5 @@ function GetGQLValueStr (value)
 
 
 module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
-                   Query, TXQuery, DriveEntityQuery, LatestQuery, Entry, Tag, ByTXQuery,
+                   Query, TXQuery, ArFSEntityQuery, LatestQuery, Entry, Tag, ByTXQuery,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

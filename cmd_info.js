@@ -325,7 +325,7 @@ async function Handler_Drive (args)
                         
                         if (index == 0)
                         {
-                            msg += "Drive created" + (meta != null ? " with name " + meta.name + " and Root Folder ID " + meta.rootFolderId : "") + ".";  
+                            msg += "Drive created" + (meta != null ? " with name '" + meta.name + "' and Root Folder ID " + meta.rootFolderId : "") + ".";  
                             t_name = meta?.name;
                             t_rfid = meta?.rootFolderId;
                         }
