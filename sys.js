@@ -329,8 +329,6 @@ function ERR (str, src)
 // An error that can be overridden with --force
 function ERR_OVERRIDABLE (str, src)
 {
-    ERR (str);
-
     if (!Settings.IsForceful () )
         return ERR_ABORT (str, src);
 

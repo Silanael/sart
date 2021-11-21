@@ -23,7 +23,11 @@ const Analyze      = require ('./TXAnalyze.js');
 const SUBCOMMANDS = 
 {
     "tx"     : Handler_TX,
-    "drive"  : Handler_Drive,
+    "arfs"   : Handler_ArFS,
+    "drive"  : async function (args) { return await Handler_ArFS (args, ArFS_DEF.ENTITYTYPE_DRIVE);  },
+    "file"   : async function (args) { return await Handler_ArFS (args, ArFS_DEF.ENTITYTYPE_FILE);   },
+    "folder" : async function (args) { return await Handler_ArFS (args, ArFS_DEF.ENTITYTYPE_FOLDER); },
+    
     "sart"   : Handler_SART,
     "author" : Handler_Author,
 };
@@ -35,13 +39,10 @@ function Help (args)
     Sys.INFO ("----------");
     Sys.INFO ("");
     Sys.INFO ("Transaction info:")
-    Sys.INFO ("   info <txid>");
-    Sys.INFO ("");
-    Sys.INFO ("Transaction tags:")
-    Sys.INFO ("   info <txid> tags");    
-    Sys.INFO ("");
-    Sys.INFO ("ArFS drive info")
-    Sys.INFO ("   info drive <drive-id>"); 
+    Sys.INFO ("   info <txid> (tags)");
+    Sys.INFO ("");    
+    Sys.INFO ("ArFS entity info:")
+    Sys.INFO ("   info (arfs) [drive/file/folder] <drive-id>"); 
     Sys.INFO ("");
     Sys.INFO ("Program/author info:")
     Sys.INFO ("   info [sart/author]");
@@ -55,37 +56,37 @@ async function HandleCommand (args)
     if ( ! args.RequireAmount (1, "Valid targets: " + Util.KeysToStr (SUBCOMMANDS) ) )
         return false;
 
-    const target = args.Pop ();
-
-    const info =
-    {
-        ItemType:     "UNKNOWN",        
-        Network:      "Arweave",
-        Valid:        false,   
-    }
-
+    const target  = args.Pop ();
     const handler = SUBCOMMANDS[target.toLowerCase () ];
 
     // Invoke handler if found
     if (handler != null)
     {
-        Sys.VERBOSE ("INFO: Invoking subcommand-handler for '" + target + "'...");
-        await handler (args, info);
+        Sys.VERBOSE ("Invoking subcommand-handler for '" + target + "'...");
+        await handler (args);
     }
 
 
     // Arweave-hash, could be either an address or a transaction.
     else if (Util.IsArweaveHash (target) )
-    {
+    {        
         // Check for transaction
         const tx = await Arweave.GetTx (target);
         if (tx != null)
-            await Handler_TX (args, info, tx);
+        {
+            Sys.VERBOSE ("Assuming " + target + " is a TXID.");
+            await Handler_TX (args, tx);
+        }
+        else
+            Sys.ERR ("Could not find transaction " + target + ". Address info display not yet implemented.");
     }
 
     // ArFS-ID.
     else if (Util.IsArFSID (target) )    
+    {
+        Sys.VERBOSE ("Assuming " + target + " is an ArFS-ID.");
         await DisplayArFSEntity (target, null);
+    }
     
 
     else if (target.toUpperCase () == "SILANAEL")
@@ -94,16 +95,14 @@ async function HandleCommand (args)
     else
         return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is.");
   
-    if (info.Valid)
-        Sys.OUT_OBJ (info, {recursive_fields: ["Tags", "State", "confirmed"] });
 }
 
 
 
 
-async function Handler_TX (args, info, tx = null)
+async function Handler_TX (args, tx = null)
 {
-
+    info = { };
     info.ItemType = "Transaction";
 
     if (tx == null)
@@ -120,7 +119,7 @@ async function Handler_TX (args, info, tx = null)
             tx = await Arweave.GetTx (txid);
             
         else
-            return Sys.ERR_ABORT ("Not a valid transaction id: " + txid);
+            return Sys.ERR_ABORT ("Not a valid transaction ID: " + txid);
                  
     }
     else
@@ -133,7 +132,7 @@ async function Handler_TX (args, info, tx = null)
     if (info.State != null)
     {
         const statuscode    = info.State.status;
-        const confirmations = info.State.confirmed["number_of_confirmations"];
+        const confirmations = info.State?.confirmed?.number_of_confirmations;
 
         info.Status        = Arweave.GetTXStatusStr (statuscode, confirmations);
         info.StatusCode    = statuscode;
@@ -145,7 +144,7 @@ async function Handler_TX (args, info, tx = null)
 
 
     if (tx == null)
-        return Sys.ERR_ABORT ("Failed to retrieve transaction '" + txid + "'.");
+        return Sys.ERR_ABORT ("Could not find transaction '" + info.TXID + "'.");
 
     
 
@@ -212,7 +211,10 @@ async function Handler_TX (args, info, tx = null)
     info.Description = Analyze.GetTXEntryDescription (GQL.Entry.FromTX (tx, info.Address) );
 
 
-    info.Valid = true;
+    // Output
+    Sys.OUT_OBJ (info, {recursive_fields: ["Tags", "State", "confirmed"] } );
+    
+
     return true;
 }
 
@@ -378,7 +380,7 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
             if (guessing)
                 Sys.VERBOSE ("ArFS-ID " + arfs_id + " was not of Entity-Type:" + entity_type + " .");
             else
-                return Sys.ERR ("Failed to get ArFS-entity for ID '" + arfs_id + "'.");
+                return Sys.ERR ("Failed to get ArFS-" + entity_type + "-entity for ID '" + arfs_id + "'.");
         }
 
         return false;
@@ -386,31 +388,24 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
 }
 
 
-async function Handler_Drive (args)
+async function Handler_ArFS (args, entity_type = null)
 {
-    if (! args.RequireAmount (1, "Drive-ID required") )
-        return false;
-
-    const drive_id = args.Pop ();
-
-    if (! Util.IsArFSID (drive_id) )
-        return Sys.ERR ("Not a valid ArFS Drive-ID: " + drive_id);
-
-    else
+    if (entity_type == null)
     {
-        const drive_entity = await ArFS.GetDriveEntity (drive_id);
-
-        if (drive_entity != null)
-        {     
-            await drive_entity.UpdateHistory (Arweave);       
-           
-            Sys.OUT_OBJ (drive_entity.GetInfo (), { recursive_fields: ["History"] } );
-            return true;
-        }
+        if (! args.RequireAmount (2, "Entity-Type (" + ArFS_DEF.ARFS_ENTITY_TYPES.toString () +") and ArFS-ID required.") )
+            return false;
         
-        else
-            return Sys.ERR ("Failed to get ArFS-entity for drive " + drive_id + ".");
+        entity_type = args.PopLC ();
+
+        if ( ! ArFS_DEF.IsValidEntityType (entity_type) && 
+             ! Sys.ERR_OVERRIDABLE ("Unknown entity type '" + entity_type + "'. Valid ones: " + ArFS_DEF.ARFS_ENTITY_TYPES.toString() ) )
+             return false;
     }
+    else
+        if (! args.RequireAmount (1, ArFS_DEF.GetIDTag (entity_type) + " required.") )
+            return false;
+
+    return await DisplayArFSEntity (args.Pop (), entity_type);    
 }
 
 

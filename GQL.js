@@ -938,7 +938,7 @@ class ArFSEntityQuery extends TXQuery
 
         else
         {
-            Sys.VERBOSE ("Failed to retrieve ArFS-entity for ID '" + arfs_id + "'.");
+            Sys.VERBOSE ("Failed to retrieve " + entity_type + "-entity for ID '" + arfs_id + "'.");
             return null;
         }
    }

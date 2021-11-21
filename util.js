@@ -463,7 +463,9 @@ function DecodeTXTags (tx, dest_obj = null, prefix = "")
     {
         const decoded_tags = [];
                          
-        let tag;Append
+        let tag;
+        let e;
+        for (let C = 0; C < len; ++C)
         {
             tag = tx.tags[C];
             e = new TXTag 
