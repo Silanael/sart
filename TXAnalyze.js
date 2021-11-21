@@ -9,6 +9,7 @@
 const Util     = require ('./util.js');
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
+const ArFSDefs = require ('./ArFS_DEF.js');
 const ZLib     = require('zlib');
 
 
@@ -163,7 +164,19 @@ class Pattern_ArFSEntity extends Pattern
 {
     constructor () 
     {
-        this.WithRequirement ("ArFS", ".");        
+        super ();
+        this.WithRequirement (ArFSDefs.TAG_ARFS, ".");        
+        this.WithDescription ("ArFS-entity");
+    }
+}
+
+class Pattern_ArFS_TX extends Pattern
+{
+    constructor () 
+    {
+        super ();
+        this.WithRequirement ("App-Name", ".*ArDrive.*");        
+        this.WithDescription ("ArFS-transaction");
     }
 }
 
@@ -173,14 +186,65 @@ class Pattern_ArFSFile extends Pattern_ArFSEntity
 {
     constructor () 
     {
-        this.AddRequirement ("Entity-Type", "file");
+        super ();
+        this.WithRequirement (ArFSDefs.TAG_ENTITYTYPE, ArFSDefs.ENTITYTYPE_FILE);        
+        this.WithDescription ("File metadata [ArFS]");
+    }    
+}
+
+class Pattern_ArFSFolder extends Pattern_ArFSEntity
+{
+    constructor () 
+    {
+        super ();
+        this.WithRequirement (ArFSDefs.TAG_ENTITYTYPE, ArFSDefs.ENTITYTYPE_FOLDER);        
+        this.WithDescription ("Folder metadata [ArFS]");
+    }    
+}
+
+class Pattern_ArFSDrive extends Pattern_ArFSEntity
+{
+    constructor (is_public) 
+    {
+        super ();
+        this.WithRequirement (ArFSDefs.TAG_ENTITYTYPE, ArFSDefs.ENTITYTYPE_DRIVE);        
+        this.WithRequirement (ArFSDefs.TAG_DRIVEPRIVACY, is_public ? "public" : "private");
+        this.WithDescription ((is_public ? "Public" : "Private") + " drive metadata [ArFS]");
+    }    
+}
+
+class Pattern_ArFSFileData extends Pattern_ArFS_TX
+{
+    constructor (is_public) 
+    {
+        super ();
+        this.WithRequirement (ArFSDefs.TAG_ENTITYTYPE, ArFSDefs.ENTITYTYPE_FILE);
+        this.WithRequirement (ArFSDefs.TAG_CIPHER, is_public ? null : ".*");
+
+        this.WithDescription ((is_public ? "Public" : "Private") + " file [ArFS]");
     }    
 }
 
 
-
 const PATTERNS =
 [
+    new Pattern_SPS          (),
+    new Pattern_PathManifest (),
+
+    new Pattern_ArFS_TX      (),
+    new Pattern_ArFSEntity   (),
+    new Pattern_ArFSDrive    (true),
+    new Pattern_ArFSDrive    (false),
+    new Pattern_ArFSFolder   (),
+    new Pattern_ArFSFile     (),
+    new Pattern_ArFSFileData (true),
+    new Pattern_ArFSFileData (false),
+
+    new Pattern     ().WithRequirement      ("page:url", ".*")         .WithRequirement      ("page:timestamp", ".*")    .WithDescription ("Archived webpage"),
+    new Pattern     ().WithRequirementExact ("App-Name", "ArConnect")  .WithRequirementExact ("Type", "Fee-Transaction") .WithDescription ("ArConnect-fee"),
+    new Pattern     ().WithRequirementExact ("App-Name", "argora")                                                       .WithDescription ("Argora"),
+
+    /*
     new Pattern     ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "file")  .WithDescription ("ArFS-file"),
     new Pattern     ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "folder").WithDescription ("ArFS-folder"),
     new Pattern     ().WithRequirement ("ArFS", ".*")             .WithRequirement ("Entity-Type", "drive") .WithDescription ("ArFS-drive"),
@@ -191,12 +255,10 @@ const PATTERNS =
     new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*").WithRequirement ("Type", "data upload")  .WithDescription ("ArDrive-fee"),
     new Pattern     ().WithRequirement ("App-Name", ".*ArDrive.*")                                          .WithDescription ("ArDrive"),
     new Pattern     ().WithRequirement ("ArFS", ".*")                                                       .WithDescription ("ArFS"),
+    */
+
     
-    new Pattern     ().WithRequirement      ("page:url", ".*")         .WithRequirement      ("page:timestamp", ".*")    .WithDescription ("Archived webpage"),
-    new Pattern     ().WithRequirementExact ("App-Name", "ArConnect")  .WithRequirementExact ("Type", "Fee-Transaction") .WithDescription ("ArConnect-fee"),
-    new Pattern     ().WithRequirementExact ("App-Name", "argora")                                                       .WithDescription ("Argora"),
-    new Pattern_SPS (),
-    new Pattern_PathManifest ()
+    
 ];
 
 

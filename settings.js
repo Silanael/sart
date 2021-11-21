@@ -87,12 +87,16 @@ const Config =
     VerifyDefaultFlags     : "SUMMARY,NOT-VERIFIED",
     VerifyDefaultFlags_NUM : "SUMMARY,ALL",
 
+    ArFSEntityTryOrder     : "drive,file,folder",
+
     Force                  : false,
       
     MaxArFSMetadataSize    : 1073741824, // 1MB ought to be enough for anybody?
     MaxTXFormat            : 2,
     MinArFSVersion         : 0.11,
     MaxArFSVersion         : 0.11,
+    SafeConfirmationsMin   : 15,
+
     ContainerMode          : false,
   
 };

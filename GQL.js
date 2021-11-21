@@ -89,6 +89,41 @@ class Entry
         }
     }
 
+    static FromTX (tx, owner)
+    {        
+        if (tx != null)
+        {
+            const entry = new Entry ();
+
+            if (Settings.IsForceful () || Settings.Config.MaxTXFormat == null || tx.format <= Settings.Config.MaxTXFormat)
+            {
+                entry.TXID             = tx.id;
+                entry.Owner            = owner;
+                entry.BlockHeight      = null;                
+                entry.Timestamp        = null;
+                entry.Fee_Winston      = Number (tx.reward);
+                entry.Fee_AR           = null;
+                entry.Quantity_Winston = Number (tx.quantity);
+                entry.Quantity_AR      = null;
+                entry.DataSize_Bytes   = Number (tx.data_size);
+
+                // TODO: Remove this hack, unify everything to use TXTag.
+                const tags = Util.DecodeTXTags (tx);
+                entry.Tags = [];
+                for (const t of tags)
+                {
+                    entry.Tags.push ( {name:t.Name, value:t.Value} )
+                }
+            }
+            else
+                Sys.ERR ("Unsupported transaction format/version '" + tx.format + "'. Use --force to process anyway.");
+
+            return entry;
+        }
+        else
+            return null;
+    }
+
 
     GetTXID        ()    { return this.TXID;                                                     }
     GetOwner       ()    { return this.Owner;                                                    }
@@ -113,7 +148,7 @@ class Entry
 
     GetTag (tag)
     { 
-        const r = this.Tags.find (e => e.name == tag);
+        const r = this.Tags?.find (e => e.name == tag);
         return r != null ? r.value : null;
     }
 
@@ -557,6 +592,47 @@ class TXQuery extends Query
 }
 
 
+class Entity
+{
+
+    EntityType = null;
+
+    Info =
+    {
+        "Entity-Type": null,
+        "ArFS-ID":     null,
+        Owner:         null,
+        TXID_Created:  null,
+        TXID_Latest:   null,
+        Operations:    null,
+        IsEncrypted:   null,
+        IsPublic:      null,
+        Errors:        null,
+    }
+
+    Entries     = null;
+    FirstEntry  = null;
+    NewestEntry = null;
+    Query       = null;
+
+    
+    constructor (info = null) 
+    { 
+        if (info != null) 
+            this.Info = info; 
+    }
+
+    IsPublic          ()      { return this.Info?.IsPublic    == true;                           }
+    IsEncrypted       ()      { return this.Info?.IsEncrypted == true;                           }
+    GetInfo           ()      { return this.Info;                                                }
+    GetOwner          ()      { return this.Info?.Owner;                                         }
+    GetPrivacy        ()      { return this.Info?.Privacy;                                       }
+    GetNewestMetaTXID ()      { return this.Info?.TXID_Latest;                                   }
+    GetFirstMetaTXID  ()      { return this.Info?.TXID_Created;                                  }
+    AddError          (error) { this.Info.Errors = Util.Append (this.Info.Errors, error, " ");    }    
+
+}
+
 class ArFSEntityQuery extends TXQuery
 {
    
@@ -596,7 +672,7 @@ class ArFSEntityQuery extends TXQuery
 
             if (first_entry != null)
             {
-                const entity = 
+                const entity = new Entity (
                 {        
                     "Entity-Type": entity_type,
                     "ArFS-ID":     arfs_id,
@@ -605,50 +681,37 @@ class ArFSEntityQuery extends TXQuery
                     TXID_Latest:   newest_entry?.GetTXID (),                    
                     Operations:    entries?.length,
                     IsEncrypted:   first_entry?.HasTag (ArFSDefs.TAG_CIPHER),
-                }
+                });
+
+                entity.EntityType  = entity_type;
+                entity.FirstEntry  = first_entry;
+                entity.NewestEntry = newest_entry;
+                entity.Entries     = entries;
+                entity.Query       = this;
 
 
-                if (entity.IsEncrypted)
-                    entity.Cipher = first_entry?.GetTag (ArFSDefs.TAG_CIPHER);
+                if (entity.Operations <= 0)
+                    Sys.ERR ("Something went wrong - couldn't get entries matching owner " + owner);
 
 
-                // Just some verification for odd edge-cases.
-                for (const c of entries)
-                {
-                    const enc    = c.HasTag (ArFSDefs.TAG_CIPHER);
-                    const cipher = c.GetTag (ArFSDefs.TAG_CIPHER);
-
-                    if (entity.IsEncrypted != enc || entity.Cipher != cipher)
-                    {
-                        Sys.ERR ("Inconsistency between metadata-updates regarding " + ArFSDefs.TAG_CIPHER + ".", arfs_id);
-                        
-                        entity.Errors = Util.Append (entity.Errors, "Inconsistency in cipher.", " ");
-                    }                    
-                }
-
-
-                entity.IsPublic = entity.IsEncrypted != null ? ! entity.IsEncrypted 
-                                                             : entity.Privacy == "private" ? false : true;
-
-
+    
                 // Could maybe move files between drives in the future?
-                entity.DriveID = newest_entry.GetTag (ArFSDefs.TAG_DRIVEID);
+                entity.Info.DriveID = newest_entry.GetTag (ArFSDefs.TAG_DRIVEID);
 
                 if (newest_entry.HasTag (ArFSDefs.TAG_FOLDERID) )
-                    entity.FolderID = newest_entry.GetTag (ArFSDefs.TAG_FOLDERID);
+                    entity.Info.FolderID = newest_entry.GetTag (ArFSDefs.TAG_FOLDERID);
 
                 if (newest_entry.HasTag (ArFSDefs.TAG_PARENTFOLDERID) )
-                    entity.ParentFolderID = newest_entry.GetTag (ArFSDefs.TAG_PARENTFOLDERID);
+                    entity.Info.ParentFolderID = newest_entry.GetTag (ArFSDefs.TAG_PARENTFOLDERID);
 
                 if (newest_entry.HasTag (ArFSDefs.TAG_FILEID) )
-                    entity.FileID = newest_entry.GetTag (ArFSDefs.TAG_FILEID);
+                    entity.Info.FileID = newest_entry.GetTag (ArFSDefs.TAG_FILEID);
 
-
-                
-                if (entity.DriveID == null)
+            
+                if (entity.Info.DriveID == null)
                 {
                     Sys.ERR ("Drive ID missing.", arfs_id);
-                    entity.Errors = Util.Append (entity.Errors, "Drive-ID missing.", " ");
+                    entity.AddError ("Drive-ID missing.");
                 }
 
 
@@ -657,72 +720,94 @@ class ArFSEntityQuery extends TXQuery
                 switch (entity_type)
                 {
                     case ArFSDefs.ENTITYTYPE_FILE:
-                        if (entity.FileID == null)
+
+                        if (entity.Info.FileID == null)
                         {                                                        
                             const err = "File ID missing.";
                             Sys.ERR (err, arfs_id);
-                            entity.Errors = Util.Append (entity.Errors, err, " ");                            
+                            entity.AddError (err);
                         }
 
-                        if (entity.ParentFolderID == null)
+                        if (entity.Info.ParentFolderID == null)
                         {
                             const err = "Parent-folder ID missing.";
                             Sys.ERR (err, arfs_id);
-                            entity.Errors = Util.Append (entity.Errors, err, " ");
+                            entity.AddError (err);
                         }
                         break;
 
                     case ArFSDefs.ENTITYTYPE_FOLDER:
-                        if (entity.FolderID == null)
+
+                        if (entity.Info.FolderID == null)
                         {                                                        
                             const err = "Folder ID missing.";
                             Sys.ERR (err, arfs_id);
-                            entity.Errors = Util.Append (entity.Errors, err, " ");                            
+                            entity.AddError (err);
                         }
 
-                        if (entity.ParentFolderID == null)
+                        if (entity.Info.ParentFolderID == null)
                         {
                             const err = "Parent-folder ID missing.";
                             Sys.ERR (err, arfs_id);
-                            entity.Errors = Util.Append (entity.Errors, err, " ");
+                            entity.AddError (err);
                         }                        
                         break;
 
-                        
+
                     case ArFSDefs.ENTITYTYPE_DRIVE:                        
-                        entity.Privacy     = newest_entry.GetTag (ArFSDefs.TAG_DRIVEPRIVACY);
-                        entity.AuthMode    = newest_entry.GetTag (ArFSDefs.TAG_DRIVEAUTHMODE)
+
+                        entity.Info.Privacy     = newest_entry.GetTag (ArFSDefs.TAG_DRIVEPRIVACY);
+
+                        // This seems to be deprecated - the web client (1.2.6) no longer adds it.
+                        if (newest_entry.HasTag (ArFSDefs.TAG_DRIVEAUTHMODE) )
+                            entity.Info.AuthMode    = newest_entry.GetTag (ArFSDefs.TAG_DRIVEAUTHMODE);
+
                         break;
 
                     default:
-                        Sys.ERR ("Unknown Entity-Type " + entity_type + " at ArFSEntityQuery.");
+                        const err = "Unknown Entity-Type " + entity_type;
+                        Sys.ERR (err + " at ArFSEntityQuery.");
+                        entity.AddError (err);
                         break;
                 }
                 
-                
-                
+
+                if (entity.Info.IsEncrypted)
+                    entity.Info.Cipher = first_entry?.GetTag (ArFSDefs.TAG_CIPHER);
 
 
-                entity.FirstEntry  = first_entry;
-                entity.NewestEntry = newest_entry;
-                entity.Entries     = entries;
-                entity.Query       = this;
+                // Just some verification for odd edge-cases.
+                for (const c of entries)
+                {
+                    const enc    = c.HasTag (ArFSDefs.TAG_CIPHER);
+                    const cipher = c.GetTag (ArFSDefs.TAG_CIPHER);
 
-                if (entity.Operations <= 0)
-                    Sys.ERR ("Something went wrong - couldn't get entries matching owner " + owner);
+                    if (entity.Info.IsEncrypted != enc || entity.Info.Cipher != cipher)
+                    {
+                        Sys.ERR ("Inconsistency between metadata-updates regarding " + ArFSDefs.TAG_CIPHER + ".", arfs_id);                        
+                        entity.AddError ("Inconsistency in cipher.");
+                    }                    
+                }
+
+
+                entity.Info.IsPublic = entity.Info.IsEncrypted != null ? ! entity.Info.IsEncrypted 
+                                                                       : entity.Info.Privacy == "private" ? false : true;
+
+
+
 
 
                 if (Settings.IsDebug () )
                 {
-                    Sys.DEBUG ("Fetched drive entity for Drive-ID: " + arfs_id + " :");
+                    Sys.DEBUG ("Fetched ArFS-entity " + arfs_id + " :");
                     Sys.DEBUG (entity);
                 }
                 
                 if (Settings.IsVerbose () )
                 {
-                    Sys.VERBOSE ("Fetched drive entity. Owner:"  + entity.owner 
-                                 + " Privacy:"                   + entity.Privacy, 
-                                 + " TXID:"                      + entity.TXID, 
+                    Sys.VERBOSE ("Fetched ArFS-entity - Owner:"  + entity.GetOwner () 
+                                 + " Privacy:"                   + entity.GetPrivacy (), 
+                                 + " TXID:"                      + entity.GetNewestMetaTXID (), 
                                  arfs_id);
                 }
                 

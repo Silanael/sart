@@ -15,6 +15,8 @@ const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
 const GQL          = require ('./GQL.js');
 const Package      = require ('./package.json');
+const ArFS_DEF     = require('./ArFS_DEF.js');
+const Analyze      = require ('./TXAnalyze.js');
 
 
 
@@ -57,8 +59,7 @@ async function HandleCommand (args)
 
     const info =
     {
-        Type:         "UNKNOWN",
-        Identifier:   target,
+        ItemType:     "UNKNOWN",        
         Network:      "Arweave",
         Valid:        false,   
     }
@@ -89,7 +90,7 @@ async function HandleCommand (args)
         return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is.");
   
     if (info.Valid)
-        Sys.OUT_OBJ (info);
+        Sys.OUT_OBJ (info, {recursive_fields: ["Tags", "State", "confirmed"] });
 }
 
 
@@ -97,6 +98,8 @@ async function HandleCommand (args)
 
 async function Handler_TX (args, info, tx = null)
 {
+
+    info.ItemType = "Transaction";
 
     if (tx == null)
     {
@@ -106,26 +109,49 @@ async function Handler_TX (args, info, tx = null)
         const txid = args.Pop ();
         Sys.VERBOSE ("INFO: Processing TXID: " + txid);
 
+        info.TXID = txid;
 
         if (Util.IsArweaveHash (txid) )
             tx = await Arweave.GetTx (txid);
-
+            
         else
             return Sys.ERR_ABORT ("Not a valid transaction id: " + txid);
+                 
+    }
+    else
+        info.TXID = tx.id;
 
-        if (tx == null)
-            return Sys.ERR_ABORT ("Failed to retrieve transaction '" + txid + "'.");
+
+    // Get status and the actual transaction
+    info.State = await Arweave.GetTXStatus (info.TXID);
+
+    if (info.State != null)
+    {
+        const statuscode    = info.State.status;
+        const confirmations = info.State.confirmed["number_of_confirmations"];
+
+        info.Status        = Arweave.GetTXStatusStr (statuscode, confirmations);
+        info.StatusCode    = statuscode;
+        info.Confirmations = confirmations;
     }
 
+    else
+        Sys.ERR ("PROGRAM ERROR: Failed to retrieve TX status object!", info.TXID);
+
+
+    if (tx == null)
+        return Sys.ERR_ABORT ("Failed to retrieve transaction '" + txid + "'.");
+
     
-    info.Type     = "Transaction";
+
+    // Start parsing the transaction        
     info.TXFormat = tx.format;
-    info.TXID     = tx.id;
+    
 
     // Check that we can understand this version.
     if (tx.format > Settings.Config.MaxTXFormat)        
     {
-        Sys.ERR ("Transaction format '" + tx.format + "' unsupported. Use --force to override.");
+        Sys.ERR ("Transaction format '" + tx.format + "' unsupported. Use --force to override (or increase Config.MaxTXFormat).");
         if (! Settings.IsForceful () )
             return info;
     }
@@ -134,20 +160,28 @@ async function Handler_TX (args, info, tx = null)
     info.Address  = await Arweave.OwnerToAddress (tx.owner);             
     info.LastTX   = tx.last_tx;
     
-    if (Util.IsSet (tx.target) ) info.Target   = tx.target;   
+    if (Util.IsSet (tx.target) )
+        info.Target   = tx.target;   
     
 
     // Tags
     info.TagsAmount = tx.tags?.length > 0 ? tx.tags.length : 0;
+
     if (info.TagsAmount > 0)
-        Util.DecodeTXTags (tx, info, "TAG:");        
+    {
+        info.Tags = {}
+        Util.DecodeTXTags (tx, info.Tags);
+
+        if (info.Tags[ArFS_DEF.TAG_UNIXTIME] != null)
+            info.ReportedDate = Util.GetDate (info.Tags[ArFS_DEF.TAG_UNIXTIME]);
+    }
 
 
     // Data
     if (tx.data_size != null && tx.data_size > 0)
     {
-        info.DataSize_Bytes = tx.data_size;            
-        info.DataLocation   = tx.data?.length > 0 ? "TX" : "DataRoot";
+        info.DataSizeBytes = tx.data_size;            
+        info.DataLocation  = tx.data?.length > 0 ? "TX" : "DataRoot";
         
         if (tx.data_root != null && tx.data_root != "")
             info.DataRoot = tx.data_root;
@@ -166,7 +200,12 @@ async function Handler_TX (args, info, tx = null)
             Sys.ERR ("Transaction " + target + " has quantity set, but no target!");
             info.Errors =  info.Errors != null ? info.Errors : "" + "Quantity set but no target. ";
         }
-    }        
+    }
+
+
+    // Further analysis
+    info.Description = Analyze.GetTXEntryDescription (GQL.Entry.FromTX (tx, info.Address) );
+
 
     info.Valid = true;
     return true;
@@ -289,12 +328,12 @@ async function Handler_Drive (args)
 
         if (drive_entity != null)
         {            
-            metadata_latest = await __FetchMeta (drive_entity.TXID_Latest, drive_entity.IsPublic) ;
+            metadata_latest = await __FetchMeta (drive_entity.GetNewestMetaTXID (), drive_entity.IsPublic () ) ;
 
             if (metadata_latest != null)
             {
-                drive_entity.Name         = metadata_latest.name;
-                drive_entity.RootFolderID = metadata_latest.rootFolderId;                        
+                drive_entity.Info.Name         = metadata_latest.name;
+                drive_entity.Info.RootFolderID = metadata_latest.rootFolderId;                        
             }
                         
             const entries_amount = drive_entity.Entries != null ? drive_entity.Entries.length : 0;
@@ -321,7 +360,7 @@ async function Handler_Drive (args)
                         if (entries_amount == 1 || index + 1 == entries_amount)
                             meta = metadata_latest;
                         else
-                            meta = await __FetchMeta (e.GetTXID (), drive_entity.IsPublic);
+                            meta = await __FetchMeta (e.GetTXID (), drive_entity.IsPublic () );
                         
                         if (index == 0)
                         {
@@ -366,11 +405,11 @@ async function Handler_Drive (args)
                     ++index;
                 }
                 
-                drive_entity.History = history;
+                drive_entity.Info.History = history;
             }
             
 
-            Sys.OUT_OBJ (drive_entity, { recursive_fields: ["History"] } );
+            Sys.OUT_OBJ (drive_entity.GetInfo (), { recursive_fields: ["History"] } );
             return true;
         }
         

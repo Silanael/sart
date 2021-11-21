@@ -5,7 +5,7 @@
 
 
 ## VERSION 0.8.5 ALPHA
-This is a pre-release version **NOT INTENDED FOR PRODUCTION!**
+This is a pre-release version that is **NOT INTENDED FOR PRODUCTION!**
 
 It exists in order to provide a fallback and point of comparison for
 the LIST-command output before I start optimizing the queries.
@@ -23,6 +23,12 @@ approach, being slow as hell - as such, it should not be used in this version.
 !!! THIS IS STILL A WORK IN PROGRESS !!!
 **THE DATA PROVIDED BY THIS VERSION MAY NOT BE FULLY ACCURATE**
 
+Furthermore, the commands, parameters and the structure of data output
+are not yet established and are subject to change.
+
+The binary executables provided have been created with [pkg](https://www.npmjs.com/package/pkg)
+and as such, I cannot be certain that they are devoid of malicious/harmful code.
+This is probably not the case, but use at your own risk still.
 
 
 
@@ -46,10 +52,16 @@ Though it's in GitHub, this is my hobby project.
 
 
 
+## THINGS TO BE MINDFUL OF
+- LIST is extremely slow with ArFS-drives/paths. It is purposely left that way
+  for this version in order to provide a good known to compare listings against
+  when I do optimize it. Use VERBOSE to verify and generate lists of drive content.
+- Redirect-to-file (">") cannot yet be used from within the internal console.
 
-## PREREQUISITES
+
+
+## PREREQUISITES (IF BUILDING FROM SOURCE)
 - Install [node.js](https://nodejs.org/)
-
 
 
 
@@ -60,45 +72,41 @@ Though it's in GitHub, this is my hobby project.
 
 
 
-
-## TO RUN
+## TO RUN FROM SOURCE
 - `./sart` OR `npm start` OR `node main.js`
 
 
 
-
 ## USAGE
-- `./sart [COMMAND] [CMD-ARGS] [OPTIONS...]`
-- `./sart --help` to display help.
-- `./sart --help [COMMAND]` to learn more of the command in question.
+- `sart [COMMAND] [CMD-ARGS] [OPTIONS...]`
+- `sart --help` to display help.
+- `sart --help [COMMAND]` to learn more of the command in question.
 - Running with no command starts the console interface.
-
 
 
 
 ## USAGE EXAMPLES
 
 ### Generate a list of successfully uploaded files with a summary
-- `./sart verify files <drive-id> summary,verified --verbose-stderr > verified.csv`
+- `sart verify files <drive-id> summary,verified --verbose-stderr > verified.csv`
 
 ### Generate a list of files that may need to be reuploaded
-- `./sart verify files <drive-id> not-verified --verbose-stderr > not-verified.csv`
+- `sart verify files <drive-id> not-verified --verbose-stderr > not-verified.csv`
 
 ### Generate a list of just failed files
-- `./sart verify files <drive-id> failed --verbose-stderr > failed.csv`
+- `sart verify files <drive-id> failed --verbose-stderr > failed.csv`
 
 ### Generate a list for NFT-uploads
-- `./sart verify files <drive-id> numeric all --verbose-stderr > numeric-all.csv`
+- `sart verify files <drive-id> numeric all --verbose-stderr > numeric-all.csv`
 
 ### Generate a list of failed, missing and uncertain files for NFT-uploads
-- `./sart verify files <drive-id> numeric not-verified --verbose-stderr > numeric-not-verified.csv`
+- `sart verify files <drive-id> numeric not-verified --verbose-stderr > numeric-not-verified.csv`
 
 ### Generate a list of files that very likely need to be re-uploaded for NFT-uploads
-- `./sart verify files <drive-id> numeric upload-needed --verbose-stderr > numeric-upload-needed.csv`
+- `sart verify files <drive-id> numeric upload-needed --verbose-stderr > numeric-upload-needed.csv`
 
 ### Generate a list for NFT-uploads for specific range and file extension (PNG)
-- `./sart verify files <drive-id> numeric all range 1-1000 extension png --verbose-stderr > numeric-range.csv`
-
+- `sart verify files <drive-id> numeric all range 1-1000 extension png --verbose-stderr > numeric-range.csv`
 
 
 
@@ -125,7 +133,6 @@ set     | Set a config variable.
 exit    | Exit the console.
 
 
-
 ## Options
 Option           | Alt | Description
 -----------------|-----|--------------------------------------------------
@@ -138,8 +145,8 @@ Option           | Alt | Description
 --debug          |     | Display extensive debugging info.
 --debug-stderr   |     | Display extensive debugging info in STDERR. Use to monitor while piping.
 --stderr         |     | Display info and warning messages in STDERR. Same as --msg-out stderr, but sets the LogLevel to >= MSG.                     
---msg-out        |     | Set destination for info-messages.  Flags: stdout,stderr,none
---err-out        |     | Set destination for error-messages. Flags: stdout,stderr,none
+--msg-out        |     | Set destinations for info-messages.  FLAGS: stdout, stderr, none
+--err-out        |     | Set destinations for error-messages. FLAGS: stdout, stderr, none
 --no-ansi        |     | Don't use ANSI codes in output.
 --all            | -a  | Display all entries (moved, orphaned etc.). For now, for LIST command only.
 --recursive      | -r  | Do a recursive listing (drive listings are by default).
@@ -166,7 +173,6 @@ Private drives are not yet supported!
   files that are shown as VERIFIED may drop from the chain if it works. Before this tracking
   is implemented, it is advised to run the verify process multiple times to be certain.**
 
-
 ### OUTPUT
 Determines what is being listed. If omitted, the default values are used - 
 "SUMMARY,NOT-VERIFIED" for regular mode and "SUMMARY,ALL" for **NUMERIC** mode.
@@ -188,12 +194,9 @@ UNKNOWN         | PENDING and ERROR, +MISSING if ERRORs are present.
 FILTERED        | All encountered files matching the filter (EXTENSION etc.)
 PROCESSED       | All encountered files. May contain duplicate filenames.
 
-
-
 ### PARAM: 'EXTENSION ext'
 Filter processed files by extension. The extension-filter is case-sensitive.
 Optional.
-
 
 ### PARAM: 'NUMERIC'
 The **NUMERIC** mode is designed to be used with numbered filenames 
@@ -202,10 +205,8 @@ Do note that this mode lists a filename as good if ANY healthy entry is found
 using that name, as opposed to listing the state of the newest entry.
 This mode is meant for files that will not be updated, such as NFTs. 
 
-
 ### PARAM: 'RANGE first-last'
 An optional parameter for the NUMERIC mode. If omitted, the range is autodetected.
-
 
 ### PARAM: 'NO-PRUNE'
 Disable the default behaviour of only displaying the newest file entity for
@@ -214,7 +215,6 @@ to show as failed/upload-needed etc. even if it has been successfully
 reuploaded with a different File-ID. The option to disable this exists
 only for the possibility that something goes wrong with the pruning process.
 This option is currently NOT applicable for the NUMERIC mode.
-
 
 ### EXAMPLES
 - `verify files a44482fd-592e-45fa-a08a-e526c31b87f1 summary,verified`

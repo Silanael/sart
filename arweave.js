@@ -139,6 +139,10 @@ async function GetConnectionStatus ()
     return ret;
 }
 
+function IsConfirmationAmountSafe (confirmations)
+{
+    return confirmations != null && Number (confirmations) >= Settings.Config.SafeConfirmationsMin;
+}
 
 
 
@@ -444,10 +448,45 @@ async function GetTXsForAddress (address, tags = null)
 }
 
 
+function GetTXStatusStr (statuscode, confirmations)
+{
+
+    if (statuscode == TXSTATUS_NOTFOUND)
+        return Sys.ANSIERROR ("NOT FOUND / FAILED");
+
+
+    else if (statuscode == TXSTATUS_PENDING)
+        return Sys.ANSIWARNING (PENDING);
+
+
+    else if (statuscode == TXSTATUS_OK)
+    {
+        if (IsConfirmationAmountSafe (confirmations) )
+            return "CONFIRMED";
+        else
+            return Sys.ANSIWARNING ("MINED, LOW CONFIRMATIONS");
+    }
+
+
+    else if (statuscode == null)
+        Sys.ERR ("PROGRAM ERROR: TXStatusCodeToStr: statuscode NULL");
+
+
+    else
+        return Sys.ANSIERROR ("Unknown status code: " + statuscode);
+    
+
+    return null;
+}
+
+
+function IsTxOKByCode (statuscode) {return statuscode == TXSTATUS_OK; }
+
 
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
+                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
                    TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES };

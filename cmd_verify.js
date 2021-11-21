@@ -438,10 +438,10 @@ async function Handler_Uploads (args)
     if (drive_entity == null)
         return Sys.ERR ("Failed to fetch drive info for " + drive_id + ".");
 
-    else if (!drive_entity.IsPublic)
+    else if (!drive_entity.IsPublic () )
         return Sys.ERR ("Sorry, support for private drives is not yet implemented.");
 
-    const owner = drive_entity.Owner;    
+    const owner = drive_entity.GetOwner ()    
     if (owner == null && ! Sys.ERR_OVERRIDABLE ("Unable to fetch owner for drive " + drive_id + " .") )        
         return false;
 

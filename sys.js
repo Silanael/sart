@@ -16,11 +16,14 @@ const FIELD_RECURSIVE    = "__SART-RECURSIVE"
 const FIELD_ANSI         = "__ANSI";
 const FIELD_VALUE_SPACER = 2;
 
-const ANSI_ERROR     = "\033[31m";
-const ANSI_PENDING   = "\033[33m";
+const ANSI_RED       = "\033[31m";
+const ANSI_YELLOW    = "\033[33m";
+const ANSI_ERROR     = ANSI_RED;
+const ANSI_WARNING   = ANSI_YELLOW;
+const ANSI_PENDING   = ANSI_YELLOW;
 const ANSI_CLEAR     = "\033[0m";
 const ANSI_UNDERLINE = "\033[4m";
-const ANSI_RED       = "\033[31m";
+
 
 
 
@@ -32,10 +35,23 @@ const IsPiped = !process.stdout.isTTY;
 
 
 function ERR_MISSING_ARG   (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
-function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj); };
-function ANSI              (code)                   { return Settings.IsANSIAllowed () ? code : "" };
-function ANSIRED           ()                       { return ANSI (ANSI_RED)   };
-function ANSICLEAR         ()                       { return ANSI (ANSI_CLEAR) };
+function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj);     };
+function ANSIRED           (msg = null)             { return ANSI (ANSI_RED    , msg)  };
+function ANSIYELLOW        (msg = null)             { return ANSI (ANSI_YELLOW , msg)  };
+function ANSIERROR         (msg = null)             { return ANSI (ANSI_ERROR  , msg)  };
+function ANSIWARNING       (msg = null)             { return ANSI (ANSI_WARNING, msg)  };
+function ANSIPENDING       (msg = null)             { return ANSI (ANSI_PENDING, msg)  };
+function ANSICLEAR         (msg = null)             { return ANSI (ANSI_CLEAR  , msg)  };
+
+function ANSI (code, msg = null)
+{ 
+    if (!Settings.IsANSIAllowed () )
+        return "";
+
+    else 
+        return msg != null ? code + msg + ANSICLEAR : code;    
+};
+
 
 
 function ErrorHandler (error)
@@ -217,11 +233,10 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 // Value is an object that's set to recursive display
                 else if (val != null && (val[FIELD_RECURSIVE] == true || (opts != null && opts.recursive_fields?.includes (field)) ) )
                 {
-                    OUT_TXT ( (var_str).padStart(opts.indent)
-                                + " ".repeat (longest_len - var_str.length) 
-                                + " ".repeat (FIELD_VALUE_SPACER)
-                                + "-----" );
-                    OUT_OBJ (e[1], { indent: opts.indent + longest_len + FIELD_VALUE_SPACER } )
+                    OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
+                            + " ".repeat (FIELD_VALUE_SPACER) + "-----");
+                    
+                    OUT_OBJ (e[1], { indent: opts.indent + longest_len + FIELD_VALUE_SPACER, recursive_fields: opts.recursive_fields, header: opts.header } )
                 }
 
                 // Display the field-value pair.
@@ -429,6 +444,10 @@ module.exports =
     SET_RECURSIVE_OUT,
     ANSI,
     ANSIRED,
+    ANSIYELLOW,
+    ANSIERROR,
+    ANSIWARNING,
+    ANSIPENDING,
     ANSICLEAR,
     INFO,
     VERBOSE,

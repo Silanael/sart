@@ -273,6 +273,28 @@ function TXStatusCodeToStr (statuscode)
     }
 }
 
+function GetTXStatusStr (statuscode, confirmations)
+{
+    if (statuscode == 404)
+        return Sys.ANSIERROR ("NOT FOUND / FAILED");
+
+    else if (statuscode == 202)
+        return Sys.ANSIWARNING (PENDING);
+
+    else if (statuscode == 200)
+    {
+
+    }
+
+    else if (statuscode == null)
+        Sys.ERR ("PROGRAM ERROR: TXStatusCodeToStr: statuscode NULL");
+
+    else
+        return Sys.ANSIERROR ("Unknown status code: " + statuscode);
+    
+}
+
+
 function IsTxOKByCode (statuscode) {return statuscode == 200; }
 
 
@@ -429,7 +451,7 @@ class TXTag
     constructor (name, value) { this.Name = name; this.Value = value; }
     /* Override */ toString () { return this.Name + ":" + this.Value  }
 
-    AddAsField (dest_obj, name_prefix = "")
+    AddAsFieldTo (dest_obj, name_prefix = "")
     { 
         if (dest_obj != null) 
             dest_obj[name_prefix + this.Name] = this.Value; 
@@ -438,7 +460,7 @@ class TXTag
 
 
 
-function DecodeTXTags (tx, dest_obj = null, prefix="")
+function DecodeTXTags (tx, dest_obj = null, prefix = "")
 {
     if (tx == null)
     {
@@ -468,7 +490,7 @@ function DecodeTXTags (tx, dest_obj = null, prefix="")
             );
 
             decoded_tags.push (e);            
-            e.AddAsField (dest_obj, prefix);
+            e.AddAsFieldTo (dest_obj, prefix);
                 
         }        
         return decoded_tags;
