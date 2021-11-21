@@ -46,10 +46,10 @@ function ANSICLEAR         (msg = null)             { return ANSI (ANSI_CLEAR  ,
 function ANSI (code, msg = null)
 { 
     if (!Settings.IsANSIAllowed () )
-        return "";
+        return msg != null ? msg : "";
 
     else 
-        return msg != null ? code + msg + ANSICLEAR : code;    
+        return msg != null ? code + msg + ANSI_CLEAR : code;    
 };
 
 
@@ -304,8 +304,8 @@ function WARN (str, src)
     if (!Settings.IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log  (msg);
-        if (Settings.IsMsgSTDERR () ) console.warn (msg);        
+        if (Settings.IsMsgSTDOUT () ) console.log  (ANSIWARNING (msg) );
+        if (Settings.IsMsgSTDERR () ) console.warn (ANSIWARNING (msg) );        
     }        
 }
 
@@ -317,8 +317,8 @@ function ERR (str, src)
     if (!Settings.IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log   (msg);
-        if (Settings.IsMsgSTDERR () ) console.error (msg);        
+        if (Settings.IsMsgSTDOUT () ) console.log   (ANSIERROR (msg) );
+        if (Settings.IsMsgSTDERR () ) console.error (ANSIERROR (msg) );        
     }
        
     return false;

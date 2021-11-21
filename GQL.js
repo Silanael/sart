@@ -613,6 +613,8 @@ class Entity
     Entries     = null;
     FirstEntry  = null;
     NewestEntry = null;
+    NewestMeta  = null;
+    MetaByTXID  = {};
     Query       = null;
 
     
@@ -629,9 +631,122 @@ class Entity
     GetPrivacy        ()      { return this.Info?.Privacy;                                       }
     GetNewestMetaTXID ()      { return this.Info?.TXID_Latest;                                   }
     GetFirstMetaTXID  ()      { return this.Info?.TXID_Created;                                  }
-    AddError          (error) { this.Info.Errors = Util.Append (this.Info.Errors, error, " ");    }    
+    AddError          (error) { this.Info.Errors = Util.Append (this.Info.Errors, error, " ");   }    
 
+
+    async UpdateNewestMetadata (arweave)
+    {
+        const meta = await this.__FetchMeta (arweave, this.GetNewestMetaTXID () );
+
+        if (meta != null)
+        {
+            this.NewestMeta        = meta;
+            
+            const state = this.__GetState (meta);
+            Util.CopyKeysToObj (state, this.Info);            
+        }
+    }
+
+
+    async UpdateHistory (arweave)
+    {
+        if (this.Entries == null)
+            return;
+
+        // Update the latest first
+        await this.UpdateNewestMetadata (arweave);
+
+
+        // (Re)build history
+        this.Info.History = [];
+
+        let oldstate, newstate = {};
+        let msg, str_changes;
+
+        for (const e of this.Entries)
+        {
+            if (e == null)
+            {
+                Sys.ERR ("PROGRAM ERROR: Entity.UpdateHistory: 'e' NULL");
+                continue;
+            }
+
+            const txid = e.GetTXID ();
+            const date = e.GetDate ();
+            const meta = await this.__FetchMeta (arweave, txid);
+                                                    
+            msg  = (date != null ? date : Util.GetDummyDate () ) + " - "; 
+            
+            oldstate = newstate;
+            newstate = this.__GetState (meta);
+            
+            // Compare to old
+            str_changes = null;
+            for (const m of Object.entries (newstate) )
+            {                
+                if (m[1] != oldstate[m[0]] )
+                    str_changes = Util.Append (str_changes, m[0] + ":" + m[1], ", " );
+            }
+
+            // First metadata
+            if (txid == this.Info?.TXID_Created)
+                msg += "Created" + (str_changes != null ? " with " + str_changes + "." : ".");
+                                                        
+
+            // Subsequent metadata (renames, moves etc.)
+            else            
+                msg += "Modified" + (str_changes != null ? ": " + str_changes + "." : ".");                                            
+            
+            if (Settings.IsDebug () && meta != null)
+            {
+                try { msg += " JSON:" + JSON.stringify (meta); } catch (e) { Sys.ON_EXCEPTION (e, "Entity.UpdateHistory"); }                            
+            }
+            
+            this.Info.History[txid] = msg;            
+        }
+    }
+
+
+    __GetState (metadata)
+    {
+        let state = {}        
+        if (metadata != null)
+        {
+            state = Util.AssignIfNotNull (metadata.name,         state, "Name");
+            state = Util.AssignIfNotNull (metadata.rootFolderId, state, "RootFolderID");                
+        }
+        return state;
+    }
+
+    async __FetchMeta (arweave, txid)
+    {
+        const existing = this.MetaByTXID[txid];
+        
+        if (existing != null)
+        {
+            Sys.VERBOSE ("Cached metadata found for TXID " + txid);
+            return existing
+        }
+
+        if (! this.IsPublic () )
+        {
+            Sys.VERBOSE ("Drive not public, unable to fetch metadata.");
+            return null;
+        }
+
+        try
+        {
+            const meta = JSON.parse (await arweave.GetTxStrData (txid) );
+            this.MetaByTXID[txid] = meta;
+            return meta;        
+        }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Entity.__FetchMeta (" + txid + ")"); }   
+    
+        return null;
+    }
 }
+
+
 
 class ArFSEntityQuery extends TXQuery
 {
@@ -823,7 +938,7 @@ class ArFSEntityQuery extends TXQuery
 
         else
         {
-            Sys.ERR ("Failed to retrieve owner for Drive-ID: " + arfs_id);
+            Sys.VERBOSE ("Failed to retrieve ArFS-entity for ID '" + arfs_id + "'.");
             return null;
         }
    }

@@ -86,22 +86,30 @@ function PopArg (args)
 
 
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
-function IsFlag         (arg, flags)            { return flags[arg] != null; }
-function IsFlagWithArg  (arg, flags)            { return flags[arg]?.A; }
-function IsSet          (value)                 { return value != null && value.length > 0; }
-function IsArweaveHash  (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
-function IsArFSID       (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
-function GetUNIXTime    ()                      { return new Date ().getTime (); }
-function GetVersion     ()                      { return Package.version; }
-function GetVersionStr  ()                      { return "v" + Package.version + " [" + Package.versiondate + "]"; }
-function GetDummyDate   ()                      { return "????-??-?? ??:??:??"; }
-function StripExtension (filename)              { return filename != null ? Path.parse (filename)?.name : null; }
-function IsTTY          ()                      { return process.stdout.isTTY; }
-function IsOutputPiped  ()                      { return !this.IsTTY (); }
-function IsFlagSet      (flags, mask)           { return (flags & mask) != 0; }
-function Or             (obj1, obj2)            { return obj1 != null ? obj1 : obj2; }
-function Append         (base, str, sep = " ")  { return base != null ? base + sep + str : str; }
+function IsFlag          (arg, flags)            { return flags[arg] != null; }
+function IsFlagWithArg   (arg, flags)            { return flags[arg]?.A; }
+function IsSet           (value)                 { return value != null && value.length > 0; }
+function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
+function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
+function GetUNIXTime     ()                      { return new Date ().getTime (); }
+function GetVersion      ()                      { return Package.version; }
+function GetVersionStr   ()                      { return "v" + Package.version + " [" + Package.versiondate + "]"; }
+function GetDummyDate    ()                      { return "????-??-?? ??:??:??"; }
+function StripExtension  (filename)              { return filename != null ? Path.parse (filename)?.name : null; }
+function IsTTY           ()                      { return process.stdout.isTTY; }
+function IsOutputPiped   ()                      { return !this.IsTTY (); }
+function IsFlagSet       (flags, mask)           { return (flags & mask) != 0; }
+function Or              (obj1, obj2)            { return obj1 != null ? obj1 : obj2; }
+function Append          (base, str, sep = " ")  { return base != null ? base + sep + str : str; }
+function CopyKeysToObj   (src, dest)             { if (src == null || dest == null) return; for (const e of Object.entries (src) ) { dest[e[0]] = e[1]; }  }
 
+function AssignIfNotNull (src, dest, varname)
+{
+    if (src != null && dest != null)
+        dest[varname] = src;
+
+    return dest;
+}
 
 async function Delay    (ms)           { await new Promise (r => setTimeout (r, ms) ); }
 
@@ -273,29 +281,6 @@ function TXStatusCodeToStr (statuscode)
     }
 }
 
-function GetTXStatusStr (statuscode, confirmations)
-{
-    if (statuscode == 404)
-        return Sys.ANSIERROR ("NOT FOUND / FAILED");
-
-    else if (statuscode == 202)
-        return Sys.ANSIWARNING (PENDING);
-
-    else if (statuscode == 200)
-    {
-
-    }
-
-    else if (statuscode == null)
-        Sys.ERR ("PROGRAM ERROR: TXStatusCodeToStr: statuscode NULL");
-
-    else
-        return Sys.ANSIERROR ("Unknown status code: " + statuscode);
-    
-}
-
-
-function IsTxOKByCode (statuscode) {return statuscode == 200; }
 
 
 const SIZE_UNITS =
@@ -478,9 +463,7 @@ function DecodeTXTags (tx, dest_obj = null, prefix = "")
     {
         const decoded_tags = [];
                          
-        let tag;
-        let e;
-        for (let C = 0; C < len; ++C)
+        let tag;Append
         {
             tag = tx.tags[C];
             e = new TXTag 
@@ -503,4 +486,4 @@ module.exports = { Args,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
-                   Or, Append };
+                   Or, Append, AssignIfNotNull, CopyKeysToObj };

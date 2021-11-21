@@ -1339,6 +1339,27 @@ class ArFSFile extends ArFSItem
 
 
 
+async function GetArFSEntity (arfs_id, entity_type)
+{
+    if (entity_type == null)
+    {
+        Sys.ERR ("PROGRAM ERROR: entity_type missing.", "GetArFSEntity");
+        return null;
+    }
+
+    if (Util.IsArFSID (arfs_id) )
+    {
+        Sys.VERBOSE ("Trying to fetch ArFS-entity of type '" + entity_type + "' with ID " + arfs_id + " ...");
+        
+        const query  = new GQL.ArFSEntityQuery (Arweave);
+        const entity = await query.Execute (arfs_id, entity_type);
+        
+        return entity;
+    }
+    else
+        Sys.ERR ("Not an ArFS-ID: " + arfs_id, "ArFS:GetArFSEntity");
+}
+
 
 
 async function GetDriveEntity (drive_id)
@@ -1813,4 +1834,4 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetIDTag };
+module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag };

@@ -346,6 +346,7 @@ function SetSetting (args)
     const key   = args.Pop ();
     const value = args.Pop ();
 
+    
     if (key == "ConfigVersion" || key == "AppVersion")
     {        
         Sys.ERR (Settings.FUP++ < 1 ? "Nope, won't change these." : Settings.FUP == 2 ? `What part of "Nope, won't change these" did you not understand?` : "..." );
@@ -354,7 +355,27 @@ function SetSetting (args)
 
     if (Object.keys (Settings.Config)?.includes (key) )
     {
-        Settings.Config[key] = value;
+        const lc = value?.toLowerCase ();
+        const num = value != null ? Number (value) : null;
+        
+        if (num != null && !isNaN (num) )
+        {            
+            Settings.Config[key] = num;
+            Sys.VERBOSE ("Value '" + value + "' determined to be a number.");
+        }
+
+        else if (lc == "true" || lc == "false")
+        {            
+            Settings.Config[key] = lc == "true";
+            Sys.VERBOSE ("Value '" + value + "' determined to be a boolean.");
+        }
+
+        else
+        {
+            Settings.Config[key] = value;
+            Sys.VERBOSE ("Setting value as-is.");
+        }
+
         Sys.INFO (key + " set to " + value + ".");
         return true;
     }

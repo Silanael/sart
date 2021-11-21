@@ -83,6 +83,11 @@ async function HandleCommand (args)
             await Handler_TX (args, info, tx);
     }
 
+    // ArFS-ID.
+    else if (Util.IsArFSID (target) )    
+        await DisplayArFSEntity (target, null);
+    
+
     else if (target.toUpperCase () == "SILANAEL")
         await Handler_Author (args);
 
@@ -309,6 +314,78 @@ may never see the light of day...
 }
 
 
+async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
+{    
+
+    if (! Util.IsArFSID (arfs_id) )
+        return Sys.ERR ("Not a valid ArFS-ID: " + arfs_id);
+
+
+    // Try all entity-types until something returns true.
+    else if (entity_type == null)
+    {
+        let order;
+        if (Settings.Config.ArFSEntityTryOrder?.length > 0 && (order = Settings.Config.ArFSEntityTryOrder.split (","))?.length > 0)
+        {
+            const max_queries = order.length;
+            if (max_queries > 1)
+            {
+                if (++Settings.FUP < 4)
+                {
+                    Sys.WARN (Sys.ANSIWARNING ("Due to the design-flaws of ArFS, retrieving an entity without knowing its type " 
+                              + "may take up to " + max_queries + " queries.\n"
+                              +"This adds unnecessary strain on the gateway/node so please use the type parameter instead\n"
+                              +"(such as 'drive <drive-id>').") );
+                }
+                else 
+                {                    
+                    Sys.ERR (Settings.FUP == 4 ? "Are you blind, ignorant or just a fucking idiot? USE. THE. TYPE. PARAMETERS." : "ERROR: User is garbage.");
+                    return;
+                }
+            }
+
+            for (const et of order)
+            {                
+                if (await DisplayArFSEntity (arfs_id, et, true) == true)                
+                    return true;                
+                else
+                    Sys.ERR ("ET " + et  +" is false");
+            }
+            Sys.ERR ("ArFS-ID " + arfs_id + " not found. (Entity-Types tried: " + order?.toString () + ")."
+                     +" Consider using a type parameter (drive, folder or file).");
+
+            return false;
+        }
+        else
+            Sys.ERR ("Config.ArFSEntityTryOrder missing or in bad format (needs to be a string such as 'drive,file,folder' ). ");
+    }
+
+    // Fetch with a known Entity-Type.
+    else
+    {
+        const entity = await ArFS.GetArFSEntity (arfs_id, entity_type);
+
+        if (entity != null)
+        {     
+            await entity.UpdateHistory (Arweave);       
+           
+            Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History"] } );
+            return true;
+        }
+        
+        else
+        {
+            if (guessing)
+                Sys.VERBOSE ("ArFS-ID " + arfs_id + " was not of Entity-Type:" + entity_type + " .");
+            else
+                return Sys.ERR ("Failed to get ArFS-entity for ID '" + arfs_id + "'.");
+        }
+
+        return false;
+    }
+}
+
+
 async function Handler_Drive (args)
 {
     if (! args.RequireAmount (1, "Drive-ID required") )
@@ -316,99 +393,17 @@ async function Handler_Drive (args)
 
     const drive_id = args.Pop ();
 
-
-
     if (! Util.IsArFSID (drive_id) )
         return Sys.ERR ("Not a valid ArFS Drive-ID: " + drive_id);
 
     else
     {
         const drive_entity = await ArFS.GetDriveEntity (drive_id);
-        let metadata_latest = null;
 
         if (drive_entity != null)
-        {            
-            metadata_latest = await __FetchMeta (drive_entity.GetNewestMetaTXID (), drive_entity.IsPublic () ) ;
-
-            if (metadata_latest != null)
-            {
-                drive_entity.Info.Name         = metadata_latest.name;
-                drive_entity.Info.RootFolderID = metadata_latest.rootFolderId;                        
-            }
-                        
-            const entries_amount = drive_entity.Entries != null ? drive_entity.Entries.length : 0;
-
-            // Generate history
-            if (entries_amount > 0)
-            {                
-                let history = {};                
-
-                let txid, msg, date, index = 0, meta;
-                let t_name = null;
-                let t_rfid = null;
-
-                // These are sorted with oldest first by GetEntriesForOwner.
-                for (const e of drive_entity.Entries)
-                {                    
-                    txid = e?.GetTXID ();
-
-                    if (e != null && txid != null)
-                    {
-                        date = e.GetDate ();
-                        msg  = (date != null ? date : Util.GetDummyDate () ) + " - "; 
-
-                        if (entries_amount == 1 || index + 1 == entries_amount)
-                            meta = metadata_latest;
-                        else
-                            meta = await __FetchMeta (e.GetTXID (), drive_entity.IsPublic () );
-                        
-                        if (index == 0)
-                        {
-                            msg += "Drive created" + (meta != null ? " with name '" + meta.name + "' and Root Folder ID " + meta.rootFolderId : "") + ".";  
-                            t_name = meta?.name;
-                            t_rfid = meta?.rootFolderId;
-                        }
-                        else
-                        {
-                            if (t_name != meta?.name)
-                            {
-                                t_name = meta?.name;
-                                msg += "Drive renamed to '" + t_name + "'";
-                                if (t_rfid =! meta?.rootFolderId)
-                                {
-                                    t_rfid = meta?.rootFolderId;
-                                    msg += " and Root Folder ID changed to " + t_rfid + ".";
-                                }
-                                else
-                                    msg += ".";
-                            }
-                            else if (t_rfid != meta?.rootFolderId)
-                            {
-                                t_rfid = meta?.rootFolderId;
-                                msg += "Root Folder ID changed to " + t_rfid + ".";                                
-                            }
-                            else
-                                msg += "Drive modified.";
-                                                        
-                        }
-
-                        if (Settings.IsDebug () && meta != null)
-                        {
-                            try { msg += " JSON:" + JSON.stringify (meta); } catch (e) { Sys.ON_EXCEPTION (e, "INFO.Drive"); }                            
-                        }
-
-                        history[txid] = msg;
-                    }
-                    else
-                        Sys.ERR ("Program error at cmd_info.Handler_Drive.");
-
-                    ++index;
-                }
-                
-                drive_entity.Info.History = history;
-            }
-            
-
+        {     
+            await drive_entity.UpdateHistory (Arweave);       
+           
             Sys.OUT_OBJ (drive_entity.GetInfo (), { recursive_fields: ["History"] } );
             return true;
         }
@@ -418,20 +413,7 @@ async function Handler_Drive (args)
     }
 }
 
-async function __FetchMeta (txid, is_public)
-{
-    if (!is_public)
-        return null;
 
-    try
-    {
-        const meta = JSON.parse (await Arweave.GetTxStrData (txid) );
-        return meta;        
-    }
-    catch (Exception) { Sys.ON_EXCEPTION (exception, "INFO (Drive)"); }   
-    
-    return null;
-}
 
 
 
