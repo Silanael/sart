@@ -67,7 +67,28 @@ const Commands =
     "exit"        : Sys.EXIT,
     "quit"        : Sys.EXIT,
     "set"         : SetSetting,
-    "date"        : function (args) { Sys.INFO (Util.GetDate () + " local, " + Util.GetDate (null, null, true) + " UTC." ); return true; },
+    "date"        : function (args)
+    { 
+        const unixtime = args.GetAmount () >= 1 ? Number (args.Pop() ) : null;
+        if (unixtime != null && isNaN (unixtime) )
+            return Sys.ERR ("Not a number. Give an unix-time in seconds since 1970-01-01 00:00:00.");
+        else
+            Sys.INFO (Util.GetDate (unixtime) + " local, " + Util.GetDate (unixtime, null, true) + " UTC." ); return true; 
+    },
+    "size"        : function (args)
+    {         
+        if (!args.RequireAmount (1, "Amount of bytes required.") )
+            return false;
+
+        const b = Number (args.Pop () );
+
+        if (isNaN (b) )
+            return Sys.ERR ("Not a number.");
+        else
+            Sys.INFO (Util.GetSizeStr (b, true, Settings.Config.SizeDigits) );
+
+        return true;
+    },    
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,
@@ -249,7 +270,7 @@ function DisplayHelp (args)
                 handler.Help ();
 
             else
-                Sys.INFO ("No help available for '" + cmd_req + "'.");
+                Sys.ERR ("No help available for '" + cmd_req + "'.");
 
             // Display subcommands at the end of the handler help-message.
             if (handler.SUBCOMMANDS != null)
@@ -301,6 +322,8 @@ function DisplayHelp (args)
         Sys.INFO ("      connect [URL]        Connect to an Arweave-node or gateway.")
         Sys.INFO ("      set [CONF] [VALUE]   Set a config key to desired value. Case-sensitive.");
         Sys.INFO ("                           Use 'GET CONFIG' to get a list of config keys and their values.");
+        Sys.INFO ("      date (UNIXTIME)      Get the current date or convert UNIX-time to human-readable form.");
+        Sys.INFO ("      size [bytes]         Convert amount of bytes to human-readable form (1K = 1024).");
         Sys.INFO ("      exit                 Exit the console.")        
         Sys.INFO ("");
         Sys.INFO ("OPTIONS:");

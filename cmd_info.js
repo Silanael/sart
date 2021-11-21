@@ -350,8 +350,6 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
             {                
                 if (await DisplayArFSEntity (arfs_id, et, true) == true)                
                     return true;                
-                else
-                    Sys.ERR ("ET " + et  +" is false");
             }
             Sys.ERR ("ArFS-ID " + arfs_id + " not found. (Entity-Types tried: " + order?.toString () + ")."
                      +" Consider using a type parameter (drive, folder or file).");
@@ -372,6 +370,8 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
             await entity.UpdateHistory (Arweave);       
            
             Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History"] } );
+            Sys.INFO ("");
+            Sys.INFO ("(Use --debug to get the metadata JSON content)");
             return true;
         }
         

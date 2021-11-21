@@ -712,8 +712,11 @@ class Entity
         let state = {}        
         if (metadata != null)
         {
-            state = Util.AssignIfNotNull (metadata.name,         state, "Name");
-            state = Util.AssignIfNotNull (metadata.rootFolderId, state, "RootFolderID");                
+            state = Util.AssignIfNotNull (metadata.name,             state, "Name");
+            state = Util.AssignIfNotNull (metadata.rootFolderId,     state, "RootFolderID");
+            state = Util.AssignIfNotNull (metadata.size,             state, "Size");
+            state = Util.AssignIfNotNull (metadata.lastModifiedDate, state, "FileLastModified");
+            state = Util.AssignIfNotNull (metadata.dataTxId,         state, "DataTXID");
         }
         return state;
     }
@@ -822,6 +825,11 @@ class ArFSEntityQuery extends TXQuery
                 if (newest_entry.HasTag (ArFSDefs.TAG_FILEID) )
                     entity.Info.FileID = newest_entry.GetTag (ArFSDefs.TAG_FILEID);
 
+                if (first_entry?.HasTag (ArFSDefs.TAG_CIPHER) )
+                    entity.Info.Cipher = first_entry.GetTag (ArFSDefs.TAG_CIPHER);
+                
+                if (first_entry?.HasTag (ArFSDefs.TAG_CIPHER_IV) )
+                    entity.Info.CipherIV_B64 = first_entry.GetTag (ArFSDefs.TAG_CIPHER_IV);
             
                 if (entity.Info.DriveID == null)
                 {
@@ -886,9 +894,7 @@ class ArFSEntityQuery extends TXQuery
                         break;
                 }
                 
-
-                if (entity.Info.IsEncrypted)
-                    entity.Info.Cipher = first_entry?.GetTag (ArFSDefs.TAG_CIPHER);
+                
 
 
                 // Just some verification for odd edge-cases.
