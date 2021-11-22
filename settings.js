@@ -95,8 +95,10 @@ const Config =
     MaxTXFormat            : 2,
     MinArFSVersion         : 0.11,
     MaxArFSVersion         : 0.11,
+    ArFSTXQueryTags        : [ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ],
     SafeConfirmationsMin   : 15,
 
+    LessFiltersMode        : false,
     ContainerMode          : false,
   
 };
@@ -128,8 +130,8 @@ function IsJSONOut          ()            { return Config.OutputFormat == Output
 function SetForce           ()            { Config.Force = true;                                               }
 function SetPort            (port)        { Config.ArweavePort  = port;  ManualDest = true;                    }
 function SetProto           (proto)       { Config.ArweaveProto = proto; ManualDest = true;                    }
-function SetDisplayAll      ()            { Config.DisplayAll   = true;;                                       }
-function SetRecursive       ()            { Config.Recursive    = true;;                                       }
+function SetDisplayAll      ()            { Config.DisplayAll   = true;                                        }
+function SetRecursive       ()            { Config.Recursive    = true;                                        }
 
 
 
@@ -170,6 +172,15 @@ function SetHost (host)
     
 }
 
+function SetLessFiltersMode ()
+{
+    Config.LessFiltersMode    = true;
+
+    Config.ArFSTXQueryTags    = null;
+    Config.MinArFSVersion     = null;
+    Config.MaxArFSVersion     = null;
+    Config.MaxTXFormat        = null;
+}
 
 function SetFormat (format)
 {    
@@ -249,6 +260,7 @@ module.exports =
     SetQuiet,
     SetDebug,
     SetForce,
+    SetLessFiltersMode,
     SetDisplayAll,
     SetRecursive,
     SetMsgOut,

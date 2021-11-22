@@ -56,6 +56,19 @@ Though it's in GitHub, this is my hobby project.
 - LIST is extremely slow with ArFS-drives/paths. It is purposely left that way
   for this version in order to provide a good known to compare listings against
   when I do optimize it. Use VERIFY to verify and generate lists of drive content.
+
+- ArFS-entities made with future ArDrive-software may not show up if it continues
+  the idiotic convention of having a different App-Name -tag for each client.
+  Currently there exists no solid way of identifying ArFS-transactions as not
+  even the presence of the ArFS-tag is guaranteed. If more App-Name -variations
+  are added, they can be appended to `Config.ArFSTXQueryTags`, or alternatively
+  the option `--less-filters` can be used to completely remove the identifying
+  requirements (this leaves queries with things like `Entity-Type=drive` and
+  `Drive-Id=<id>`). Using this option may produce false entries and errors
+  if any other software uses the same tags as ArFS.
+  **Currently the VERIFY-functionality ignores this and seeks for metadata
+   transactions containing an `ArFS`-tag**.
+
 - This version uses a fixed concurrent delay of 200ms. Dropping it to 50ms gives
   faster VERIFY-listings but is too fast for some Internet-connections. 
   If you're getting errors in VERIFY-listings, try increasing concurrent interval,
@@ -156,6 +169,7 @@ Option           | Alt | Description
 --all            | -a  | Display all entries (moved, orphaned etc.). For now, for LIST command only.
 --recursive      | -r  | Do a recursive listing (drive listings are by default).
 --force          |     | Override abort on some fatal errors.
+--less-filters   |     | Try to retrieve omitted entries by lowering the search criteria.
 --host           | -h  | Arweave gateway to use. Can include port and proto.
 --port           |     | Arweave gateway port.
 --proto          |     | Arweave gateway protocol, ie. 'https'.

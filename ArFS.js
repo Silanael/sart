@@ -369,7 +369,8 @@ class ArFSEntity
     {
         const ver = this.ArFSVersion;
 
-        if (ver <= Settings.Config.MaxArFSVersion && ver >= Settings.Config.MinArFSVersion)
+        if ( (Settings.Config.MaxArFSVersion == null || ver <= Settings.Config.MaxArFSVersion) && 
+             (Settings.Config.MinArFSVersion == null || ver >= Settings.Config.MinArFSVersion) )
             return true;
         
         else

@@ -52,6 +52,20 @@ class Tag
     {                
         return new Tag (tagname, value);
     }
+
+    static APPENDNATIVETAGS (tag_array, dest)
+    {
+        if (tag_array == null || dest == null || tag_array.length <= 0)
+            return;
+
+        for (const t of tag_array)
+        {
+            if (t.name != null && t.values != null)
+                dest.push (Tag.QUERYTAG (t.name, t.values) );
+            else
+                Sys.ERR_ONCE ("Tag not in corrent format - need to be { name:'foo', values:['bar','baz'] } - " + Util.ObjToStr (t), "Tag.APPENDNATIVETAGS" );
+        }
+    }
 }
 
 
@@ -143,8 +157,9 @@ class Entry
     HasTag         (tag) { return this.Tags.find (e => e.name == tag) != null;                   }
     IsMined        ()    { return this.BlockHeight != null && this.BlockHeight >= 0;             }
     GetTags        ()    { return this.Tags; }
+    IsNewerThan    (e)   { return this.BlockHeight > e?.BlockHeight;                             }
 
-  
+    
 
     GetTag (tag)
     { 
@@ -752,6 +767,32 @@ class Entity
         if (Object.keys (fileversions)?.length > 1)
             this.Info.Versions = fileversions;
 
+
+        // Entity-specific stuff
+        switch (this.EntityType)
+        {
+            case ArFSDefs.ENTITYTYPE_DRIVE:
+                
+                const id    = this.Info != null ? this.Info['ArFS-ID'] : null;
+                const owner = this.Info?.Owner;
+
+                if (id != null && owner != null)
+                {
+                    const query = new ArFSDriveContentQuery (arweave);
+                    const results = await query.Execute (id, owner);
+                    
+                    if (results != null)
+                        this.Info.Content = results.Info;
+                }
+                else
+                    Sys.ERR ("Could not retrieve drive content, either of these is null: " + id + " or " + owner);
+
+                break;
+
+            default:
+                break;
+        }
+
     }
 
 
@@ -894,19 +935,22 @@ class ArFSEntityQuery extends TXQuery
    {       
         this.Sort = SORT_OLDEST_FIRST;
 
-        await super.ExecuteOnce
-        (
-            TXQuery.CreateTxQuery 
-            ({                                                           
-                    sort: this.Sort,
-                    tags:   
-                    [ 
-                        Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE,           entity_type),
-                        Tag.QUERYTAG (ArFSDefs.GetIDTag (entity_type),   arfs_id),                        
-                    ],                     
-                    
-            })
+        const tags = 
+        [ 
+            Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE,           entity_type),
+            Tag.QUERYTAG (ArFSDefs.GetIDTag (entity_type),   arfs_id),                        
+        ];
+        Tag.APPENDNATIVETAGS (Settings.Config.ArFSTXQueryTags, tags);
+        
+
+        await super.Execute
+        (            
+            {                                                           
+                sort: this.Sort,
+                tags: tags,                
+            }
         );
+
 
         if (this.GetEntriesAmount () > 0)
         {
@@ -990,6 +1034,193 @@ class ArFSEntityQuery extends TXQuery
    }
 }
 
+
+class ArFSDriveContentQuery extends TXQuery
+{       
+    async Execute (drive_id, owner)
+    {       
+
+        this.Sort = SORT_NEWEST_FIRST;
+
+        if (drive_id == null)
+            return Sys.ERR ("PROGRAM ERROR: drive_id null", "ArFSDriveContentQuery");
+
+        if (owner == null)
+            return Sys.ERR ("PROGRAM ERROR: owner null", "ArFSDriveContentQuery");
+
+
+
+        const tags = 
+        [ 
+            Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE,    ArFSDefs.ENTITYTYPES_INFOLDER),
+            Tag.QUERYTAG (ArFSDefs.TAG_DRIVEID,       drive_id),
+        ];
+        Tag.APPENDNATIVETAGS (Settings.Config.ArFSTXQueryTags, tags);
+        
+
+        await super.Execute
+        (            
+            {
+                owner: owner,          
+                sort:  this.Sort,
+                tags:  tags,                
+            }
+        );
+
+        const report = 
+        {
+            Info : 
+            {
+                Metadata        : 0,    
+                UniqueFileIDs   : 0,
+                UniqueFolderIDs : 0,
+                OrphanedEntities: 0,
+                OrphanedFiles   : 0,
+                OrphanedFolders : 0,            
+                UnknownEntities : 0,                
+            },
+            
+            Files:           {},
+            Folders:         {},
+            All:             {},
+            Orphaned:        {},
+            OrphanedFiles:   {},
+            OrphanedFolders: {},
+            MissingFolders:  {},
+            Parentless:      {},            
+            Unknown:         {},
+            EntityTypes:     {},
+        }
+
+        if (this.Entries != null)
+        {
+            report.Info.Metadata = this.Entries.length;
+
+            let newer;
+
+            for (const e of this.Entries)
+            {
+                const entity_type = e.GetTag (ArFSDefs.TAG_ENTITYTYPE);
+                const id          = e.GetTag (ArFSDefs.GetIDTag (entity_type) );
+
+                if (entity_type == null)
+                {
+                    Sys.ERR ("Entity-Type missing.", e.GetTXID () );
+                    continue;
+                }
+                
+                if (id == null)
+                {
+                    Sys.ERR ("ArFS-ID missing.", e.GetTXID () );
+                    continue;
+                }
+                
+
+                const obj = entity_type == ArFSDefs.ENTITYTYPE_FILE ? report.Files
+                                                                    : entity_type == ArFSDefs.ENTITYTYPE_FOLDER ? report.Folders : report.Unknown;
+                                        
+                if (obj[id] == null || (newer = e.IsNewerThan (obj[id])) == true)
+                {
+                    obj                [id] = e;
+                    report.All         [id] = e;
+                    report.EntityTypes [id] = entity_type;
+
+                    if (newer)
+                        Sys.VERBOSE ("Overwrote "+ obj[id]?.GetTXID () + " with " + e.GetTXID () + " as the latter seems to be newer." );
+                }
+
+                else
+                    Sys.VERBOSE ("Omitted " + e.GetTXID () + " as it was older than " + obj[id]?.GetTXID () );
+                
+            }
+
+            // Look for orphaned
+            for (const f of Object.entries (report.All) )
+            {
+                const entry            = f[1];
+                const arfs_id          = f[0];
+                const parent_folder_id = entry?.GetTag (ArFSDefs.TAG_PARENTFOLDERID);
+                const txid             = entry?.GetTXID ();
+                const entity_type      = report.EntityTypes[arfs_id];
+
+                if (parent_folder_id == null)
+                    report.Parentless[arfs_id] = entry;
+
+                else if (report.Folders[parent_folder_id] == null)
+                {
+                    report.MissingFolders[parent_folder_id] = true;
+
+                    if (report.Orphaned[arfs_id] == null || entry?.IsNewerThan (report.Orphaned[arfs_id]) )
+                    {
+                        report.Orphaned[arfs_id] = f[1];
+                    
+                        Sys.VERBOSE ("Orphaned entity found - ArFS-ID:" + arfs_id + " TXID:" + txid
+                            + " - should be in folder " + parent_folder_id + " which doesn't exist.");
+
+                        switch (entity_type)
+                        {
+                            case ArFSDefs.ENTITYTYPE_FILE:
+                                report.OrphanedFiles[arfs_id] = entry;
+                                break;
+
+                            case ArFSDefs.ENTITYTYPE_FOLDER:
+                                report.OrphanedFolders[arfs_id] = entry;
+                                break;
+
+                            case ArFSDefs.ENTITYTYPE_DRIVE:
+                                Sys.ERR ("There's a drive inside a drive? What the fuck?", arfs_id);
+                                break;
+
+                            default:
+                                Sys.ERR ("Unknown Entity-Type:" + entity_type, arfs_id);
+                                break;
+                        }
+                        if (report.Info.Orphans == null)
+                            report.Info.Orphans = {};
+
+                        report.Info.Orphans[arfs_id] = "TXID:" + txid + " (" + entity_type + ") - Missing:" + parent_folder_id;
+                    }
+                }
+
+            }
+
+            report.Info.UniqueFileIDs    = Object.keys (report.Files)           ?.length;
+            report.Info.UniqueFolderIDs  = Object.keys (report.Folders)         ?.length;           
+            report.Info.UnknownEntities  = Object.keys (report.Unknown)         ?.length;
+            report.Info.OrphanedEntities = Object.keys (report.Orphaned)        ?.length;
+            report.Info.OrphanedFiles    = Object.keys (report.OrphanedFiles)   ?.length;
+            report.Info.OrphanedFolders  = Object.keys (report.OrphanedFolders) ?.length;
+            
+            let folder_ids = Object.keys (report.MissingFolders);
+            if (folder_ids?.length >= 0)
+            {
+                report.Info.MissingFolders = [];
+                for (const k of folder_ids)
+                {
+                    report.Info.MissingFolders.push (k);
+                }
+            }
+
+
+
+            const parentless = Object.keys (report.Parentless)?.length;
+            if (parentless > 1)
+            {
+                Sys.WARN ("Encountered " + parentless + " entities that lack " + ArFSDefs.TAG_PARENTFOLDERID +
+                          + "It's normal to have one folder-entity like this (the root folder) but no more than that.");
+
+                report.Info.Parentless = {};
+
+                for (const e of report.Parentless)
+                {
+                    report.Info.Parentless[e[0]] = "TXID:" + e[1]?.GetTXID ();
+                }
+            }
+        }
+
+        return report;
+    }
+}
 
 
 
@@ -1112,5 +1343,5 @@ function GetGQLValueStr (value)
 
 
 module.exports = { RunGQLQuery, IsValidSort: IsSortValid,
-                   Query, TXQuery, ArFSEntityQuery, LatestQuery, Entry, Tag, ByTXQuery,
+                   Query, TXQuery, ArFSEntityQuery, LatestQuery, Entry, Tag, ByTXQuery, ArFSDriveContentQuery,
                    SORT_DEFAULT, SORT_HEIGHT_ASCENDING, SORT_HEIGHT_DESCENDING, SORT_OLDEST_FIRST, SORT_NEWEST_FIRST }

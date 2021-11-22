@@ -132,7 +132,8 @@ const Flags =
     "--concurrent-ms"   : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = ms; }, "A":true },
     "--retries"         : { "F": function (n)  { Settings.Config.ErrorRetries       = n;  }, "A":true },
     "--retry-ms"        : { "F": function (ms) { Settings.Config.ErrorWaitDelay_ms  = ms; }, "A":true },
-    "--force"           : { "F": Settings.SetForce,      "A":false },
+    "--force"           : { "F": Settings.SetForce,           "A":false },
+    "--less-filters"    : { "F": Settings.SetLessFiltersMode, "A":false },
         
     "--format"          : { "F": Settings.SetFormat,     "A":true  }, 
     "-f"                : { "F": Settings.SetFormat,     "A":true  }, 
@@ -344,6 +345,8 @@ function DisplayHelp (args)
         Sys.INFO ("");
         Sys.INFO ("  -a, --all                Display all entries (moved, orphaned etc.).");
         Sys.INFO ("  -r, --recursive          Do a recursive listing (drive listings are by default).");
+        Sys.INFO ("      --less-filters       Try to retrieve omitted entries by lowering the search criteria.");
+        Sys.INFO ("                           Disables Config.ArFSTXQueryTags + TX- and ArFS-minimum versions.");
         Sys.INFO ("      --force              Override abort on some fatal errors.");
         Sys.INFO ("  -h, --host               Arweave gateway to use. Can include port and proto.");
         Sys.INFO ("      --port               Arweave gateway port.");

@@ -146,7 +146,7 @@ async function Handler_TX (args, tx = null)
     
 
     // Check that we can understand this version.
-    if (tx.format > Settings.Config.MaxTXFormat)        
+    if (Settings.Config.MaxTXFormat != null && tx.format > Settings.Config.MaxTXFormat)        
     {
         Sys.ERR ("Transaction format '" + tx.format + "' unsupported. Use --force to override (or increase Config.MaxTXFormat).");
         if (! Settings.IsForceful () )
@@ -362,7 +362,7 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
         {     
             await entity.UpdateDetailed (Arweave, true);       
            
-            Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History", "Versions"] } );
+            Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History", "Versions", "Content", "Orphans", "Parentless"] } );
             Sys.INFO ("");
             Sys.INFO ("(Use --debug to get the metadata JSON content)");
             return true;
