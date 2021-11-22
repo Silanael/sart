@@ -360,9 +360,9 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
 
         if (entity != null)
         {     
-            await entity.UpdateHistory (Arweave);       
+            await entity.UpdateDetailed (Arweave, true);       
            
-            Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History"] } );
+            Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History", "Versions"] } );
             Sys.INFO ("");
             Sys.INFO ("(Use --debug to get the metadata JSON content)");
             return true;

@@ -505,9 +505,13 @@ function TXStatusToInfo (txstatus)
 
 }
 
+async function GetTXStatusInfo (txid)
+{
+    return TXStatusToInfo (await GetTXStatus (txid) );
+}
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
-                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode, TXStatusToInfo,
+                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode, TXStatusToInfo, GetTXStatusInfo,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
                    TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES };

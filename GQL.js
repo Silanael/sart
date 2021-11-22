@@ -610,11 +610,12 @@ class Entity
         Errors:        null,
     }
 
-    Entries     = null;
+    Entries     = null;    
     FirstEntry  = null;
     NewestEntry = null;
     NewestMeta  = null;
     MetaByTXID  = {};
+    EntryByTXID = {};
     Query       = null;
 
     
@@ -634,51 +635,83 @@ class Entity
     AddError          (error) { this.Info.Errors = Util.Append (this.Info.Errors, error, " ");   }    
 
 
-    async UpdateNewestMetadata (arweave)
+    async UpdateBasic (arweave, update_tx = true, update_meta = true, verify = true)
     {
-        const meta = await this.__FetchMeta (arweave, this.GetNewestMetaTXID () );
+        const latest_txid = this.GetNewestMetaTXID ();
 
-        if (meta != null)
+        if (latest_txid != null)
         {
-            this.NewestMeta        = meta;
+            const txentry = update_tx   ? await this.__FetchTXEntry (arweave, latest_txid) : null;
+            const meta    = update_meta ? await this.__FetchMeta    (arweave, latest_txid) : null;
             
-            const state = this.__GetState (meta);
+            const state = await this.__GetState (arweave, meta, txentry, verify);
             Util.CopyKeysToObj (state, this.Info);            
+
+            if (meta != null)
+                this.NewestMeta = meta;
         }
+        else
+            Sys.ERR_ONCE ("PROGRAM ERROR: Entity.GetNewestMetaTXID returned null.");
     }
 
+  
 
-    async UpdateHistory (arweave)
+    async UpdateDetailed (arweave, verify = true)
     {
         if (this.Entries == null)
             return;
-
-        // Update the latest first
-        await this.UpdateNewestMetadata (arweave);
+        
+        if (this.Info == null)
+            this.Info = {};
 
 
         // (Re)build history
-        this.Info.History = [];
-
+        const history = [];
+        const fileversions = {};
+        
         let oldstate, newstate = {};
         let msg, str_changes;
+        let newest_updated = false;
 
         for (const e of this.Entries)
         {
             if (e == null)
             {
-                Sys.ERR ("PROGRAM ERROR: Entity.UpdateHistory: 'e' NULL");
+                Sys.ERR_ONCE ("PROGRAM ERROR: Entity.UpdateHistory: 'e' NULL");
                 continue;
             }
 
             const txid = e.GetTXID ();
             const date = e.GetDate ();
-            const meta = await this.__FetchMeta (arweave, txid);
-                                                    
-            msg  = (date != null ? date : Util.GetDummyDate () ) + " - "; 
+
+            const meta    = await this.__FetchMeta    (arweave, txid);
+            const txentry = await this.__FetchTXEntry (arweave, txid);
+            const datestr = (date != null ? date : Util.GetDummyDate () );
+
+            msg = datestr + " - ";
             
             oldstate = newstate;
-            newstate = this.__GetState (meta);
+            newstate = await this.__GetState (arweave, meta, txentry, verify);
+
+            // File versions
+            if (newstate.DataTXID != null && fileversions[newstate.DataTXID] == null)
+            {
+                let filever_str = msg;
+
+                filever_str = Util.AppendIfNotNull (filever_str, "'" + newstate.Name          + "'", ", ");
+                filever_str = Util.AppendIfNotNull (filever_str,       newstate.Size          + 'B', ", ");
+                filever_str = Util.AppendIfNotNull (filever_str,       newstate.DataTXStatus,        ", ");
+
+                fileversions[newstate.DataTXID] = filever_str;            
+            }
+
+            // Update newest state
+            if (txid == this.Info?.TXID_Latest)
+            {
+                this.__UpdateStateToNewest (newstate);
+                newest_updated = true;
+            }
+        
             
             // Compare to old
             str_changes = null;
@@ -702,24 +735,73 @@ class Entity
                 try { msg += " JSON:" + JSON.stringify (meta); } catch (e) { Sys.ON_EXCEPTION (e, "Entity.UpdateHistory"); }                            
             }
             
-            this.Info.History[txid] = msg;            
+            history[txid] = msg;
+                        
         }
+
+        // A failsafe to ensure that the info contains some data
+        if (!newest_updated)
+        {
+            Sys.ERR_ONCE ("Entity.UpdateHistory: Newest data was for some reason not updated. Updating manually.");
+            this.UpdateBasic (arweave, true, true, true);
+        }
+
+        this.Info.History = history;
+
+  
+        if (Object.keys (fileversions)?.length > 1)
+            this.Info.Versions = fileversions;
+
     }
 
 
-    __GetState (metadata)
+    async __GetState (arweave, metadata, tx_entry, check_txstatus = false)
     {
         let state = {}        
+
         if (metadata != null)
         {
-            state = Util.AssignIfNotNull (metadata.name,             state, "Name");
-            state = Util.AssignIfNotNull (metadata.rootFolderId,     state, "RootFolderID");
-            state = Util.AssignIfNotNull (metadata.size,             state, "Size");
-            state = Util.AssignIfNotNull (metadata.lastModifiedDate, state, "FileLastModified");
-            state = Util.AssignIfNotNull (metadata.dataTxId,         state, "DataTXID");
+            state = Util.AssignIfNotNull (metadata.name,                                 state, "Name");
+            state = Util.AssignIfNotNull (metadata.rootFolderId,                         state, "RootFolderID");
+            state = Util.AssignIfNotNull (metadata.size,                                 state, "Size");
+            state = Util.AssignIfNotNull (metadata.lastModifiedDate,                     state, "FileLastModified");
+            state = Util.AssignIfNotNull (metadata.dataTxId,                             state, "DataTXID");
+
+            if (check_txstatus && state.DataTXID != null)
+            {
+                const status = await arweave.GetTXStatusInfo (state.DataTXID);
+                state.DataTXStatus        = status?.Status;            
+                state.DataTXConfirmations = status?.Confirmations;
+            }
         }
+
+        if (tx_entry != null)
+        {
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_FILEID),         state, "FileID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_DRIVEID),        state, "DriveID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_FOLDERID),       state, "FolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_PARENTFOLDERID), state, "ParentFolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_CIPHER),         state, "Cipher");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_CIPHER_IV),      state, "Cipher-IV");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
+                        
+            state.IsEncrypted = state.DrivePrivacy == "private" || state.Cipher != null;
+            state.IsPublic    = !state.IsEncrypted;
+
+            if (check_txstatus)
+            {
+                const status = await arweave.GetTXStatusInfo (tx_entry.GetTXID () );
+                state.MetaTXStatus        = status?.Status;
+                state.MetaTXConfirmations = status?.Confirmations;
+            }
+        }
+        else
+            Sys.ERR_ONCE ("PROGRAM ERROR: tx_entry null.", "Entity.__GetState");
+
         return state;
     }
+
 
     async __FetchMeta (arweave, txid)
     {
@@ -728,7 +810,7 @@ class Entity
         if (existing != null)
         {
             Sys.VERBOSE ("Cached metadata found for TXID " + txid);
-            return existing
+            return existing;
         }
 
         if (! this.IsPublic () )
@@ -747,6 +829,53 @@ class Entity
     
         return null;
     }
+
+
+    async __FetchTXEntry (arweave, txid)
+    {
+        const existing = this.EntryByTXID[txid];
+        
+        if (existing != null)
+        {
+            Sys.VERBOSE ("Cached TX entry found for TXID " + txid);
+            return existing;
+        }
+
+        else
+        {
+            Sys.ERROR ("TX-entry for " + txid + " not found for some reason - fetching:");
+
+            const owner = this.GetOwner ();
+
+            if (owner != null)
+            {
+                try
+                {
+                    const query = new ByTXQuery (arweave);
+                    const tx = await query.Execute (txid, owner);
+
+                    if (tx != null)                    
+                        this.EntryByTXID[txid] = tx;
+                    else
+                        Sys.ERR ("Failed to retrieve TX " + txid, "Entity.__FetchTXEntry");
+
+                    return tx;
+                }
+                catch (exception) { Sys.ON_EXCEPTION (exception, "Entity.__FetchTXEntry (" + txid + ")"); } 
+            }
+            else        
+                Sys.ERR ("... or not fetching after all. The Owner-address isn't set. Program error.", "Entity.__FetchTXEntry");
+                            
+        }        
+        return null;
+    }
+
+    __UpdateStateToNewest (state)
+    {
+        if (state != null)            
+            Util.CopyKeysToObj (state, this.Info);        
+    }
+
 }
 
 
@@ -785,7 +914,7 @@ class ArFSEntityQuery extends TXQuery
             const owner        = first_entry.GetOwner ();
             const newest_entry = this.GetNewestEntry  (owner);
 
-            const entries = this.GetEntriesForOwner (owner);
+            const entries      = this.GetEntriesForOwner (owner);
 
 
             if (first_entry != null)
@@ -812,110 +941,23 @@ class ArFSEntityQuery extends TXQuery
                     Sys.ERR ("Something went wrong - couldn't get entries matching owner " + owner);
 
 
-    
-                // Could maybe move files between drives in the future?
-                entity.Info.DriveID = newest_entry.GetTag (ArFSDefs.TAG_DRIVEID);
-
-                if (newest_entry.HasTag (ArFSDefs.TAG_FOLDERID) )
-                    entity.Info.FolderID = newest_entry.GetTag (ArFSDefs.TAG_FOLDERID);
-
-                if (newest_entry.HasTag (ArFSDefs.TAG_PARENTFOLDERID) )
-                    entity.Info.ParentFolderID = newest_entry.GetTag (ArFSDefs.TAG_PARENTFOLDERID);
-
-                if (newest_entry.HasTag (ArFSDefs.TAG_FILEID) )
-                    entity.Info.FileID = newest_entry.GetTag (ArFSDefs.TAG_FILEID);
-
-                if (first_entry?.HasTag (ArFSDefs.TAG_CIPHER) )
-                    entity.Info.Cipher = first_entry.GetTag (ArFSDefs.TAG_CIPHER);
-                
-                if (first_entry?.HasTag (ArFSDefs.TAG_CIPHER_IV) )
-                    entity.Info.CipherIV_B64 = first_entry.GetTag (ArFSDefs.TAG_CIPHER_IV);
-            
-                if (entity.Info.DriveID == null)
+                if (entity.Entries != null)
                 {
-                    Sys.ERR ("Drive ID missing.", arfs_id);
-                    entity.AddError ("Drive-ID missing.");
-                }
-
-
-
-                // Entity-Type -specific stuff.
-                switch (entity_type)
-                {
-                    case ArFSDefs.ENTITYTYPE_FILE:
-
-                        if (entity.Info.FileID == null)
-                        {                                                        
-                            const err = "File ID missing.";
-                            Sys.ERR (err, arfs_id);
-                            entity.AddError (err);
-                        }
-
-                        if (entity.Info.ParentFolderID == null)
-                        {
-                            const err = "Parent-folder ID missing.";
-                            Sys.ERR (err, arfs_id);
-                            entity.AddError (err);
-                        }
-                        break;
-
-                    case ArFSDefs.ENTITYTYPE_FOLDER:
-
-                        if (entity.Info.FolderID == null)
-                        {                                                        
-                            const err = "Folder ID missing.";
-                            Sys.ERR (err, arfs_id);
-                            entity.AddError (err);
-                        }
-
-                        if (entity.Info.ParentFolderID == null)
-                        {
-                            const err = "Parent-folder ID missing.";
-                            Sys.ERR (err, arfs_id);
-                            entity.AddError (err);
-                        }                        
-                        break;
-
-
-                    case ArFSDefs.ENTITYTYPE_DRIVE:                        
-
-                        entity.Info.Privacy     = newest_entry.GetTag (ArFSDefs.TAG_DRIVEPRIVACY);
-
-                        // This seems to be deprecated - the web client (1.2.6) no longer adds it.
-                        if (newest_entry.HasTag (ArFSDefs.TAG_DRIVEAUTHMODE) )
-                            entity.Info.AuthMode    = newest_entry.GetTag (ArFSDefs.TAG_DRIVEAUTHMODE);
-
-                        break;
-
-                    default:
-                        const err = "Unknown Entity-Type " + entity_type;
-                        Sys.ERR (err + " at ArFSEntityQuery.");
-                        entity.AddError (err);
-                        break;
-                }
-                
-                
-
-
-                // Just some verification for odd edge-cases.
-                for (const c of entries)
-                {
-                    const enc    = c.HasTag (ArFSDefs.TAG_CIPHER);
-                    const cipher = c.GetTag (ArFSDefs.TAG_CIPHER);
-
-                    if (entity.Info.IsEncrypted != enc || entity.Info.Cipher != cipher)
+                    for (const e of entity.Entries)
                     {
-                        Sys.ERR ("Inconsistency between metadata-updates regarding " + ArFSDefs.TAG_CIPHER + ".", arfs_id);                        
-                        entity.AddError ("Inconsistency in cipher.");
-                    }                    
+                        entity.EntryByTXID[e.GetTXID ()] = e;
+                    }
                 }
+                else
+                    Sys.ERR ("Entries null.", "ArFSEntityQuery");
 
-
-                entity.Info.IsPublic = entity.Info.IsEncrypted != null ? ! entity.Info.IsEncrypted 
-                                                                       : entity.Info.Privacy == "private" ? false : true;
-
-
-
+    
+     
+                // Don't update the metadata yet.
+                // This query can be used to retrieve things like owner,
+                // where it's not necessary to have.                
+                entity.UpdateBasic (this.Arweave, true, false, false);
+              
 
 
                 if (Settings.IsDebug () )
@@ -931,9 +973,7 @@ class ArFSEntityQuery extends TXQuery
                                  + " TXID:"                      + entity.GetNewestMetaTXID (), 
                                  arfs_id);
                 }
-                
-                
-
+                            
                 return entity;
             }
             else

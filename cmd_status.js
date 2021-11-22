@@ -15,7 +15,9 @@ const Settings     = require ('./settings.js');
 const Util         = require ('./util.js');
 const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
+const ArFSDefs     = require ('./ArFS_DEF.js');
 const GQL          = require ('./GQL.js');
+const ArFS_DEF = require('./ArFS_DEF.js');
 
 
 
@@ -132,7 +134,7 @@ async function Handler_TX (args, txid = null)
         if (txstatus != null)
         {            
             const info = { ItemType: "Transaction", TXID: txid }
-            
+
             Util.CopyKeysToObj (Arweave.TXStatusToInfo (txstatus), info);
 
             Sys.OUT_OBJ (info);
@@ -153,7 +155,7 @@ async function Handler_TX (args, txid = null)
 async function Handler_ArFS (args, arfs_id = null)
 {    
 
-    if ( ! args.RequireAmount (2, "Usage: status arfs <entity-type> <arfs-id> \n(entity-type can be 'file', 'folder' or 'drive'.)") )
+    if ( ! args.RequireAmount (2, "Usage: status arfs <entity-type> <arfs-id> - Valid entity-types: " + ArFSDefs.ARFS_ENTITY_TYPES.toString () ) )
         return false;
     
     Sys.WARN ("THIS FEATURE IS NOT FINISHED YET!")
@@ -161,6 +163,7 @@ async function Handler_ArFS (args, arfs_id = null)
     Sys.WARN ("");
 
     const entity_type = args.Pop ();
+
     if (arfs_id == null) 
         arfs_id = args.Pop ();
 
@@ -168,33 +171,15 @@ async function Handler_ArFS (args, arfs_id = null)
     if (!Util.IsArFSID (arfs_id) )
         return Sys.ERR ("Invalid ArFS-ID: " + arfs_id);
 
-
-
-    const status =
-    {
-        "ArFS-ID":     arfs_id,
-        Valid:         false,
-        MetaTXID:      null,
-        DataTXID:      null,
-    }
-
-
-    const entity = await ArFS.ArFSEntity.CREATE (arfs_id, entity_type);
-
+    if (!ArFS_DEF.IsValidEntityType (entity_type) && !Sys.ERR_OVERRIDABLE ("Unknown entity-type '" + entity_type + "'. --force to use anyway.") )
+        return false;
+    
+    const entity = ArFS.GetArFSEntity (arfs_id, entity_type);
+    
     if (entity != null)
     {
-        await entity.Update ();
-        status.Valid = entity.Valid;
-
-        if (status.Valid)
-        {
-            status.MetaTXID = entity.MetaTXID_Latest;
-            status.DataTXID = entity.DataTXID;
-        }                
+  
     }
-    else
-        Sys.ERR ("Unable to figure out how to deal with " + arfs_id + ".")
-    
 
     // Print
     Sys.OUT_OBJ (status);

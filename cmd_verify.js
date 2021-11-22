@@ -515,7 +515,7 @@ async function Handler_Uploads (args)
 
     
 
-    Sys.INFO ("Operation expected to take approx. " + (metadata_amount * req_delay / 1000) + " seconds.");
+    Sys.INFO ("Operation expected to take approximately " + (metadata_amount * req_delay / 1000) + " seconds.");
 
     for (const f of file_metadata)
     {
