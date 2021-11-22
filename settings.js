@@ -72,7 +72,7 @@ const Config =
     Recursive              : false,
     DisplayAll             : false,    
     AllowWildcards         : true,
-    ConcurrentDelay_ms     : 50,
+    ConcurrentDelay_ms     : 200,
     ErrorWaitDelay_ms      : 5000,
     ErrorWaitVariationP    : 1.0,
     ErrorRetries           : 3,

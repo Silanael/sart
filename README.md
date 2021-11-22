@@ -56,9 +56,11 @@ Though it's in GitHub, this is my hobby project.
 - LIST is extremely slow with ArFS-drives/paths. It is purposely left that way
   for this version in order to provide a good known to compare listings against
   when I do optimize it. Use VERIFY to verify and generate lists of drive content.
-- The default value of --concurrent-ms 50 may be too fast for some connections.
+- This version uses a fixed concurrent delay of 200ms. Dropping it to 50ms gives
+  faster VERIFY-listings but is too fast for some Internet-connections. 
   If you're getting errors in VERIFY-listings, try increasing concurrent interval,
-  ie. `--concurrent-ms 100`, or to 200 or more.
+  ie. `--concurrent-ms 300`, or to 500 or more. This increases the time to verify
+  the files but makes things work for bad connections.
 - Redirect-to-file (">") cannot yet be used from within the internal console.
 
 
@@ -158,7 +160,7 @@ Option           | Alt | Description
 --port           |     | Arweave gateway port.
 --proto          |     | Arweave gateway protocol, ie. 'https'.
 --timeout-ms     |     | HTTP request timeout. Default is 100000.
---concurrent-ms  |     | Interval between concurrent requests. Default is 50. Increase if issues.
+--concurrent-ms  |     | Interval between concurrent requests. Default is 200. Increase if issues.
 --retry-ms       |     | Delay between retries upon errors. Default is 5000.
 --retries        |     | Amount of retries for failed data fetch per entry. Default is 3.
 --format         | -f  | Output data format. Valid formats: txt, json, csv
