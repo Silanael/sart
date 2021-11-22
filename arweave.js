@@ -483,10 +483,31 @@ function GetTXStatusStr (statuscode, confirmations)
 function IsTxOKByCode (statuscode) {return statuscode == TXSTATUS_OK; }
 
 
+function TXStatusToInfo (txstatus)
+{
+    if (txstatus != null)
+    {
+        const info = {};
+
+        const statuscode    = txstatus.status;
+        const confirmations = txstatus.confirmed?.number_of_confirmations;
+        const mined_at      = txstatus.confirmed?.block_height;
+
+        info.Status        = GetTXStatusStr (statuscode, confirmations);
+        info.StatusCode    = statuscode;
+        info.Confirmations = confirmations;
+        info.MinedAtBlock  = mined_at;
+
+        return info;
+    }
+    else
+        return null;
+
+}
 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
-                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
+                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode, TXStatusToInfo,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
                    TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES };

@@ -130,14 +130,7 @@ async function Handler_TX (args, tx = null)
     info.State = await Arweave.GetTXStatus (info.TXID);
 
     if (info.State != null)
-    {
-        const statuscode    = info.State.status;
-        const confirmations = info.State?.confirmed?.number_of_confirmations;
-
-        info.Status        = Arweave.GetTXStatusStr (statuscode, confirmations);
-        info.StatusCode    = statuscode;
-        info.Confirmations = confirmations;
-    }
+        Util.CopyKeysToObj (Arweave.TXStatusToInfo (info.State), info);        
 
     else
         Sys.ERR ("PROGRAM ERROR: Failed to retrieve TX status object!", info.TXID);

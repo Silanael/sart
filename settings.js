@@ -73,9 +73,9 @@ const Config =
     DisplayAll             : false,    
     AllowWildcards         : true,
     ConcurrentDelay_ms     : 50,
-    ErrorWaitDelay_ms      : 3000,
+    ErrorWaitDelay_ms      : 5000,
     ErrorWaitVariationP    : 1.0,
-    ErrorRetries           : 2,
+    ErrorRetries           : 3,
       
     OutputFields           : null,
     OutputFormat           : OutputFormats.TXT,

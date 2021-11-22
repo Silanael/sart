@@ -130,22 +130,17 @@ async function Handler_TX (args, txid = null)
         const txstatus = await Arweave.GetTXStatus (txid);
 
         if (txstatus != null)
-        {
-            // Yeah yeah, I'll read about the status codes at some point.
-            const is_confirmed = txstatus["confirmed"] != null;
+        {            
+            const info = { ItemType: "Transaction", TXID: txid }
             
-            status.State      = is_confirmed ? "Confirmed" : "Pending";            
-            status.StatusCode = txstatus.status;
-            if (is_confirmed)
-            {
-                status.Confirmations    = txstatus.confirmed.number_of_confirmations;
-                status.ConfirmedAtBlock = txstatus.confirmed.block_height;                
-            }            
+            Util.CopyKeysToObj (Arweave.TXStatusToInfo (txstatus), info);
+
+            Sys.OUT_OBJ (info);
         }
         else
-            Sys.ERR ("Failed to retrieve status for transaction '" + txid + "'.");
+            Sys.ERR ("PROGRAM ERROR: Failed to retrieve status-object for transaction '" + txid + "'.");
 
-        Sys.OUT_OBJ (txstatus, { txt_obj: status} );
+        
         return true;
     }
     else
