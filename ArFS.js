@@ -217,7 +217,7 @@ class ArFSURL
             if (URLMODES[mode] != null)
                 this.Mode = mode;
             else
-                return this.#Err ("Unknown mode in URL: " + mode);            
+                return this.#Err ("Unknown mode in URL: '" + mode + "'. The current format for names is <drive-id>/path/<foldername> . This is subject to change.");  
 
         
 

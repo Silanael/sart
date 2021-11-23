@@ -119,7 +119,7 @@ async function Handler_Arweave (args)
         }
         // List all
         else
-            Sys.OUT_OBJ (network_status);
+            Sys.OUT_OBJ (network_status, {format: "json"} );
         
     }
     else
@@ -156,7 +156,7 @@ async function Handler_TX (args)
             
         // Print the entire TX.
         else                    
-            Sys.OUT_OBJ (tx);        
+            Sys.OUT_OBJ (tx, {format: "json"} );        
 
     }
     else
@@ -181,7 +181,7 @@ async function Handler_TXTags (args)
             Sys.ERR ("No tags obtained from transaction " + txid + " !");
 
         else
-            Sys.OUT_OBJ (Util.DecodeTXTags (tx).entries )
+            Sys.OUT_OBJ (Util.DecodeTXTags (tx).entries, {format: "json"}  )
 
     }
     else
@@ -273,7 +273,7 @@ async function Handler_MemPool (args, show_amount = false)
         Sys.OUT_TXT (mempool.length);
 
     else
-        Sys.OUT_OBJ (mempool);
+        Sys.OUT_OBJ (mempool, {format: "json"} );
 
 }
 
@@ -283,7 +283,7 @@ async function Handler_Peers (args)
     const peers = await Arweave.GetPeers ();
 
     if (peers != null)        
-        Sys.OUT_OBJ (peers);
+        Sys.OUT_OBJ (peers, {format: "json"} );
     
     else
         Sys.ERR ("Failed to get peers (Arweave-nodes).");
@@ -299,7 +299,7 @@ async function Handler_PendingAmount ()
 
 async function Handler_Config ()
 {
-    Sys.OUT_OBJ (Settings.Config);
+    Sys.OUT_OBJ (Settings.Config, {format: "json"} );
 }
 
 

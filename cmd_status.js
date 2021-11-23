@@ -25,6 +25,9 @@ const SUBCOMMANDS =
 {    
     "tx":      Handler_TX,
     "arfs":    Handler_ArFS,
+    "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
+    "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
+    "folder" : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },    
     "arweave": Handler_Arweave,
     "pending": Handler_PendingAmount,    
 };
@@ -35,18 +38,20 @@ const ARWEAVE_FIELDS  = "network, version, release, height, current, blocks, pee
 
 function Help (args)
 {
+    Sys.INFO ("------------");
     Sys.INFO ("STATUS USAGE");
     Sys.INFO ("------------");
     Sys.INFO ("");    
-    Sys.INFO ("Print Arweave status:")
+    Sys.INFO ("Status of the Arweave-network:")
     Sys.INFO ("   status arweave [property]");
     Sys.INFO ("");
-    Sys.INFO ("Print transaction status:")
+    Sys.INFO ("Transaction status:")
     Sys.INFO ("   status tx [txid]");
     Sys.INFO ("");
-    Sys.INFO ("Print ArFS-entity status:")
-    Sys.INFO ("   status arfs [arfs-id]");    
+    Sys.INFO ("Health-check of an ArFS-entity:")
+    Sys.INFO ("   status (arfs) [drive/folder/file] <arfs-id>");    
     Sys.INFO ("");
+    Sys.INFO ("Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS.");    
 }
 
 
@@ -62,8 +67,7 @@ async function HandleCommand (args)
 
         const status =
         {
-            "Arweave-host"      : await Arweave.GetTargetHost (),
-            "Connection state"  : conn_status.State,             
+            "Arweave-host"      : await Arweave.GetTargetHost (),             
             "Memory"            : OS.freemem () + " bytes free"
         }
 
@@ -78,10 +82,11 @@ async function HandleCommand (args)
             status ["Network pending TX"] = await Arweave.GetPendingTXAmount ();
         }
 
-        Sys.OUT_TXT ("");
+        Sys.INFO ("");
         Sys.OUT_OBJ (status);
-        Sys.OUT_TXT ("");
-        Sys.OUT_TXT ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) );
+        Sys.INFO ("");
+        Sys.INFO ("'HELP STATUS' for usage information.");
+        Sys.INFO ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) );
         
         return true;
     }
@@ -107,10 +112,13 @@ async function HandleCommand (args)
             return ret;
         }
 
-        // ArFS-ID
-        //else if (Util.IsArFSID (target) )
-        //    await Handler_ArFS (args, target);
-
+        // ArFS-ID.
+        else if (Util.IsArFSID (target) )    
+        {
+            Sys.VERBOSE ("Assuming " + target + " is an ArFS-ID.");
+            await Handler_ArFS (args, target);
+        }
+        
         else
             return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is. Valid commands are: " + Util.KeysToStr (SUBCOMMANDS) );
     
@@ -151,45 +159,40 @@ async function Handler_TX (args, txid = null)
 }
 
 
-// TODO: Implement.
-async function Handler_ArFS (args, arfs_id = null)
-{    
 
-    if ( ! args.RequireAmount (2, "Usage: status arfs <entity-type> <arfs-id> - Valid entity-types: " + ArFSDefs.ARFS_ENTITY_TYPES.toString () ) )
-        return false;
+async function Handler_ArFS (args, arfs_id = null, entity_type = null)
+{
     
-    Sys.WARN ("THIS FEATURE IS NOT FINISHED YET!")
-    Sys.WARN ("Entities show as invalid if wrong entity-type is given.")
-    Sys.WARN ("");
+    if (arfs_id == null)
+    {
+        if (! args.RequireAmount (entity_type != null ? 1 : 2, "Entity-Type (" + ArFS_DEF.ARFS_ENTITY_TYPES.toString () +") and ArFS-ID required.") )
+            return false;
+    
+        if (entity_type == null)
+            entity_type = args.PopLC ();
 
-    const entity_type = args.Pop ();
-
-    if (arfs_id == null) 
         arfs_id = args.Pop ();
 
-
-    if (!Util.IsArFSID (arfs_id) )
-        return Sys.ERR ("Invalid ArFS-ID: " + arfs_id);
-
-    if (!ArFS_DEF.IsValidEntityType (entity_type) && !Sys.ERR_OVERRIDABLE ("Unknown entity-type '" + entity_type + "'. --force to use anyway.") )
-        return false;
+        if ( ! ArFS_DEF.IsValidEntityType (entity_type) && 
+             ! Sys.ERR_OVERRIDABLE ("Unknown entity type '" + entity_type + "'. Valid ones: " + ArFS_DEF.ARFS_ENTITY_TYPES.toString() ) )
+             return false;
+    }
+    else if (entity_type == null)
+        entity_type = args.PopLC ();
     
-    const entity = ArFS.GetArFSEntity (arfs_id, entity_type);
-    
+    const entity = await ArFS.UserGetArFSEntity (arfs_id, entity_type);
+
     if (entity != null)
     {
-  
+        await entity.UpdateDetailed (Arweave, true, true);
+           
+        Sys.OUT_OBJ (entity.GetStatusInfo (), { recursive_fields: entity.RecursiveFields } );
+        Sys.INFO ("");
+        Sys.INFO ("(Use INFO to get detailed entity information and VERIFY to check the integrity of files)");
+        return true;       
     }
 
-    // Print
-    Sys.OUT_OBJ (status);
-
-    if (Util.IsSet (status.MetaTXID) )
-        await Handler_TX (args, status.MetaTXID);
-
-    if (Util.IsSet (status.DataTXID) )
-        await Handler_TX (args, status.DataTXID);
-
+    //return await DisplayArFSEntity (args.Pop (), entity_type);    
 }
 
 

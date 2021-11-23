@@ -37,7 +37,7 @@ async function HandleCommand (args)
 {    
     Sys.VERBOSE ("Entering the Command Interface.")
 
-    if (Settings.ConsoleActive)
+    if (Settings.ConsoleActive == true)
     {
         Sys.ERR ("Console already running.")
         return false;

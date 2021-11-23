@@ -21,30 +21,43 @@ const Analyze  = require ('./TXAnalyze.js');
 const SUBCOMMANDS =
 {   
     "address"     : ListAddress,     
-    "drive"       : ListDrive,
-    "drives"      : ListDrives
+    "arfs"        : ListARFS,
+    "drive"       : ListARFS,
+    "drives"      : ListDrives,
+    "all-drives"  : async function (args) { await ListDrives (args, true); },
+    "config"      : function (args) { Sys.OUT_OBJ (Settings.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
 }
 
 
 function Help (args)
 {
+    Sys.INFO ("----------");
     Sys.INFO ("LIST USAGE");
     Sys.INFO ("----------");
     Sys.INFO ("");
-    Sys.INFO ("List transactions:")
-    Sys.INFO ("   list <address>");
+    Sys.INFO ("List transactions by address:")
+    Sys.INFO ("   list <ADDRESS>");
     Sys.INFO ("");
-    Sys.INFO ("List drive content:")
-    Sys.INFO ("   list <drive-id>");
+    Sys.INFO ("List ArFS-drives on an Arweave-address:")
+    Sys.INFO ("   list <ADDRESS>");
+    Sys.INFO ("")
+    Sys.INFO ("Scan for broken ArFS-drives:")
+    Sys.INFO ("   list <ADDRESS> deep");
+    Sys.INFO ("")
+    Sys.INFO ("List content of an ArFS-drive:")
+    Sys.INFO ("   list drive <DRIVE-ID>");
     Sys.INFO ("");
-    Sys.INFO ("List root directory content:")
-    Sys.INFO ("   list <drive-id>/");
+    Sys.INFO ("List ArFS root directory content:")
+    Sys.INFO ("   list arfs <DRIVE-ID>/");
     Sys.INFO ("");
-    Sys.INFO ("List folder content:")
-    Sys.INFO ("   list <drive-id>/path/<folder>/<folder>");
+    Sys.INFO ("List ArFS-folder content:")
+    Sys.INFO ("   list arfs <DRIVE-ID>/path/<FOLDERNAME>");
     Sys.INFO ("");
     Sys.INFO ("List content of folder and all of its subfolders:")
-    Sys.INFO ("   list <drive-id>/path/<folder>/<folder> -r");
+    Sys.INFO ("   list arfs <DRIVE-ID>/path/<FOLDERNAME>/<FOLDERNAME> -r");
+    Sys.INFO ("");
+    Sys.INFO ("List config:")
+    Sys.INFO ("   list config");
     Sys.INFO ("");
 }
 
@@ -52,11 +65,25 @@ function Help (args)
 // TODO
 async function HandleCommand (args)
 {
-    if ( ! args.RequireAmount (1, "Can be an address, an ArFS Drive-ID or a path like <drive-id>/path/Images ."))
+    if (args.GetAmount () <= 0)
+    {
+        Help ();
+        Sys.INFO ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) );
         return false;
+    }
+    
+    const target  = args.Pop ();
+    const handler = SUBCOMMANDS[target.toLowerCase () ];
+
+    // Invoke handler if found
+    if (handler != null)
+    {
+        Sys.VERBOSE ("LIST: Invoking subcommand-handler for '" + target + "'...");
+        const ret = await handler (args);
+        return ret;
+    }
 
     
-    const target = args.Pop ();
     let arfs_url = null;
     
 
@@ -222,24 +249,6 @@ async function ListTXs (args, address = null)
 
 
 
-async function ListDrive (args, drive_id = null)
-{
-    if (drive_id != null)
-    {
-        if ( ! RequireAmount (1, "ListTXs: Transaction ID (TXID) required.") )
-            return false;  
-        if (! RequireArgs (args, 1, "Drive-ID required.") )
-            return false;
-        
-        drive_id = args.Pop ();
-    }
-
-    const drive = new ArFS.ArFSDrive (arfs_url.DriveID);
-    await drive.List (arfs_url); 
-
-    //ArFS.ListDriveFiles (drive_id);
-}
-
 
 async function ListDrive2 (args, drive_id = null)
 {
@@ -307,12 +316,53 @@ async function ListARFS (args, arfs_url = null)
 }
 
 
-async function ListDrives (args)
+async function ListDrives (args, all_drives = false)
 {
-    const fn_tag = "LIST DRIVES";
-    
-    ArFS.ListDrives (args[0]);
+    let addr = null;
+    let deep = false;
 
+    if (!all_drives)
+    {
+        if (! args.RequireAmount (1, "Arweave-address required.") )
+            return false;
+
+        addr = args.Pop ();
+
+        if (addr == null || !Util.IsArweaveHash (addr) )
+        {
+            Sys.ERR ("Not a valid Arweave-address: " + addr);
+            return false;
+        }
+
+        if (args.GetAmount () >= 1)        
+        {
+            const param = args.PopLC ();
+            if (param == "deep")
+            {
+                deep = true;
+                Sys.VERBOSE ("Deep scan enabled.");
+            }
+            else
+                return Sys.ERR ("Valid parameters: 'deep' for deep scan.");
+        }
+        
+    }
+    
+    const query   = new GQL.ArFSDriveQuery (Arweave);        
+    const results = all_drives ? await query.Execute (null, false) : await query.Execute (addr, deep);
+
+    if (results != null)
+    {
+        Sys.OUT_OBJ (results.Info, { recursive_fields: results.RECURSIVE_FIELDS } );
+        Sys.INFO ("")
+        if (!deep && !all_drives)
+            Sys.INFO (`(Use "LIST DRIVES <address> DEEP" for deep scan to find broken drives)`);
+    }
+    else
+        Sys.ERR ("Drive query failed for some reason.", "ListDrives");
+
+
+    //ArFS.ListDrives (args[0]);
 }
 
 

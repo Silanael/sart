@@ -24,10 +24,10 @@ const SUBCOMMANDS =
 {
     "tx"     : Handler_TX,
     "arfs"   : Handler_ArFS,
-    "drive"  : async function (args) { return await Handler_ArFS (args, ArFS_DEF.ENTITYTYPE_DRIVE);  },
-    "file"   : async function (args) { return await Handler_ArFS (args, ArFS_DEF.ENTITYTYPE_FILE);   },
-    "folder" : async function (args) { return await Handler_ArFS (args, ArFS_DEF.ENTITYTYPE_FOLDER); },
-    
+    "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
+    "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
+    "folder" : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
+    "config" : function (args) { Sys.OUT_OBJ (Settings.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
     "sart"   : Handler_SART,
     "author" : Handler_Author,
 };
@@ -35,26 +35,35 @@ const SUBCOMMANDS =
 
 function Help (args)
 {
+    Sys.INFO ("----------");
     Sys.INFO ("INFO USAGE");
     Sys.INFO ("----------");
     Sys.INFO ("");
     Sys.INFO ("Transaction info:")
     Sys.INFO ("   info <txid> (tags)");
     Sys.INFO ("");    
-    Sys.INFO ("ArFS entity info:")
-    Sys.INFO ("   info (arfs) [drive/file/folder] <drive-id>"); 
+    Sys.INFO ("ArFS-entity info:")
+    Sys.INFO ("   info (arfs) [drive/file/folder] <arfs-id>"); 
+    Sys.INFO ("");
+    Sys.INFO ("Get the current config:");
+    Sys.INFO ("   info config"); 
     Sys.INFO ("");
     Sys.INFO ("Program/author info:")
     Sys.INFO ("   info [sart/author]");
-    Sys.INFO ("");    
+    Sys.INFO ("");
+    Sys.INFO ("Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS.");    
 }
 
 
 
 async function HandleCommand (args)
 {
-    if ( ! args.RequireAmount (1, "Valid targets: " + Util.KeysToStr (SUBCOMMANDS) ) )
+    if (args.GetAmount () <= 0)
+    {
+        Help ();
+        Sys.INFO ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) )
         return false;
+    }
 
     const target  = args.Pop ();
     const handler = SUBCOMMANDS[target.toLowerCase () ];
@@ -85,7 +94,7 @@ async function HandleCommand (args)
     else if (Util.IsArFSID (target) )    
     {
         Sys.VERBOSE ("Assuming " + target + " is an ArFS-ID.");
-        await DisplayArFSEntity (target, null);
+        await Handler_ArFS (args, target);
     }
     
 
@@ -309,96 +318,29 @@ may never see the light of day...
 }
 
 
-async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
-{    
-
-    if (! Util.IsArFSID (arfs_id) )
-        return Sys.ERR ("Not a valid ArFS-ID: " + arfs_id);
 
 
-    // Try all entity-types until something returns true.
-    else if (entity_type == null)
-    {
-        let order;
-        if (Settings.Config.ArFSEntityTryOrder?.length > 0 && (order = Settings.Config.ArFSEntityTryOrder.split (","))?.length > 0)
-        {
-            const max_queries = order.length;
-            if (max_queries > 1)
-            {
-                if (++Settings.FUP < 4)
-                {
-                    Sys.WARN (Sys.ANSIWARNING ("Due to the design-flaws of ArFS, retrieving an entity without knowing its type " 
-                              + "may take up to " + max_queries + " queries.\n"
-                              +"This adds unnecessary strain on the gateway/node so please use the type parameter instead\n"
-                              +"(such as 'drive <drive-id>').") );
-                }
-                else 
-                {                    
-                    Sys.ERR (Settings.FUP == 4 ? "Are you blind, ignorant or just a fucking idiot? USE. THE. TYPE. PARAMETERS." : "ERROR: User is garbage.");
-                    return;
-                }
-            }
-
-            for (const et of order)
-            {                
-                if (await DisplayArFSEntity (arfs_id, et, true) == true)                
-                    return true;                
-            }
-            Sys.ERR ("ArFS-ID " + arfs_id + " not found. (Entity-Types tried: " + order?.toString () + ")."
-                     +" Consider using a type parameter (drive, folder or file).");
-
-            return false;
-        }
-        else
-            Sys.ERR ("Config.ArFSEntityTryOrder missing or in bad format (needs to be a string such as 'drive,file,folder' ). ");
-    }
-
-    // Fetch with a known Entity-Type.
-    else
-    {
-        const entity = await ArFS.GetArFSEntity (arfs_id, entity_type);
-
-        if (entity != null)
-        {     
-            await entity.UpdateDetailed (Arweave, true, false);       
-           
-            Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History", "Versions", "Content", "Orphans", "Parentless"] } );
-            Sys.INFO ("");
-            Sys.INFO ("(Use --debug to get the metadata JSON content)");
-            return true;
-        }
-        
-        else
-        {
-            if (guessing)
-                Sys.VERBOSE ("ArFS-ID " + arfs_id + " was not of Entity-Type:" + entity_type + " .");
-            else
-                return Sys.ERR ("Failed to get ArFS-" + entity_type + "-entity for ID '" + arfs_id + "'.");
-        }
-
-        return false;
-    }
-}
-
-
-async function Handler_ArFS (args, entity_type = null)
+async function Handler_ArFS (args, arfs_id = null, entity_type = null)
 {
-    if (entity_type == null)
+    
+    if (arfs_id == null)
     {
-        if (! args.RequireAmount (2, "Entity-Type (" + ArFS_DEF.ARFS_ENTITY_TYPES.toString () +") and ArFS-ID required.") )
+        if (! args.RequireAmount (entity_type != null ? 1 : 2, "Entity-Type (" + ArFS_DEF.ARFS_ENTITY_TYPES.toString () +") and ArFS-ID required.") )
             return false;
-        
-        entity_type = args.PopLC ();
+    
+        if (entity_type == null)
+            entity_type = args.PopLC ();
+
+        arfs_id = args.Pop ();
 
         if ( ! ArFS_DEF.IsValidEntityType (entity_type) && 
              ! Sys.ERR_OVERRIDABLE ("Unknown entity type '" + entity_type + "'. Valid ones: " + ArFS_DEF.ARFS_ENTITY_TYPES.toString() ) )
              return false;
     }
-    else
-        if (! args.RequireAmount (1, ArFS_DEF.GetIDTag (entity_type) + " required.") )
-            return false;
-
-    const entity = await ArFS.UserGetArFSEntity (args.Pop(), entity_type);
+    else if (entity_type == null)
+        entity_type = args.PopLC ();
+    
+    const entity = await ArFS.UserGetArFSEntity (arfs_id, entity_type);
 
     if (entity != null)
     {
@@ -406,7 +348,7 @@ async function Handler_ArFS (args, entity_type = null)
            
         Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: entity.RecursiveFields } );
         Sys.INFO ("");
-        Sys.INFO ("(Use --debug to get the metadata JSON content)");
+        Sys.INFO ("(Use STATUS to get " + entity.EntityType + " condition and VERIFY to verify success of uploads. --debug for metadata-JSON.)");
         return true;       
     }
 

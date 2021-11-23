@@ -456,7 +456,7 @@ function GetTXStatusStr (statuscode, confirmations)
 
 
     else if (statuscode == TXSTATUS_PENDING)
-        return Sys.ANSIWARNING (PENDING);
+        return Sys.ANSIWARNING ("PENDING");
 
 
     else if (statuscode == TXSTATUS_OK)
@@ -483,11 +483,35 @@ function GetTXStatusStr (statuscode, confirmations)
 function IsTxOKByCode (statuscode) {return statuscode == TXSTATUS_OK; }
 
 
+class TXStatusInfo
+{
+    Status        = null;
+    StatusCode    = null;
+    Confirmations = null;
+    MinedAtBlock  = null;
+
+    IsMined     () { return this.StatusCode == TXSTATUS_OK       };
+    IsPending   () { return this.StatusCode == TXSTATUS_PENDING  };
+    IsFailed    () { return this.StatusCode == TXSTATUS_NOTFOUND };
+    IsConfirmed () 
+    { 
+        if (Settings.Config.SafeConfirmationsMin == null || isNaN (Settings.Config.SafeConfirmationsMin) )
+        {
+            Sys.ERR_ONCE ("Config.SafeConfirmationsMin not properly set!");
+            return false;
+        }
+
+        else 
+            return this.IsMined () && this.Confirmations != null && this.Confirmations >= Settings.Config.SafeConfirmationsMin; 
+    }
+    
+}
+
 function TXStatusToInfo (txstatus)
 {
     if (txstatus != null)
     {
-        const info = {};
+        const info = new TXStatusInfo ();
 
         const statuscode    = txstatus.status;
         const confirmations = txstatus.confirmed?.number_of_confirmations;
@@ -514,4 +538,4 @@ module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, 
                    IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode, TXStatusToInfo, GetTXStatusInfo,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
-                   TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES };
+                   TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES, TXStatusInfo };

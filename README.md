@@ -10,15 +10,26 @@ This is a pre-release version that is **NOT INTENDED FOR PRODUCTION!**
 It exists in order to provide a fallback and point of comparison for
 the LIST-command output before I start optimizing the queries.
 
-This version focuses on the VERIFY-functionality, which was designed to produce
-a CSV containing data of files that were successfully uploaded along with failed
-and missing ones during these times of network congestion. At the time of
-writing this, ArDrive's error-tolerance and recovery capabilities are virtually
-non-existent, prompting the creation of SART.
+This version focuses on the `VERIFY`-functionality which is capable of verifying
+the integrity of uploaded files as well as generating CSV-lists of verified files
+containing TXID-name mappings, as well as lists of files that need to be
+(re)uploaded. Listing missing files when using numbered files (ie. for NFT-collections)
+is also possible with the `NUMERIC`-option. 
 
-The VERIFY-functionality is consider operational and optimized, using
-concurrent asynchronous fetched whereas LIST does not yet use this kind of
-approach, being slow as hell - as such, it should not be used in this version.
+At the time of writing this, ArDrive's error-tolerance and recovery-capabilities
+are virtually non-existent, this being what prompted the creation of SART.
+
+The `VERIFY`-command is consider operational and fairly optimized (though could start
+processing files during query-passes), using concurrent asynchronous fetches
+whereas `LIST` does not yet use this kind of approach, being slow as hell.
+As such, **LIST should NOT be used in this version**.
+
+The `STATUS`-command can be used to get an overview of the health of ArFS-entities
+such as drives, folders and files, displaying orphaned files and folders when used
+on a drive. SART cannot yet fix these, but this functionality will be coming soon.
+
+The `INFO`-command is already fairly adept in giving detailed information
+about transactions and ArFS-entities.
 
 !!! THIS IS STILL A WORK IN PROGRESS !!!
 **THE DATA PROVIDED BY THIS VERSION MAY NOT BE FULLY ACCURATE**
@@ -37,30 +48,55 @@ This is probably not the case, but use at your own risk still.
 able to create ArFS-listings in CSV-form containing information about the files
 such as Filenames mapped to TXIDs, being a successor to **ardrive-get-files**.
 
-It's also able to verify uploaded files and show the missing ones for uploads
-that contain numeric filenames (ie. 1.png, 2.png etc.).
+It's also able to verify the integrity of uploaded files and show the missing ones
+for uploads that contain numeric filenames (ie. 1.png, 2.png etc.).
 
-Transaction creating functionality is also planned, allowing users to create
+Transaction-creating functionality is also planned, allowing users to create
 custom transactions, fix broken ArDrives and generate path manifests
 in the near future.
 
-SART may be operated via command-line parameters, or from a console interface
-that launches by default if no command is given.
+SART may be operated via command-line parameters or from a console-interface
+that launches by default if no command is given. Yet the console-mode is not
+yet properly optimized, not tracking state or doing any caching.
 
-Though it's in GitHub, this is my hobby project. 
-**Pull requests are currently NOT accepted**.
+Despite of the project being in (GitHub)[https://github.com/Silanael/sart], 
+it's really just my hobby project. **Pull requests are currently NOT accepted**.
+
 
 
 
 ## THINGS TO BE MINDFUL OF
+
+- Only public ArFS-drives are currently supported, and while issues are found,
+  the repair-functionality is not yet implemented. This will soon change.
+
+- Use STATUS to check for orphaned files and VERIFY to verify the file integrity,
+  ie. to ensure that they have been uploaded properly. The latter can also generate
+  CSV-listings of TXID-filename -pairs, as well as lists of verified files and
+  those that need to be (re)uploaded. I'm planning of unifying these functionalities
+  into INFO and LIST respectively, but for now, it is what it is.
+
 - LIST is extremely slow with ArFS-drives/paths. It is purposely left that way
   for this version in order to provide a good known to compare listings against
-  when I do optimize it. Use VERIFY to verify and generate lists of drive content.
+  when I do optimize it. Use VERIFY to generate lists of public drive content.
+
+- This version uses a fixed concurrent delay of 200ms. Dropping it to 50ms gives
+  faster VERIFY-listings but is too fast for some Internet-connections. 
+  If you're getting errors in VERIFY-listings, try increasing concurrent interval,
+  ie. `--concurrent-ms 300`, or to 500 or more. This increases the time to verify
+  the files but makes things work for bad connections.
+
+- Redirect-to-file (">") cannot yet be used from within the internal console.
+
+- The internal console doesn't yet track state, meaning that queries/listings
+  aren't cached (no 'after'-pointer used either) and that options given to commands
+  will affect the subsequent commands. I will attend to all of these things
+  in the coming time, be patient.
 
 - ArFS-entities made with future ArDrive-software may not show up if it continues
-  the idiotic convention of having a different App-Name -tag for each client.
+  the idiotic convention of having a different `App-Name`-tag for each client.
   Currently there exists no solid way of identifying ArFS-transactions as not
-  even the presence of the ArFS-tag is guaranteed. If more App-Name -variations
+  even the presence of the `ArFS`-tag is guaranteed. If more `App-Name`-variations
   are added, they can be appended to `Config.ArFSTXQueryTags`, or alternatively
   the option `--less-filters` can be used to completely remove the identifying
   requirements (this leaves queries with things like `Entity-Type=drive` and
@@ -69,12 +105,7 @@ Though it's in GitHub, this is my hobby project.
   **Currently the VERIFY-functionality ignores this and seeks for metadata
    transactions containing an `ArFS`-tag**.
 
-- This version uses a fixed concurrent delay of 200ms. Dropping it to 50ms gives
-  faster VERIFY-listings but is too fast for some Internet-connections. 
-  If you're getting errors in VERIFY-listings, try increasing concurrent interval,
-  ie. `--concurrent-ms 300`, or to 500 or more. This increases the time to verify
-  the files but makes things work for bad connections.
-- Redirect-to-file (">") cannot yet be used from within the internal console.
+
 
 
 
@@ -104,6 +135,24 @@ Though it's in GitHub, this is my hobby project.
 
 
 ## USAGE EXAMPLES
+
+### List transactions by an address
+- `sart list address <address>`
+
+### List 10 newest transactions by an address
+- `sart list address <address> last 10`
+
+### Get state of an ArFs-drive, including orphaned entries:
+- `sart status <drive-id>`
+
+### Scan for broken ArFS-drives
+- `sart list drives <address> deep`
+
+### Get detailed info about an ArFS-entity
+- `sart info [drive/file/folder] <arfs-id>`
+
+### Get the status of the Arweave-network:
+- `sart status arweave`
 
 ### Generate a list of successfully uploaded files with a summary
 - `sart verify files <drive-id> summary,verified --verbose-stderr > verified.csv`
@@ -148,12 +197,16 @@ Command | Description
 --------|------------------------------------
 connect | Connect to Arweave-host or Gateway.
 set     | Set a config variable.
+date    | Get current date or convert UNIX-time.
+size    | Convert bytes to human-readable form.
 exit    | Exit the console.
 
 
 ## Options
 Option           | Alt | Description
------------------|-----|--------------------------------------------------
+-----------------|-----|-------------------------------------------------------------------------------------------------------
+--config-file    |     | Load a config-file in JSON-format. Can be created with `GET CONFIG > sart.conf` (while not in console)
+--config         |     | Manually enter one or multiple config-entries, like: '{"Setting": value }'
 --quiet          |     | Output only data, no messages or errors. 
 --no-msg         |     | Output only data/results and errors. Default for piped.
 --msg            |     | Display info on what's done. Default for non-piped.
@@ -167,7 +220,7 @@ Option           | Alt | Description
 --err-out        |     | Set destinations for error-messages. FLAGS: stdout, stderr, none
 --no-ansi        |     | Don't use ANSI codes in output.
 --all            | -a  | Display all entries (moved, orphaned etc.). For now, for LIST command only.
---recursive      | -r  | Do a recursive listing (drive listings are by default).
+--recursive      | -r  | Do a recursive listing (only LIST is affected, LIST DRIVE is by default).
 --force          |     | Override abort on some fatal errors.
 --less-filters   |     | Try to retrieve omitted entries by lowering the search criteria.
 --host           | -h  | Arweave gateway to use. Can include port and proto.
@@ -177,6 +230,7 @@ Option           | Alt | Description
 --concurrent-ms  |     | Interval between concurrent requests. Default is 200. Increase if issues.
 --retry-ms       |     | Delay between retries upon errors. Default is 5000.
 --retries        |     | Amount of retries for failed data fetch per entry. Default is 3.
+--fast           |     | Set concurrent-delay to 50ms. May cause errors on some connections.
 --format         | -f  | Output data format. Valid formats: txt, json, csv
 
 

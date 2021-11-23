@@ -25,11 +25,13 @@ const Verify   = require ('./cmd_verify.js');
 const Analyze  = require ('./TXAnalyze.js');
 //const Search   = require ('./cmd_search.js');
 const Console  = require ('./cmd_console.js');
-
+const GQL      = require ("./GQL");
 
 
 const ArweaveLib  = require ('arweave');
-const GQL = require("./GQL");
+const FS          = require ("fs");
+
+
 
 
 
@@ -129,11 +131,14 @@ const Flags =
     "--port"            : { "F": Settings.SetPort,       "A":true  },
     "--proto"           : { "F": Settings.SetProto,      "A":true  },
     "--timeout-ms"      : { "F": function (ms) { Settings.Config.ArweaveTimeout_ms  = ms; }, "A":true },
-    "--concurrent-ms"   : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = ms; }, "A":true },
+    "--concurrent-ms"   : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = ms; }, "A":true },    
     "--retries"         : { "F": function (n)  { Settings.Config.ErrorRetries       = n;  }, "A":true },
     "--retry-ms"        : { "F": function (ms) { Settings.Config.ErrorWaitDelay_ms  = ms; }, "A":true },
+    "--fast"            : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = 50; }, "A":false},
     "--force"           : { "F": Settings.SetForce,           "A":false },
     "--less-filters"    : { "F": Settings.SetLessFiltersMode, "A":false },
+    "--config-file"     : { "F": Handler_LoadConfig,          "A":true },
+    "--config"          : { "F": Handler_AppendConfig,        "A":true },
         
     "--format"          : { "F": Settings.SetFormat,     "A":true  }, 
     "-f"                : { "F": Settings.SetFormat,     "A":true  }, 
@@ -327,8 +332,9 @@ function DisplayHelp (args)
         Sys.INFO ("      size [bytes]         Convert amount of bytes to human-readable form (1K = 1024).");
         Sys.INFO ("      exit                 Exit the console.")        
         Sys.INFO ("");
-        Sys.INFO ("OPTIONS:");
+        Sys.INFO ("OPTIONS:");        
         Sys.INFO ("");
+        Sys.INFO ("      --config-file [FILE] Load a config file in JSON-format. Can be saved with 'GET CONFIG' > file.");
         Sys.INFO ("      --quiet              Output only data, no messages or errors.");
         Sys.INFO ("      --no-msg             Output only data/results and errors. Default for piped.");
         Sys.INFO ("      --msg                Display info on what's done. Default for non-piped.");
@@ -354,6 +360,8 @@ function DisplayHelp (args)
         Sys.INFO ("      --timeout-ms         HTTP request timeout. Default is 100000.");
         Sys.INFO ("      --concurrent-ms      Interval between concurrent requests. Default is 200. Increase if issues.");
         Sys.INFO ("      --retry-ms           Delay between retries upon errors. Default is 5000.");
+        Sys.INFO ("      --fast               Sets the concurrency-delay to 50ms. May result in failed fetches on");
+        Sys.INFO ("                           some connections. No, it won't make the current LIST any faster.");
         Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 3.");
         Sys.INFO ("  -f, --format             Output data format. Valid formats: txt, json, csv");
         Sys.INFO ("");
@@ -373,18 +381,25 @@ function SetSetting (args)
     const value = args.Pop ();
 
     
-    if (key == "ConfigVersion" || key == "AppVersion")
-    {        
-        Sys.ERR (Settings.FUP++ < 1 ? "Nope, won't change these." : Settings.FUP == 2 ? `What part of "Nope, won't change these" did you not understand?` : "..." );
-        return false;
-    }
-
     if (Object.keys (Settings.Config)?.includes (key) )
     {
+
+        if (! Settings.CanAlterConf (key) )
+        {        
+            Sys.ERR (Settings.FUP++ < 1 ? "Nope, won't change these." : Settings.FUP == 2 ? `What part of "Nope, won't change these" did you not understand?`:"..." );
+            return false;
+        }
+    
         const lc = value?.toLowerCase ();
         const num = value != null ? Number (value) : null;
-        
-        if (num != null && !isNaN (num) )
+
+        if (lc === "null")            
+        {
+            Settings.Config[key] = null;
+            Sys.VERBOSE ("Value '" + value + "' set to null.");            
+        }
+
+        else if (num != null && !isNaN (num) )
         {            
             Settings.Config[key] = num;
             Sys.VERBOSE ("Value '" + value + "' determined to be a number.");
@@ -412,6 +427,127 @@ function SetSetting (args)
     }
         
 }
+
+
+function Handler_LoadConfig (arg)
+{
+    const console_active = Settings.ConsoleActive;
+    const success = LoadConfig (arg);
+    
+    if (!success && !console_active)
+        Sys.EXIT (-1);
+
+    return success;
+}
+
+
+function LoadConfig (arg)
+{
+    const in_console = Settings.ConsoleActive;
+
+    if (in_console && Settings.SystemAccess != true)
+        return Sys.ERR ("SYSTEM ACCESS RESTRICTED");
+
+
+    const filename = arg; //args.Pop ();
+        
+    if (filename == null)
+    {
+        const error = "Config-filename not provided."                    
+        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, "LoadConfig");
+    }
+
+    try
+    {
+        const stat = FS.statSync (filename);
+
+        if (stat != null)
+        {
+            Sys.VERBOSE ("Config file '" + filename + "' is " + stat.size + " bytes.");
+
+            if (stat.size > Settings.MAX_CONFIGFILE_SIZE_BYTES &&
+                Sys.ERR_OVERRIDABLE ("Config file size exceeds the maximum of " + Util.GetSizeStr (Settings.MAX_CONFIGFILE_SIZE_BYTES, true) 
+                                     + ". Use --force to load anyways.") == false)
+                return false;
+
+        }
+        else if (Sys.ERR_OVERRIDABLE ("Could not stat '" + filename +"'. Use --force to try to load anyways.") == false)
+            return false;
+
+        const data = FS.readFileSync (filename, Settings.CONFIGFILE_ENCODING);
+
+        if (data != null)
+        {
+            const json = JSON.parse (data);
+
+            if (json != null)            
+                return ApplyConfig (json);            
+            else
+                Sys.ERR ("Failed to parse config JSON for file '" + filename + "'.");
+        }
+        else
+            return Sys.ERR ("Failed to load config-file '" + filename + "'.");
+
+        
+
+    }
+    catch (exception)
+    { 
+        Sys.ON_EXCEPTION (exception, "LoadConfig: " + filename); 
+        const error = "Failed to load config-file '" + filename + "'.";
+        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, "LoadConfig");
+    }
+
+    return false;
+}
+
+
+function Handler_AppendConfig (config_json)
+{
+    try
+    {
+        const json = JSON.parse (config_json);
+
+        if (json != null)            
+            return ApplyConfig (json);
+    }
+    catch (exception )
+    {
+        Sys.ON_EXCEPTION (exception, "Handler_AppendConfig");
+        return Sys.ERR (`Failed to parse manual config JSON. Proper way to use: --config '{ "Settings": value }' <-- Note the single-quotes.`);
+    }
+
+    return false;
+}
+
+
+function ApplyConfig (config)
+{
+    if (config != null)
+    {
+        Settings.SetConfigToDefault ();
+        
+        for (e of Object.entries (config) )
+        {
+            const key   = e[0];
+            const value = e[1];
+
+            if (Settings.Config.hasOwnProperty (key) )
+            {
+                Settings.Config[key] = value;
+                Sys.VERBOSE ("Setting '" + key + "' set to '" + value + "'. ");
+            }
+            else            
+                Sys.ERR ("Config-key '" + key + "' not recognized and will be omitted.");            
+        }
+    }
+    else
+        Sys.ERR ("PROGRAM ERROR: config null", "ApplyConfig");
+
+    return true;
+}
+
+
 
 
 function DisplayVersion (argv)

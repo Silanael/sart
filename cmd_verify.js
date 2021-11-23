@@ -122,10 +122,15 @@ const ANSI_RED       = "\033[31m";
 
 function Help (args)
 {
+    Sys.INFO ("------------");
     Sys.INFO ("VERIFY USAGE");
     Sys.INFO ("------------");
     Sys.INFO ("");
-    Sys.INFO ("Verify upload success:")
+    Sys.INFO ("VERIFY is used to verify file integrity, to get information regarding what files are");
+    Sys.INFO ("present on the drive as well as which ones need to be (re)uploaded. It can provide");    
+    Sys.INFO ("various file-listings in CSV-format along with a summary of the files and their total size.");    
+    Sys.INFO ("");
+    Sys.INFO ("SYNTAX:")
     Sys.INFO ("   verify files <Drive-ID> [OUTPUT] (NUMERIC) [PARAMS]");
     Sys.INFO ("");
     Sys.INFO ("'OUTPUT' is optional and can be any combination of following:");
@@ -145,6 +150,8 @@ function Help (args)
     Sys.INFO ("PROCESSED        All encountered files. May contain duplicate filenames.");
     Sys.INFO ("")
     Sys.INFO ("***")
+    Sys.INFO ("If omitted, defaults are " + Settings?.Config?.VerifyDefaults + " for the regular mode");
+    Sys.INFO ("and " + Settings?.Config?.VerifyDefaults_Numeric + " for the numeric mode.");
     Sys.INFO ("")
     Sys.INFO ("'EXTENSION ext' - filter processed files by extension. Optional.");
     Sys.INFO ("The extension-filter is case-sensitive.");
@@ -156,7 +163,7 @@ function Help (args)
     Sys.INFO ("be updated, such as NFTs. ");
     Sys.INFO ("")
     Sys.INFO ("'RANGE first-last' is an optional parameter for NUMERIC mode.");
-    Sys.INFO ("If omitted, the range is autodetected.");
+    Sys.INFO ("If omitted, the range is autodetected. This is usually fine.");
     Sys.INFO ("");
     Sys.INFO ("'NO-PRUNE' disables the default behaviour of only displaying the newest")
     Sys.INFO ("file entity for each filename. Disabling this will cause a failed file to")
@@ -168,6 +175,7 @@ function Help (args)
     
     Sys.INFO ("");
     Sys.INFO ("EXAMPLES:")
+    Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1");
     Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 summary,verified");
     Sys.INFO ("   verify files a44482fd-592e-45fa-a08a-e526c31b87f1 not-verified");
     Sys.INFO ("   verify files <NFT-drive-id> numeric");
@@ -205,7 +213,6 @@ class Results
         Unknown           : [],        
     };
    
-    
     Numeric = null;
 
     Summary = {};
@@ -250,13 +257,73 @@ class Results
 
     }
 
-    CreateSummary ()
+    CreateSummary (time_ms)
     {
         for (const e of Object.entries (this.FileLists) )
         {
             if (e[1] != null)
                 this.Summary[e[0]] = e[1].length;
         }
+
+        const hr_chars = Settings.Config.SizeDigits;
+
+        this.Summary.ReportedBytes_Processed = 0;
+        this.Summary.ReportedBytes_Filtered  = 0;
+        this.Summary.ReportedBytes_FailedEst = 0;
+        
+
+
+        if (this.FileLists?.Processed != null)
+        {
+            let bytes = 0;
+            for (const e of this.FileLists.Processed)
+            {
+                if (e?.ReportedSize != null && !isNaN (e.ReportedSize) )
+                {
+                    bytes += Number(e.ReportedSize);
+                }
+                else
+                    Sys.ERR ("PROGRAM ERROR: Skipping " + e.FileID + " from calculations - ReportedSize not a number.");
+            }
+            this.Summary.ProcessedBytes_Reported = bytes;
+        }        
+
+        if (this.FileLists?.Processed != null)
+            this.Summary.ReportedBytes_Processed = this.__CountBytes (this.FileLists.Processed);
+
+        if (this.FileLists?.Filtered != null)
+            this.Summary.ReportedBytes_Filtered = this.__CountBytes (this.FileLists.Filtered);
+        
+        if (this.FileLists?.Failed != null)
+            this.Summary.ReportedBytes_FailedEst = this.__CountBytes (this.FileLists.Failed); 
+        
+
+        this.Summary.ReportedSize_Processed = Util.GetSizeStr (this.Summary.ReportedBytes_Processed, true, hr_chars);
+        this.Summary.ReportedSize_Filtered  = Util.GetSizeStr (this.Summary.ReportedBytes_Filtered,  true, hr_chars);
+        this.Summary.ReportedSize_FailedEst = Util.GetSizeStr (this.Summary.ReportedBytes_FailedEst, true, hr_chars);
+        
+        this.Summary.Duration_sec       = time_ms / 1000;
+        this.Summary.ConcurrentDelay_ms = Settings?.Config?.ConcurrentDelay_ms;
+        this.Summary.App                = "SART";
+        this.Summary.AppVersion         = Util.GetVersion (); 
+    }
+
+    __CountBytes (list)
+    {
+        let bytes = 0;
+        if (list != null)
+        {
+            for (const e of list)
+            {
+                if (e?.ReportedSize != null && !isNaN (e.ReportedSize) )
+                {
+                    bytes += Number(e.ReportedSize);
+                }
+                else
+                    Sys.ERR ("PROGRAM ERROR: Skipping " + e.FileID + " from calculations - ReportedSize not a number.");
+            }
+        }
+        return bytes;
     }
 
     CreateFilenamePruned (filter_ext)
@@ -311,9 +378,13 @@ class Results
 
 async function HandleCommand (args)
 {
-    if ( ! args.RequireAmount (1, "A subcommand is required. Valid ones: " + Util.KeysToStr (SUBCOMMANDS) ) )
-        return false; 
-
+    if (args.GetAmount () <= 0)
+    {
+        Help ();
+        Sys.INFO ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) );
+        return false;
+    }
+    
     const target  = args.Pop ();
     const handler = SUBCOMMANDS[target.toLowerCase () ];
 
@@ -408,7 +479,7 @@ async function Handler_Uploads (args)
     // Autoset listmode
     if (list_mode == null)
     {
-        list_mode = numeric_mode ? Settings.Config.VerifyDefaultFlags_NUM : Settings.Config.VerifyDefaultFlags;
+        list_mode = numeric_mode ? Settings.Config.VerifyDefaults_Numeric : Settings.Config.VerifyDefaults;
         Sys.VERBOSE ("Autoset list mode to '" + list_mode + "'.");
     }
 
@@ -570,8 +641,8 @@ async function Handler_Uploads (args)
 
 
 
-    // Generate a summary
-    results.CreateSummary ();
+    // Generate a summary      
+    results.CreateSummary (new Date().getTime () - start_time);
     
 
     
@@ -648,6 +719,7 @@ class File
 {
     FileID         = null;
     BlockHeight    = null;
+    ReportedSize   = 0;
     
     // TODO: Should turn these into one variable at some point.
     Analyzed       = false;
@@ -828,9 +900,16 @@ class File
 
             else
             {                
-                this.Filename    = json.name;
-                this.DataTXID    = json.dataTxId;            
+                this.Filename     = json.name;
+                this.DataTXID     = json.dataTxId;
+                this.ReportedSize = json.size != null ? Number (json.size) : 0;         
                 
+                if (isNaN (this.ReportedSize) )
+                {
+                    Sys.ERR ("Reported size not a number: '" + this.ReportedSize + "'.", this.FileID);
+                    this.ReportedSize = 0;
+                }
+
                 // This shouldn't really happen
                 if (tx_table[this.MetaTXID] == null)
                 {
@@ -861,11 +940,35 @@ class File
                     const data_entry = tx_table[this.DataTXID];
 
                     if (data_entry == null)
-                    {
-                        this.Failed         = true;
-                        this.StatusText     = "FAIL";                    
-                        this.DataText       = "FAIL";
-                        this.DetailedStatus = "Data-transaction doesn't seem to exist.";
+                    {        
+                        Sys.VERBOSE ("Didn't find data TX " + this.DataTXID + " locally, querying to make sure..");                        
+                        const info = await Arweave.GetTXStatusInfo (this.DataTXID);
+                        
+                        if (info == null || info.IsFailed () )
+                        {
+                            this.Failed         = true;
+                            this.StatusText     = "FAIL";                    
+                            this.DataText       = "FAIL";
+                            this.DetailedStatus = "Data-transaction doesn't seem to exist.";
+                        }
+                        else if (info.IsPending () )
+                        {
+                            this.DataOK     = false;
+                            this.StatusText = "PEND";
+                            this.DataText   = "PEND";
+                            this.Pending    = true;                           
+                        }
+                        else if (info.IsMined () )
+                        {
+                            this.DataOK     = true;
+                            this.DataText   = " OK ";
+                        }
+                        else
+                        {
+                            this.DataOK         = false;
+                            this.DataText       = "????";
+                            this.DetailedStatus = "Data-transaction state unknown. May be a program error.";
+                        }
                     }
 
                     else

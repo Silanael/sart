@@ -9,15 +9,18 @@
 const Package  = require ("./package.json");
 
 
-const CONFIG_VERSION = 1;
+const CONFIG_VERSION            = 1;
+const MAX_CONFIGFILE_SIZE_BYTES = 83886080;
+const CONFIGFILE_ENCODING       = "utf-8";
+const RECURSIVE_FIELDS          = ["ArFSTXQueryTags"]
 
 
 // Whether to allow the program to access the system,
 // restricting fopen and SYS if set to false.
 const SystemAccess  = true;
 
-const ConsoleActive = false;
 
+let ConsoleActive = false;
 let FUP = 0;
 
 
@@ -52,12 +55,13 @@ const OutputFormats =
     JSON    : "json",
 }
 
+const LOCKED_CONFIG_ITEMS = ["ConfigVersion", "AppVersion", "AppVersionCode"];
 
-
-const Config =
+const CONFIG_DEFAULT =
 {
     ConfigVersion          : CONFIG_VERSION,
     AppVersion             : Package.version,
+    AppVersionCode         : Package.versioncode,
 
     LogLevel               : process.stdout.isTTY ? LogLevels.MSG : LogLevels.NOMSG,
     MsgOut                 : OutputDests.STDOUT,
@@ -83,9 +87,10 @@ const Config =
     VarNamesUppercase      : false,
     ANSIAllowed            : true,
     CSVReplacePeriodWith   : "#!#",
+    JSONSpacing            : 3,
 
-    VerifyDefaultFlags     : "SUMMARY,NOT-VERIFIED",
-    VerifyDefaultFlags_NUM : "SUMMARY,ALL",
+    VerifyDefaults         : "SUMMARY,NOT-VERIFIED",
+    VerifyDefaults_Numeric : "SUMMARY,ALL",
 
     ArFSEntityTryOrder     : "drive,file,folder",
 
@@ -103,6 +108,20 @@ const Config =
   
 };
 
+var Config = {};
+
+
+function SetConfigToDefault ()
+{
+    Config = {};
+
+    for (const e of Object.entries (CONFIG_DEFAULT) )
+    {
+        const key   = e[0];
+        const value = e[1];
+        Config[key] = value;
+    }
+}
 
 
 
@@ -132,7 +151,7 @@ function SetPort            (port)        { Config.ArweavePort  = port;  ManualD
 function SetProto           (proto)       { Config.ArweaveProto = proto; ManualDest = true;                    }
 function SetDisplayAll      ()            { Config.DisplayAll   = true;                                        }
 function SetRecursive       ()            { Config.Recursive    = true;                                        }
-
+function CanAlterConf       (field)       { return ! LOCKED_CONFIG_ITEMS.includes (field);                     }
 
 
 function SetHost (host)
@@ -225,6 +244,10 @@ function SetDebug () { Config.LogLevel = LogLevels.DEBUG; }
 
 
 
+SetConfigToDefault ();
+
+
+
 // I can think of a better way of doing this. But CBA at the moment.
 module.exports =
 { 
@@ -233,6 +256,7 @@ module.exports =
     OutputFormats,
     OutputDests,
     ConsoleActive,
+    SystemAccess,
     FUP, 
     GetHostString,
     GetGQLHostString,
@@ -265,5 +289,10 @@ module.exports =
     SetRecursive,
     SetMsgOut,
     SetErrOut,
+    CanAlterConf,
+    SetConfigToDefault,
+    MAX_CONFIGFILE_SIZE_BYTES,
+    RECURSIVE_FIELDS,
+    CONFIGFILE_ENCODING,
 };
 

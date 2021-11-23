@@ -23,7 +23,10 @@ const ANSI_WARNING   = ANSI_YELLOW;
 const ANSI_PENDING   = ANSI_YELLOW;
 const ANSI_CLEAR     = "\033[0m";
 const ANSI_UNDERLINE = "\033[4m";
+const ANSI_BLINK     = "\033[5m";
+const ANSI_BLINK_OFF = "\033[25m";
 
+const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
 
 
@@ -130,7 +133,7 @@ function OUT_TXT_RAW (str)
 }
 
 
-function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], header: true } ) 
+function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], header: true, format:null } ) 
 {
 
     if (obj == null)
@@ -143,13 +146,16 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
     if (opts.header == null)             opts.header = true;
 
 
-    switch (Settings.Config.OutputFormat) 
+    const out_fmt = opts.format != null ? opts.format : Settings.Config.OutputFormat;
+
+
+    switch (out_fmt) 
     {        
         case Settings.OutputFormats.JSON:
        
             try
             { 
-                OUT_TXT (JSON.stringify (obj) ); 
+                OUT_TXT (JSON.stringify (obj, null, Settings.Config.JSONSpacing) ); 
             }
             catch (exception) 
             { 
@@ -188,12 +194,15 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 if (val == "[object Object]") // Too ugly to be listed like this.
                     val = "<OBJECT>";
 
-                val = val.replace (',', Settings.Config.CSVReplacePeriodWith);
+                val = val.replace (/,/g, Settings.Config.CSVReplacePeriodWith);
 
                 line = line != null ? line + "," + val : val;
             }
             OUT_TXT (line);
             break;
+
+
+
 
         // Text
         default:
@@ -235,8 +244,14 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 {
                     OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
                             + " ".repeat (FIELD_VALUE_SPACER) + "-----");
-                    
-                    OUT_OBJ (e[1], { indent: opts.indent + longest_len + FIELD_VALUE_SPACER, recursive_fields: opts.recursive_fields, header: opts.header } )
+                                 
+                    OUT_OBJ (e[1], 
+                    { 
+                        indent:           opts.indent + longest_len + FIELD_VALUE_SPACER, 
+                        recursive_fields: opts.recursive_fields, 
+                        header:           opts.header,
+                        format:           out_fmt 
+                    });
                 }
 
                 // Display the field-value pair.
@@ -246,6 +261,10 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                     
                     if (val_str == "[object Object]") // Too ugly to be listed like this.
                         val_str = "<OBJECT>";
+
+                    let pos
+                    if (Settings.IsANSIAllowed () && (pos = val_str.search (WARNING_CHR_SEQ_REGEXP)) != -1)
+                        val_str = ANSIERROR (val_str).replace (/!!!/g, ANSI_BLINK + "!!!" + ANSI_BLINK_OFF);
 
                     OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
                             + " ".repeat (FIELD_VALUE_SPACER) + val_str);
@@ -291,8 +310,8 @@ function DEBUG (str, src)
     if (Settings.IsDebug () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log  (msg);
-        if (Settings.IsMsgSTDERR () ) console.warn (msg);        
+        if (Settings.IsMsgSTDOUT () ) console.log   (msg);
+        if (Settings.IsMsgSTDERR () ) console.error (msg);        
     }
 }
 
@@ -304,8 +323,8 @@ function WARN (str, src)
     if (!Settings.IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log  (ANSIWARNING (msg) );
-        if (Settings.IsMsgSTDERR () ) console.warn (ANSIWARNING (msg) );        
+        if (Settings.IsErrSTDOUT () ) console.log   (ANSIWARNING (msg) );
+        if (Settings.IsErrSTDERR () ) console.error (ANSIWARNING (msg) );        
     }        
 }
 
@@ -317,8 +336,8 @@ function ERR (str, src)
     if (!Settings.IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log   (ANSIERROR (msg) );
-        if (Settings.IsMsgSTDERR () ) console.error (ANSIERROR (msg) );        
+        if (Settings.IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
+        if (Settings.IsErrSTDERR () ) console.error (ANSIERROR (msg) );        
     }
        
     return false;
