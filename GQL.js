@@ -625,20 +625,24 @@ class Entity
         Errors:        null,
     }
 
-    Entries     = null;    
-    FirstEntry  = null;
-    NewestEntry = null;
-    NewestMeta  = null;
-    MetaByTXID  = {};
-    EntryByTXID = {};
-    Query       = null;
+    Entries         = null;    
+    FirstEntry      = null;
+    NewestEntry     = null;
+    NewestMeta      = null;
+    MetaByTXID      = {};
+    EntryByTXID     = {};
+    Query           = null;
 
-    
+    RecursiveFields = ["History", "Versions", "Content", "Orphans", "Parentless"];
+    StatusFields    = ["Entity-Type", "ArFS-ID", "Owner", "MetaTXStatus", "MetaTXConfirmations",
+                       "DataTXStatus", "DataTXConfirmations", "Operations", "Versions", "Content"];
+
     constructor (info = null) 
     { 
         if (info != null) 
             this.Info = info; 
     }
+
 
     IsPublic          ()      { return this.Info?.IsPublic    == true;                           }
     IsEncrypted       ()      { return this.Info?.IsEncrypted == true;                           }
@@ -671,7 +675,7 @@ class Entity
 
   
 
-    async UpdateDetailed (arweave, verify = true)
+    async UpdateDetailed (arweave, verify = true, content = true)
     {
         if (this.Entries == null)
             return;
@@ -768,32 +772,36 @@ class Entity
             this.Info.Versions = fileversions;
 
 
-        // Entity-specific stuff
-        switch (this.EntityType)
+        if (content)
         {
-            case ArFSDefs.ENTITYTYPE_DRIVE:
+            // Entity-specific stuff
+            switch (this.EntityType)
+            {
+                case ArFSDefs.ENTITYTYPE_DRIVE:
+
+                    const id    = this.Info != null ? this.Info['ArFS-ID'] : null;
+                    const owner = this.Info?.Owner;
+            
+                    if (id != null && owner != null)
+                    {
+                        const query = new ArFSDriveContentQuery (arweave);
+                        const results = await query.Execute (id, owner);
+
+                        if (results != null)
+                            this.Info.Content = results.Info;
+                    }
+                    else
+                        Sys.ERR ("Could not retrieve drive content, either of these is null: " + id + " or " + owner);
                 
-                const id    = this.Info != null ? this.Info['ArFS-ID'] : null;
-                const owner = this.Info?.Owner;
-
-                if (id != null && owner != null)
-                {
-                    const query = new ArFSDriveContentQuery (arweave);
-                    const results = await query.Execute (id, owner);
-                    
-                    if (results != null)
-                        this.Info.Content = results.Info;
-                }
-                else
-                    Sys.ERR ("Could not retrieve drive content, either of these is null: " + id + " or " + owner);
-
-                break;
-
-            default:
-                break;
+                    break;
+                
+                default:
+                    break;
+            }            
         }
-
     }
+
+
 
 
     async __GetState (arweave, metadata, tx_entry, check_txstatus = false)

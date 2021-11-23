@@ -1363,6 +1363,78 @@ async function GetArFSEntity (arfs_id, entity_type)
 
 
 
+async function UserGetArFSEntity (arfs_id, entity_type = null, guessing = false)
+{    
+    let entity = null;
+
+    if (! Util.IsArFSID (arfs_id) )
+    {
+        Sys.ERR ("Not a valid ArFS-ID: " + arfs_id);
+        return null;
+    }
+
+
+    // Try all entity-types until something returns true.
+    else if (entity_type == null)
+    {
+        let order;
+        if (Settings.Config.ArFSEntityTryOrder?.length > 0 && (order = Settings.Config.ArFSEntityTryOrder.split (","))?.length > 0)
+        {
+            const max_queries = order.length;
+            if (max_queries > 1)
+            {
+                if (++Settings.FUP < 4)
+                {
+                    Sys.WARN (Sys.ANSIWARNING ("Due to the flawed design of ArFS, retrieving an entity without knowing its type " 
+                              + "may take up to " + max_queries + " queries.\n"
+                              +"This adds unnecessary strain on the gateway/node so please use the type parameter instead\n"
+                              +"(such as 'drive <drive-id>').") );
+                }
+                else 
+                {                    
+                    Sys.ERR (Settings.FUP == 4 ? "Are you blind, ignorant or just a fucking idiot? USE. THE. TYPE. PARAMETERS." : "ERROR: User is garbage.");
+                    return;
+                }
+            }
+
+            for (const et of order)
+            {                
+                if ( (entity = await UserGetArFSEntity (arfs_id, et, true)) != null)
+                    return entity;                
+            }
+            Sys.ERR ("ArFS-ID " + arfs_id + " not found. (Entity-Types tried: " + order?.toString () + ")."
+                     +" Consider using a type parameter (drive, folder or file).");
+
+            return null;
+        }
+        else
+            Sys.ERR ("Config.ArFSEntityTryOrder missing or in bad format (needs to be a string such as 'drive,file,folder' ). ");
+    }
+
+    // Fetch with a known Entity-Type.
+    else
+    {
+        entity = await GetArFSEntity (arfs_id, entity_type);
+
+        if (entity != null)
+            return entity;
+        
+        else
+        {
+            if (guessing)
+                Sys.VERBOSE ("ArFS-ID " + arfs_id + " was not of Entity-Type:" + entity_type + " .");
+            else            
+                Sys.ERR ("Failed to get ArFS-" + entity_type + "-entity for ID '" + arfs_id + "'.");
+        }        
+    }
+
+    return entity;
+}
+
+
+
+
+
 async function GetDriveEntity (drive_id)
 {
     if (Util.IsArFSID (drive_id) )
@@ -1835,4 +1907,5 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag };
+module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag,
+                   UserGetArFSEntity };

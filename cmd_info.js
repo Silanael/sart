@@ -360,7 +360,7 @@ async function DisplayArFSEntity (arfs_id, entity_type = null, guessing = false)
 
         if (entity != null)
         {     
-            await entity.UpdateDetailed (Arweave, true);       
+            await entity.UpdateDetailed (Arweave, true, false);       
            
             Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: ["History", "Versions", "Content", "Orphans", "Parentless"] } );
             Sys.INFO ("");
@@ -398,7 +398,19 @@ async function Handler_ArFS (args, entity_type = null)
         if (! args.RequireAmount (1, ArFS_DEF.GetIDTag (entity_type) + " required.") )
             return false;
 
-    return await DisplayArFSEntity (args.Pop (), entity_type);    
+    const entity = await ArFS.UserGetArFSEntity (args.Pop(), entity_type);
+
+    if (entity != null)
+    {
+        await entity.UpdateDetailed (Arweave, true, false);
+           
+        Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: entity.RecursiveFields } );
+        Sys.INFO ("");
+        Sys.INFO ("(Use --debug to get the metadata JSON content)");
+        return true;       
+    }
+
+    //return await DisplayArFSEntity (args.Pop (), entity_type);    
 }
 
 
