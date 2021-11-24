@@ -76,6 +76,7 @@ class Entry
     TXID           = null;
     Owner          = null;
     BlockHeight    = null;
+    BlockID        = null;
     Tags           = null;
     Timestamp      = null;
     Fee_AR         = null;
@@ -92,6 +93,7 @@ class Entry
         {
             this.TXID             = edge.node?.id,
             this.Owner            = edge.node?.owner?.address,
+            this.BlockID          = edge.node?.block?.id         != null ? edge.node.block.id         : null;
             this.BlockHeight      = edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null;
             this.Tags             = edge.node?.tags              != null ? edge.node?.tags : [];
             this.Timestamp        = edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null;
@@ -141,6 +143,7 @@ class Entry
 
     GetTXID        ()    { return this.TXID;                                                     }
     GetOwner       ()    { return this.Owner;                                                    }
+    GetBlockID     ()    { return this.BlockID;                                                  }
     GetBlockHeight ()    { return this.BlockHeight;                                              }
     GetBlockTime   ()    { return this.Timestamp;                                                }
     GetDate        ()    { return this.Timestamp != null ? Util.GetDate (this.Timestamp) : null; }
@@ -592,6 +595,16 @@ class TXQuery extends Query
             tag_str += "],";
         }
 
+        let block_str = "";
+        const minblock = Settings.Config.QueryMinBlockHeight;
+        const maxblock = Settings.Config.QueryMaxBlockHeight;
+        if (minblock != null || maxblock != null)
+        {            
+            block_str = "block: {" + (minblock != null ? "min:" + minblock + "," : "") 
+                                   + (maxblock != null ? "max:" + maxblock       : "") + " },";
+        }
+
+
         return `
         query 
         {
@@ -599,6 +612,7 @@ class TXQuery extends Query
             (             
               first:${config.first},
               ${id_str}
+              ${block_str}
               ${sort_str}
               ${cursor_str}
               ${owner_str}
@@ -744,15 +758,19 @@ class Entity
 
     Info =
     {
-        "Entity-Type": null,
-        "ArFS-ID":     null,
-        Owner:         null,
-        TXID_Created:  null,
-        TXID_Latest:   null,
-        Operations:    null,
-        IsEncrypted:   null,
-        IsPublic:      null,
-        Errors:        null,
+        "Entity-Type":       null,
+        "ArFS-ID":           null,
+        Owner:               null,
+        TXID_Created:        null,
+        TXID_Latest:         null,
+        Block_Created:       null,
+        Block_Latest:        null,
+        BlockHeight_Created: null,
+        BlockHeight_Latest:  null,
+        Operations:          null,
+        IsEncrypted:         null,
+        IsPublic:            null,
+        Errors:              null,
     }
 
     Entries         = null;    
@@ -937,7 +955,7 @@ class Entity
     
 
         if (this.EntityType == ArFSDefs.ENTITYTYPE_DRIVE)
-            status_info.Analysis += " File integrity for NOT ANALYZED - use the VERIFY-command for that.";
+            status_info.Analysis += " File integrity NOT ANALYZED - use the VERIFY-command for that.";
 
         else if (this.EntityType == ArFSDefs.ENTITYTYPE_FOLDER)
             status_info.Analysis += " File integrity of the files in the folder NOT ANALYZED - use the VERIFY-command to check the entire drive.";            
@@ -1318,15 +1336,19 @@ class ArFSEntityQuery extends TXQuery
             {
                 const entity = new Entity (
                 {        
-                    "Entity-Type": entity_type,
-                    "ArFS-ID":     arfs_id,
-                    Owner:         owner,
-                    Created:       first_entry ?.GetBlockTime () != null ? Util.GetDate (first_entry. GetBlockTime () ) : null,
-                    LastModified:  newest_entry?.GetBlockTime () != null ? Util.GetDate (newest_entry.GetBlockTime () ) : null,
-                    TXID_Created:  first_entry ?.GetTXID (),
-                    TXID_Latest:   newest_entry?.GetTXID (),                    
-                    Operations:    entries?.length,
-                    IsEncrypted:   first_entry?.HasTag (ArFSDefs.TAG_CIPHER),
+                    "Entity-Type":       entity_type,
+                    "ArFS-ID":           arfs_id,
+                    Owner:               owner,
+                    Created:             first_entry ?.GetBlockTime () != null ? Util.GetDate (first_entry. GetBlockTime () ) : null,
+                    LastModified:        newest_entry?.GetBlockTime () != null ? Util.GetDate (newest_entry.GetBlockTime () ) : null,
+                    TXID_Created:        first_entry ?.GetTXID        (),
+                    TXID_Latest:         newest_entry?.GetTXID        (),
+                    Block_Created:       first_entry ?.GetBlockID     (),
+                    Block_Latest:        newest_entry?.GetBlockID     (),
+                    BlockHeight_Created: first_entry ?.GetBlockHeight (),
+                    BlockHeight_Latest:  newest_entry?.GetBlockHeight (),                    
+                    Operations:          entries?.length,
+                    IsEncrypted:         first_entry?.HasTag (ArFSDefs.TAG_CIPHER),
                 });
 
                 entity.EntityType  = entity_type;

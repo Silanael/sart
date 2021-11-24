@@ -1,13 +1,13 @@
 {
-  "name": "SART",
+  "name": "sart",
   "version": "0.8.5a",
   "versioncode": 1,
-  "versiondate": "2021-11-22_01",
+  "versiondate": "2021-11-24_01",
   "description": "Silanael ARweave Tool",
   "codename": "Dying Light",
   "main": "main.js",
   "bin": "main.js",
-  "man": "./README.md",
+  "man": "README.md",
   "scripts": {
     "start": "node ./main.js",
     "help": "node ./main.js --help",
@@ -17,11 +17,13 @@
     "quiet": "node ./main.js --quiet"
   },
   "dependencies": {
-    "arweave": "^1.10.18"
+    "arweave": "^1.10.18",
+    "g": "^2.0.1"
   },
-  "repository": "github:Silanael/sart",      
+  "repository": "github:Silanael/sart",
   "keywords": [
     "Arweave",
+    "ArFS",
     "ArDrive",
     "tool",
     "utility",
@@ -31,5 +33,8 @@
   ],
   "author": "Silanael",
   "license": "SEE LICENSE IN 'LICENSE'",
-  "homepage": "https://github.com/Silanael/sart"
+  "homepage": "https://github.com/Silanael/sart",
+  "pkg": {
+    "assets": "README.md"
+  }
 }

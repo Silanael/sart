@@ -80,8 +80,8 @@ it's really just my hobby project. **Pull requests are currently NOT accepted**.
   for this version in order to provide a good known to compare listings against
   when I do optimize it. Use VERIFY to generate lists of public drive content.
 
-- This version uses a fixed concurrent delay of 200ms. Dropping it to 50ms gives
-  faster VERIFY-listings but is too fast for some Internet-connections. 
+- This version uses a fixed concurrent delay of 200ms. Using `--fast` drops it to
+  50ms, resulting in faster VERIFY-listings, yet some connections can't handle it.
   If you're getting errors in VERIFY-listings, try increasing concurrent interval,
   ie. `--concurrent-ms 300`, or to 500 or more. This increases the time to verify
   the files but makes things work for bad connections.
@@ -110,11 +110,13 @@ it's really just my hobby project. **Pull requests are currently NOT accepted**.
 - Private drive support
 - Optimized, concurrent LIST-queries
 - Selectable output fields for listing (ie. name,datatxid,ar_url)
+- Paged output inspection.
 - Save data into files without STDOUT redirect (and making console '>' use this).
 - Batch-download of drive/folder content with appropriate filters/wildcards.
 - Custom transaction-creation.
 - Listing summary of all owned wallets (TX-amount, data, balances etc.)
 - ArFS-repair functionality.
+- Path manifest creation, manual + from ArFS-folders.
 - Dynamic concurrent delay for maximum stable performance.
 - Different concurrency-modes, perhaps based on N simultaneous fetches.
 - Navigation within ArFS in the console.
@@ -133,7 +135,7 @@ it's really just my hobby project. **Pull requests are currently NOT accepted**.
 - Saving and loading config file from home dir
 - Progress indicators for non-verbose levels.
 - Encryption of a JSON-wallet + a keyring for drive/file keys.
-Probably even more than that. Getting some sleep now.
+
 
 
 ## PREREQUISITES (IF BUILDING FROM SOURCE)
@@ -141,15 +143,14 @@ Probably even more than that. Getting some sleep now.
 
 
 
-## TO BUILD
+## TO INSTALL FROM SOURCE
 - `git clone https://github.com/Silanael/sart.git`
 - `cd sart`
-- `npm install`
+- `npm install -g` or `sudo npm install -g`
+Leaving the '-g' out will build the project in the local directory,
+not installing it into the system. If this is done, the program can be
+launched with commands `./sart`, `npm start` or `node main.js`.
 
-
-
-## TO RUN FROM SOURCE
-- `./sart` OR `npm start` OR `node main.js`
 
 
 
@@ -177,6 +178,9 @@ Probably even more than that. Getting some sleep now.
 
 ### Get detailed info about an ArFS-entity
 - `sart info [drive/file/folder] <arfs-id>`
+
+### List content of an ArFS-folder
+- `sart list <drive-id>/path/<foldername>`
 
 ### Get the status of the Arweave-network:
 - `sart status arweave`
@@ -259,6 +263,8 @@ Option           | Alt | Description
 --retries        |     | Amount of retries for failed data fetch per entry. Default is 3.
 --fast           |     | Set concurrent-delay to 50ms. May cause errors on some connections.
 --format         | -f  | Output data format. Valid formats: txt, json, csv
+--min-block H    |     | Add 'block: { min:[H] }' to the GQL-queries. Minimum block height for the data obtained.
+--max-block H    |     | Add 'block: { max:[H] }' to the GQL-queries. Maximum block height for the data obtained.
 
 
 

@@ -138,11 +138,12 @@ const Flags =
     "--fast"            : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = 50; }, "A":false},
     "--force"           : { "F": Settings.SetForce,           "A":false },
     "--less-filters"    : { "F": Settings.SetLessFiltersMode, "A":false },
-    "--config-file"     : { "F": Handler_LoadConfig,          "A":true },
-    "--config"          : { "F": Handler_AppendConfig,        "A":true },
-        
-    "--format"          : { "F": Settings.SetFormat,     "A":true  }, 
-    "-f"                : { "F": Settings.SetFormat,     "A":true  }, 
+    "--config-file"     : { "F": Handler_LoadConfig,          "A":true  },
+    "--config"          : { "F": Handler_AppendConfig,        "A":true  },
+    "--min-block"       : { "F": Settings.SetMinBlockHeight,  "A":true  },
+    "--max-block"       : { "F": Settings.SetMaxBlockHeight,  "A":true  },
+    "--format"          : { "F": Settings.SetFormat,          "A":true  }, 
+    "-f"                : { "F": Settings.SetFormat,          "A":true  }, 
 }
 
 
@@ -177,6 +178,10 @@ async function Main (argv)
             if (cmd != undefined)
             {
                 const command_params = new Util.Args (Util.GetCmdArgs (argv, C, Flags) );
+
+                if (Settings.Config.QueryMinBlockHeight != null ||  Settings.Config.QueryMaxBlockHeight != null)
+                Sys.WARN ("Block range override in effect - min:" + Settings.Config.QueryMinBlockHeight 
+                           + " max:" + Settings.Config.QueryMaxBlockHeight);
 
                 if (cmd.HandleCommand != null)
                     await cmd.HandleCommand (command_params);
@@ -366,6 +371,9 @@ function DisplayHelp (args)
         Sys.INFO ("                           some connections. No, it won't make the current LIST any faster.");
         Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 3.");
         Sys.INFO ("  -f, --format             Output data format. Valid formats: txt, json, csv");
+        Sys.INFO ("      --min-block [HEIGHT] Add 'block: { min:[HEIGHT] }' to the GQL-queries.");
+        Sys.INFO ("      --max-block [HEIGHT] Add 'block: { max:[HEIGHT] }' to the GQL-queries.");
+        Sys.INFO ("                           The current block height is 817872 upon writing this.");
         Sys.INFO ("");
         Sys.INFO ("(Use README to get a more detailed usage instructions)");
     }

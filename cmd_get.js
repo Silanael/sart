@@ -31,7 +31,12 @@ const SUBCOMMANDS =
     "mempool"      : Handler_MemPool,
     "pending"      : Handler_PendingAmount,
     "peers"        : Handler_Peers,
-    "config"       : Handler_Config
+    "config"       : Handler_Config,
+    "blockheight"  : async function () { await Handler_Arweave (new Util.Args (["height"])  ); },
+    "height"       : async function () { await Handler_Arweave (new Util.Args (["height"])  ); },
+    "block"        : async function () { await Handler_Arweave (new Util.Args (["current"]) ); },
+    "peers"        : async function () { await Handler_Arweave (new Util.Args (["peers"])   ); }
+    
 }
 
 const ALIASES_PENDING = ["amount", "pending", "pendings", "total"];
@@ -40,6 +45,7 @@ const ARWEAVE_FIELDS  = "network, version, release, height, current, blocks, pee
 
 function Help (args)
 {
+    Sys.INFO ("---------");
     Sys.INFO ("GET USAGE");
     Sys.INFO ("---------");
     Sys.INFO ("");
@@ -76,8 +82,12 @@ function Help (args)
 
 async function HandleCommand (args)
 {
-    if (! args.RequireAmount (1, "Valid targets: " + Util.KeysToStr (SUBCOMMANDS) ) )
+    if (args.GetAmount () <= 0)
+    {
+        Help ();
+        Sys.INFO ("Valid targets: " + Util.KeysToStr (SUBCOMMANDS) );
         return false;
+    }
 
     const subcmd  = args.PopLC ();    
     const handler = SUBCOMMANDS[subcmd];

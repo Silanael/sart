@@ -55,10 +55,11 @@ const OutputFormats =
     JSON    : "json",
 }
 
-const LOCKED_CONFIG_ITEMS = ["ConfigVersion", "AppVersion", "AppVersionCode"];
+const LOCKED_CONFIG_ITEMS = ["Type", "ConfigVersion", "AppVersion", "AppVersionCode"];
 
 const CONFIG_DEFAULT =
 {
+    Type                   : "SART config",
     ConfigVersion          : CONFIG_VERSION,
     AppVersion             : Package.version,
     AppVersionCode         : Package.versioncode,
@@ -93,6 +94,8 @@ const CONFIG_DEFAULT =
     VerifyDefaults_Numeric : "SUMMARY,ALL",
 
     ArFSEntityTryOrder     : "drive,file,folder",
+    QueryMinBlockHeight    : null,
+    QueryMaxBlockHeight    : null,
 
     Force                  : false,
       
@@ -100,6 +103,7 @@ const CONFIG_DEFAULT =
     MaxTXFormat            : 2,
     MinArFSVersion         : 0.11,
     MaxArFSVersion         : 0.11,
+    // Set to null to query solely based on tags like Entity-Type, Drive-Id etc.
     ArFSTXQueryTags        : [ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ],
     SafeConfirmationsMin   : 15,
 
@@ -201,6 +205,27 @@ function SetLessFiltersMode ()
     Config.MaxTXFormat        = null;
 }
 
+
+function SetMinBlockHeight (height)
+{
+    if (height == null || height.toLowerCase() == "null" || height == "" || height == 0 || height == "0")
+        Config.QueryMinBlockHeight = null;
+
+    else if (!isNaN (height) )
+        Config.QueryMinBlockHeight = height;
+}    
+    
+function SetMaxBlockHeight (height)
+{
+    if (height == null || height.toLowerCase() == "null" || height == "" || height == 0 || height == "0")
+        Config.QueryMaxBlockHeight = null;
+
+    else if (!isNaN (height) )
+        Config.QueryMaxBlockHeight = height;
+}    
+
+
+
 function SetFormat (format)
 {    
     //Util.RequireParam (format, "format", "SetFormat");
@@ -289,6 +314,8 @@ module.exports =
     SetRecursive,
     SetMsgOut,
     SetErrOut,
+    SetMinBlockHeight,
+    SetMaxBlockHeight,
     CanAlterConf,
     SetConfigToDefault,
     MAX_CONFIGFILE_SIZE_BYTES,
