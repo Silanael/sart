@@ -17,8 +17,7 @@
     "quiet": "node ./main.js --quiet"
   },
   "dependencies": {
-    "arweave": "^1.10.18",
-    "g": "^2.0.1"
+    "arweave": "^1.10.18"
   },
   "repository": "github:Silanael/sart",
   "keywords": [
