@@ -106,7 +106,34 @@ it's really just my hobby project. **Pull requests are currently NOT accepted**.
    transactions containing an `ArFS`-tag**.
 
 
-
+## PLANNED FEATURES
+- Private drive support
+- Optimized, concurrent LIST-queries
+- Selectable output fields for listing (ie. name,datatxid,ar_url)
+- Save data into files without STDOUT redirect (and making console '>' use this).
+- Batch-download of drive/folder content with appropriate filters/wildcards.
+- Custom transaction-creation.
+- Listing summary of all owned wallets (TX-amount, data, balances etc.)
+- ArFS-repair functionality.
+- Dynamic concurrent delay for maximum stable performance.
+- Different concurrency-modes, perhaps based on N simultaneous fetches.
+- Navigation within ArFS in the console.
+- Saving listing/query results for inspection and generating different data from.
+- Console state tracking and caching to optimize queries.
+- Listing result index numbers to use with commands, lowering the need for copy-paste.
+- Advanced search-feature for transactions and content.
+- Stable HTML-output.
+- GQL-command for performing manual queries.
+- Modular, loadable TX-interpret definitions.
+- An "address book" for quick access to Arweave-addresses and Drive-IDs.
+- Executing commands in the background at will.
+- Autoexec-section for the config file (with some restrictions).
+- File/data upload functionality.
+- System command execution from the console.
+- Saving and loading config file from home dir
+- Progress indicators for non-verbose levels.
+- Encryption of a JSON-wallet + a keyring for drive/file keys.
+Probably even more than that. Getting some sleep now.
 
 
 ## PREREQUISITES (IF BUILDING FROM SOURCE)

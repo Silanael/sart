@@ -91,6 +91,7 @@ const Commands =
 
         return true;
     },    
+    "readme"      : DisplayReadme,
     //"search"      : Search.HandleCommand,
     //"console"     : Console.HandleCommand,
     //"getfile"     : ArFS.DownloadFile,
@@ -322,6 +323,7 @@ function DisplayHelp (args)
         Sys.INFO ("    , pending              Display network pending TX amount.");
         Sys.INFO ("  -v, version              Display version info.");
         Sys.INFO ("      help    [COMMAND]    Display help for a command.");
+        Sys.INFO ("      readme               Display a detailed user guide.");
         Sys.INFO ("");
         Sys.INFO ("CONSOLE:");
         Sys.INFO ("");
@@ -365,6 +367,7 @@ function DisplayHelp (args)
         Sys.INFO ("      --retries            Amount of retries for failed data fetch per entry. Default is 3.");
         Sys.INFO ("  -f, --format             Output data format. Valid formats: txt, json, csv");
         Sys.INFO ("");
+        Sys.INFO ("(Use README to get a more detailed usage instructions)");
     }
      
 
@@ -553,6 +556,20 @@ function ApplyConfig (config)
 function DisplayVersion (argv)
 {    
     Sys.OUT_TXT (Package.version);
+}
+
+
+function DisplayReadme ()
+{
+    try
+    {
+        Sys.INFO (FS.readFileSync (__dirname + "/README.md", "utf-8" ));
+    }
+    catch (exception)
+    {
+        Sys.ON_EXCEPTION (exception, "DisplayReadme");
+        Sys.ERR ("Couldn't open README.md. How lame is that.");
+    }
 }
 
 
