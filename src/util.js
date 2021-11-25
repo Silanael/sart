@@ -11,7 +11,7 @@
 const Path     = require ('path');
 
 const Sys      = require ("./sys.js");
-const Package  = require ("./package.json");
+const Package  = require ("../package.json");
 
 
 

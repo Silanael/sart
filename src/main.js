@@ -11,7 +11,7 @@
 
 
 // Imports
-const Package  = require ("./package.json");
+const Package  = require ("../package.json");
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
 const Arweave  = require ('./arweave.js');
@@ -571,7 +571,7 @@ function DisplayReadme ()
 {
     try
     {
-        Sys.INFO (FS.readFileSync (__dirname + "/README.md", "utf-8" ));
+        Sys.INFO (FS.readFileSync (__dirname + "/../README.md", "utf-8" ));
     }
     catch (exception)
     {

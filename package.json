@@ -5,16 +5,16 @@
   "versiondate": "2021-11-25_01",
   "description": "Silanael ARweave Tool",
   "codename": "Hachiroku",
-  "main": "main.js",
-  "bin": "main.js",
-  "man": "README.md",
+  "main": "src/main.js",
+  "bin":  "src/main.js",
+  "man":  "README.md",
   "scripts": {
-    "start": "node ./main.js",
-    "help": "node ./main.js --help",
-    "version": "node ./main.js --version",
-    "verbose": "node ./main.js --verbose",
-    "debug": "node ./main.js --debug",
-    "quiet": "node ./main.js --quiet"
+    "start":   "node ./src/main.js",
+    "help":    "node ./src/main.js --help",
+    "version": "node ./src/main.js --version",
+    "verbose": "node ./src/main.js --verbose",
+    "debug":   "node ./src/main.js --debug",
+    "quiet":   "node ./src/main.js --quiet"
   },
   "dependencies": {
     "arweave": "^1.10.18"

@@ -6,7 +6,7 @@
 // settings.js - 2021-10-17 -> 2021-10-26_01
 //
 
-const Package  = require ("./package.json");
+const Package  = require ("../package.json");
 
 
 const CONFIG_VERSION            = 1;
