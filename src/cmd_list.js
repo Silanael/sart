@@ -10,14 +10,14 @@
 // Imports
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
-const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js');
-const Util     = require ('./util.js');
-const Arweave  = require ('./arweave.js');
-const ArFS     = require ('./ArFS.js');
-const GQL      = require ('./GQL.js');
-const Listing  = require ('./Listing.js');
-const Analyze  = require ('./TXAnalyze.js');
+const Sys       = require ('./sys.js');
+const Settings  = require ('./settings.js');
+const Util      = require ('./util.js');
+const Arweave   = require ('./arweave.js');
+const ArFS      = require ('./ArFS.js');
+const GQL       = require ('./GQL.js');
+const Listing   = require ('./Listing.js');
+const Analyze   = require ('./TXAnalyze.js');
 
 
 const SUBCOMMANDS =

@@ -1854,7 +1854,7 @@ class ByTXQuery extends TXQuery
 // Returns raw results.
 async function RunGQLQuery (Arweave, query_str)
 {            
-    const arweave = Arweave.Init ();
+    const arweave = await Arweave.Init ();
 
     if (arweave != null)
     {

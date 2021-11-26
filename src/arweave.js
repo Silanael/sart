@@ -11,8 +11,8 @@
 // Imports
 const ArweaveLib  = require ('arweave');
 
-const Constants = require ("./CONST_SART.js");
-const State     = require ("./ProgramState.js");
+const Constants   = require ("./CONST_SART.js");
+const State       = require ("./ProgramState.js");
 const Sys         = require ('./sys.js');
 const Settings    = require ('./settings.js');
 const Util        = require ('./util.js');
@@ -21,27 +21,12 @@ const Tag         = GQL.Tag;
 
 
 
-// Variables
-var Arweave_Instance;
-
 
 
 // Constants
-const TXSTATUS_OK       = 200;
-const TXSTATUS_PENDING  = 202;
-const TXSTATUS_NOTFOUND = 404;
 
-const ENDPOINT_PENDING = "tx/pending";
 const _TAG             = "Arweave";
 
-const CONNSTATES =
-{
-    NOTCONN : "NOT CONNECTED",
-    OK      : "OK",
-    FAIL    : "FAILED",
-}
-
-let ConnectionState = CONNSTATES.NOTCONN;
 
 
 
@@ -52,8 +37,8 @@ async function Connect (args)
     if (hoststr != null)
         Settings.SetHost (hoststr);
 
-    Arweave_Instance = null;
-
+    State.ArweaveInstance = null;
+    
     return await Init () != null;
 }
 
@@ -61,12 +46,12 @@ async function Connect (args)
 
 async function Init (nofail = false)
 {
-    if (Arweave_Instance == null)
+    if (State.ArweaveInstance == null)
     {
-        const Config = State.Config;
+        const Config = State.GetConfig ();
         Sys.VERBOSE ("Settings connection params to " + Settings.GetHostString () + " .")
 
-        Arweave_Instance = ArweaveLib.init
+        State.ArweaveInstance = ArweaveLib.init
         (
             {
                 host:     Config.ArweaveHost,
@@ -78,43 +63,43 @@ async function Init (nofail = false)
         // Test the connection.
         if (await TestConnection () )
         {
-            Sys.INFO ("Connected to " + GetHostStr (Arweave_Instance) + " (" + Config.ArweaveTimeout_ms + "ms timeout)" );
-            return Arweave_Instance;
+            Sys.INFO ("Connected to " + GetHostStr (State.ArweaveInstance) + " (" + Config.ArweaveTimeout_ms + "ms timeout)" );
+            return State.ArweaveInstance;
         }
 
-        return nofail == true ? Arweave_Instance : null;    
+        return nofail == true ? State.ArweaveInstance : null;    
     }
 
-    return Arweave_Instance;
+    return State.ArweaveInstance;
 }
 
 
 
 async function TestConnection ()
 {
-    if (Arweave_Instance != null)
+    if (State.ArweaveInstance != null)
     {
         const info = await GetNetworkInfo ();
         
         if (info != null)
         {            
-            ConnectionState = CONNSTATES.OK;
-            return { State: ConnectionState, NetworkInfo: info };
+            State.ConnectionState = Constants.CONNSTATES.OK;
+            return { State: State.ConnectionState, NetworkInfo: info };
         }
         else
-            ConnectionState = CONNSTATES.FAIL;
+            State.ConnectionState = Constants.CONNSTATES.FAIL;
     }
     else
-        ConnectionState = CONNSTATES.NOTCONN;
+        State.ConnectionState = Constants.CONNSTATES.NOTCONN;
 
-    return { State: ConnectionState, NetworkInfo: null }
+    return { State: State.ConnectionState, NetworkInfo: null }
 }
 
 
 
 async function GetTargetHost ()
 {
-    return Arweave_Instance != null ? GetHostStr (Arweave_Instance) : Settings.GetHostString ();
+    return State.ArweaveInstance != null ? GetHostStr (State.ArweaveInstance) : Settings.GetHostString ();
 }
 
 
@@ -194,7 +179,7 @@ async function OwnerToAddress (owner)
 function WinstonToAR (winston_amount)
 {
     // TODO: Make more reasonable.
-    const arweave  = Arweave_Instance != null ? Arweave_Instance : ArweaveLib.init ();
+    const arweave  = State.ArweaveInstance != null ? State.ArweaveInstance : ArweaveLib.init ();
     return arweave != null ? arweave.ar.winstonToAr (winston_amount) : null;
 }
 
@@ -331,7 +316,7 @@ async function GetTXStatus (txid)
         
         // Currently (2021-11-18), the gateway doesn't return TX-status for transactions
         // that are contained inside bundles, yet a GQL-query is able to fetch them.
-        if (txstatus != null && txstatus.status == TXSTATUS_NOTFOUND)
+        if (txstatus != null && txstatus.status == Constants.TXSTATUS_NOTFOUND)
         {
             Sys.DEBUG ("arweave.transactions.getStatus returned 404, trying with a GQL-query..", txid);
             
@@ -341,12 +326,12 @@ async function GetTXStatus (txid)
             if (res != null)
             {
                 if (res.IsMined () )
-                    return { status: TXSTATUS_OK, confirmed: {} };
+                    return { status: Constants.TXSTATUS_OK, confirmed: {} };
                 else 
-                    return { status: TXSTATUS_PENDING, confirmed: null };
+                    return { status: Constants.TXSTATUS_PENDING, confirmed: null };
             }
             else
-                return { status: TXSTATUS_NOTFOUND, confirmed: null };
+                return { status: Constants.TXSTATUS_NOTFOUND, confirmed: null };
         }
 
         return txstatus; 
@@ -454,15 +439,15 @@ async function GetTXsForAddress (address, tags = null)
 function GetTXStatusStr (statuscode, confirmations)
 {
 
-    if (statuscode == TXSTATUS_NOTFOUND)
+    if (statuscode == Constants.TXSTATUS_NOTFOUND)
         return Sys.ANSIERROR ("NOT FOUND / FAILED");
 
 
-    else if (statuscode == TXSTATUS_PENDING)
+    else if (statuscode == Constants.TXSTATUS_PENDING)
         return Sys.ANSIWARNING ("PENDING");
 
 
-    else if (statuscode == TXSTATUS_OK)
+    else if (statuscode == Constants.TXSTATUS_OK)
     {
         if (IsConfirmationAmountSafe (confirmations) )
             return "CONFIRMED";
@@ -483,7 +468,7 @@ function GetTXStatusStr (statuscode, confirmations)
 }
 
 
-function IsTxOKByCode (statuscode) {return statuscode == TXSTATUS_OK; }
+function IsTxOKByCode (statuscode) {return statuscode == Constants.TXSTATUS_OK; }
 
 
 class TXStatusInfo
@@ -493,9 +478,9 @@ class TXStatusInfo
     Confirmations = null;
     MinedAtBlock  = null;
 
-    IsMined     () { return this.StatusCode == TXSTATUS_OK       };
-    IsPending   () { return this.StatusCode == TXSTATUS_PENDING  };
-    IsFailed    () { return this.StatusCode == TXSTATUS_NOTFOUND };
+    IsMined     () { return this.StatusCode == Constants.TXSTATUS_OK       };
+    IsPending   () { return this.StatusCode == Constants.TXSTATUS_PENDING  };
+    IsFailed    () { return this.StatusCode == Constants.TXSTATUS_NOTFOUND };
     IsConfirmed () 
     { 
         if (State.Config.SafeConfirmationsMin == null || isNaN (State.Config.SafeConfirmationsMin) )
@@ -541,4 +526,8 @@ module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, 
                    IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode, TXStatusToInfo, GetTXStatusInfo,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
-                   TXSTATUS_OK, TXSTATUS_NOTFOUND, TXSTATUS_PENDING, CONNSTATES, TXStatusInfo };
+                   TXSTATUS_OK       : Constants.TXSTATUS_OK, 
+                   TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
+                   TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,
+                   CONNSTATES        : Constants.CONNSTATES, 
+                   TXStatusInfo };

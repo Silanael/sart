@@ -17,6 +17,13 @@ const CONFIGFILE_ENCODING       = "utf-8";
 const CONFIG_RECURSIVE_FIELDS   = ["ArFSTXQueryTags"]
 const CONFIG_LOCKED_ITEMS       = ["Type", "ConfigVersion", "AppVersion", "AppVersionCode"];
 
+const TXSTATUS_OK               = 200;
+const TXSTATUS_PENDING          = 202;
+const TXSTATUS_NOTFOUND         = 404;
+
+const ENDPOINT_PENDING          = "tx/pending";
+
+
 
 // Whether to allow the program to access the system,
 // restricting fopen and SYS if set to false.
@@ -53,6 +60,15 @@ const OUTPUTFORMATS =
     HTML    : "html",
     JSON    : "json",
 }
+
+const CONNSTATES =
+{
+    NOTCONN : "NOT CONNECTED",
+    OK      : "OK",
+    FAIL    : "FAILED",
+}
+
+
 
 
 const CONFIG_DEFAULT =
@@ -123,9 +139,15 @@ module.exports =
     CONFIG_LOCKED_ITEMS,
     IS_TTY,
 
+    TXSTATUS_OK,
+    TXSTATUS_PENDING,
+    TXSTATUS_NOTFOUND,
+    ENDPOINT_PENDING,
+
     LOGLEVELS, 
     OUTPUTDESTS, 
-    OUTPUTFORMATS,     
+    OUTPUTFORMATS,
+    CONNSTATES,   
     SYSTEM_ACCESS,
     CONFIG_DEFAULT, 
 };

@@ -14,6 +14,7 @@ const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
 const Sys       = require ("./sys.js");
 const Package   = require ("../package.json");
+const STX       = require ("./STransaction.js");
 
 
 
@@ -442,20 +443,6 @@ function RequireParam (param, name, src)
 
 
 
-class TXTag
-{
-    Name  = null;
-    Value = null;
-
-    constructor (name, value) { this.Name = name; this.Value = value; }
-    /* Override */ toString () { return this.Name + ":" + this.Value  }
-
-    AddAsFieldTo (dest_obj, name_prefix = "")
-    { 
-        if (dest_obj != null) 
-            dest_obj[name_prefix + this.Name] = this.Value; 
-    }    
-}
 
 
 
@@ -482,7 +469,7 @@ function DecodeTXTags (tx, dest_obj = null, prefix = "")
         for (let C = 0; C < len; ++C)
         {
             tag = tx.tags[C];
-            e = new TXTag 
+            e = new STX.TXTag 
             (
                 tag.get ('name',  { decode: true, string: true } ),
                 tag.get ('value', { decode: true, string: true } )
@@ -498,7 +485,7 @@ function DecodeTXTags (tx, dest_obj = null, prefix = "")
 
 
 
-module.exports = { Args,
+module.exports = { Args, TXTag : STX.TXTag,
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
