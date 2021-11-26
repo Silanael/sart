@@ -10,6 +10,9 @@
 
 // Imports
 const ArweaveLib  = require ('arweave');
+
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys         = require ('./sys.js');
 const Settings    = require ('./settings.js');
 const Util        = require ('./util.js');
@@ -60,7 +63,7 @@ async function Init (nofail = false)
 {
     if (Arweave_Instance == null)
     {
-        const Config = Settings.Config;
+        const Config = State.Config;
         Sys.VERBOSE ("Settings connection params to " + Settings.GetHostString () + " .")
 
         Arweave_Instance = ArweaveLib.init
@@ -141,7 +144,7 @@ async function GetConnectionStatus ()
 
 function IsConfirmationAmountSafe (confirmations)
 {
-    return confirmations != null && Number (confirmations) >= Settings.Config.SafeConfirmationsMin;
+    return confirmations != null && Number (confirmations) >= State.Config.SafeConfirmationsMin;
 }
 
 
@@ -151,9 +154,9 @@ async function Testing ()
     const arweave = ArweaveLib.init
     (
         {
-            host:     Settings.Config.ArweaveHost,
-            port:     Settings.Config.ArweavePort,
-            protocol: Settings.Config.ArweaveProto
+            host:     State.Config.ArweaveHost,
+            port:     State.Config.ArweavePort,
+            protocol: State.Config.ArweaveProto
         }
     );  
 }
@@ -495,14 +498,14 @@ class TXStatusInfo
     IsFailed    () { return this.StatusCode == TXSTATUS_NOTFOUND };
     IsConfirmed () 
     { 
-        if (Settings.Config.SafeConfirmationsMin == null || isNaN (Settings.Config.SafeConfirmationsMin) )
+        if (State.Config.SafeConfirmationsMin == null || isNaN (State.Config.SafeConfirmationsMin) )
         {
             Sys.ERR_ONCE ("Config.SafeConfirmationsMin not properly set!");
             return false;
         }
 
         else 
-            return this.IsMined () && this.Confirmations != null && this.Confirmations >= Settings.Config.SafeConfirmationsMin; 
+            return this.IsMined () && this.Confirmations != null && this.Confirmations >= State.Config.SafeConfirmationsMin; 
     }
     
 }

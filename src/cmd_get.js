@@ -9,6 +9,8 @@
 
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
@@ -309,7 +311,7 @@ async function Handler_PendingAmount ()
 
 async function Handler_Config ()
 {
-    Sys.OUT_OBJ (Settings.Config, {format: "json"} );
+    Sys.OUT_OBJ (State.Config, {format: "json"} );
 }
 
 

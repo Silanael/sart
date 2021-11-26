@@ -8,6 +8,8 @@
 //
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Settings = require ('./settings.js');
 const Sys      = require ('./sys.js');
 const Util     = require ('./util.js');
@@ -111,7 +113,7 @@ class Entry
         {
             const entry = new Entry ();
 
-            if (Settings.IsForceful () || Settings.Config.MaxTXFormat == null || tx.format <= Settings.Config.MaxTXFormat)
+            if (Settings.IsForceful () || State.Config.MaxTXFormat == null || tx.format <= State.Config.MaxTXFormat)
             {
                 entry.TXID             = tx.id;
                 entry.Owner            = owner;
@@ -596,8 +598,8 @@ class TXQuery extends Query
         }
 
         let block_str = "";
-        const minblock = Settings.Config.QueryMinBlockHeight;
-        const maxblock = Settings.Config.QueryMaxBlockHeight;
+        const minblock = State.Config.QueryMinBlockHeight;
+        const maxblock = State.Config.QueryMaxBlockHeight;
         if (minblock != null || maxblock != null)
         {            
             block_str = "block: {" + (minblock != null ? "min:" + minblock + "," : "") 
@@ -849,7 +851,7 @@ class Entity
 
 
         // Categorize TX-state
-        const safe_confirmations = Settings.Config.SafeConfirmationsMin;
+        const safe_confirmations = State.Config.SafeConfirmationsMin;
 
         const confirmed = (this.Info.MetaTXStatusCode == 200 && this.Info.MetaTXConfirmations >= safe_confirmations) &&
                         (this.Info.DataTXStatusCode == null || (this.Info.DataTXStatusCode == 202 && this.Info.DataTXConfirmations >= safe_confirmations) );
@@ -1311,7 +1313,7 @@ class ArFSEntityQuery extends TXQuery
             Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE,           entity_type),
             Tag.QUERYTAG (ArFSDefs.GetIDTag (entity_type),   arfs_id),                        
         ];
-        Tag.APPENDNATIVETAGS (Settings.Config.ArFSTXQueryTags, tags);
+        Tag.APPENDNATIVETAGS (State.Config.ArFSTXQueryTags, tags);
         
 
         await super.Execute
@@ -1462,7 +1464,7 @@ class ArFSDriveQuery extends TXQuery
             [ 
                 Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE, ArFSDefs.ENTITYTYPES_INFOLDER),
             ];
-            Tag.APPENDNATIVETAGS (Settings.Config.ArFSTXQueryTags, tags);
+            Tag.APPENDNATIVETAGS (State.Config.ArFSTXQueryTags, tags);
 
             await super.Execute
             (            
@@ -1503,7 +1505,7 @@ class ArFSDriveQuery extends TXQuery
             [ 
                 Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE, ArFSDefs.ENTITYTYPE_DRIVE),
             ];
-            Tag.APPENDNATIVETAGS (Settings.Config.ArFSTXQueryTags, tags);
+            Tag.APPENDNATIVETAGS (State.Config.ArFSTXQueryTags, tags);
 
             Sys.INFO ("Performing a surface scan for drives on " + (owner != null ? owner + " ..." : "the entire Arweave. Might take a while...") );
             
@@ -1595,7 +1597,7 @@ class ArFSDriveContentQuery extends TXQuery
             Tag.QUERYTAG (ArFSDefs.TAG_ENTITYTYPE,    ArFSDefs.ENTITYTYPES_INFOLDER),
             Tag.QUERYTAG (ArFSDefs.TAG_DRIVEID,       drive_id),
         ];
-        Tag.APPENDNATIVETAGS (Settings.Config.ArFSTXQueryTags, tags);
+        Tag.APPENDNATIVETAGS (State.Config.ArFSTXQueryTags, tags);
         
 
         await super.Execute

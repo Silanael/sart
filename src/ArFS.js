@@ -8,6 +8,8 @@
 //
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Arweave  = require ('./arweave.js');
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
@@ -369,15 +371,15 @@ class ArFSEntity
     {
         const ver = this.ArFSVersion;
 
-        if ( (Settings.Config.MaxArFSVersion == null || ver <= Settings.Config.MaxArFSVersion) && 
-             (Settings.Config.MinArFSVersion == null || ver >= Settings.Config.MinArFSVersion) )
+        if ( (State.Config.MaxArFSVersion == null || ver <= State.Config.MaxArFSVersion) && 
+             (State.Config.MinArFSVersion == null || ver >= State.Config.MinArFSVersion) )
             return true;
         
         else
         {
             Sys.VERBOSE ("Unsupported ArFS-version " + this.ArFSVersion + " on entity '" + this.ArFSID + "'.");
 
-            if (!Settings.Config.IsForceful () )
+            if (!State.Config.IsForceful () )
             {
                 Sys.ERR_ONCE ("Omitting files with unsupported ArFS-version. Use --force to override.");
                 this.Valid = false;
@@ -439,7 +441,7 @@ class ArFSEntity
     GetSizeStr ()
     { 
         const size_b      = this.GetSizeBytes (); 
-        const digits = Settings.Config.SizeDigits;
+        const digits = State.Config.SizeDigits;
 
         return size_b != null ? Util.GetSizeStr (size_b, true, digits)
                               : " ".repeat (digits);
@@ -672,7 +674,7 @@ class ArFSEntity
 
     GetListStr ()
     {
-        switch (Settings.Config.OutputFormat)
+        switch (State.Config.OutputFormat)
         {
             case Settings.OutputFormats.CSV:
 
@@ -900,7 +902,7 @@ class ArFSDrive extends ArFSEntity
             Sys.VERBOSE ("Listing full drive " + this.ArFSID + ":");
             await this.RootFolder.List ( { recursive: true} );
 
-            if (Settings.Config.DisplayAll)
+            if (State.Config.DisplayAll)
             {
                 Sys.VERBOSE ("Seeking for orphaned files..");
                 const query = new GQL.TXQuery (Arweave);
@@ -937,7 +939,7 @@ class ArFSDrive extends ArFSEntity
         else if (arfs_url.IsRootFolder () )
         {                    
             Sys.VERBOSE ("Listing root folder of drive " + this.ArFSID + ":");
-            success = await this.RootFolder.List ( {recursive: Settings.Config.Recursive} );
+            success = await this.RootFolder.List ( {recursive: State.Config.Recursive} );
         }
                 
         // Path listing
@@ -948,7 +950,7 @@ class ArFSDrive extends ArFSEntity
             const dir = await this.RootFolder.GetDirByURL (arfs_url, 0);
 
             if (dir != null)
-                await dir.List ( {recursive: Settings.Config.Recursive} );
+                await dir.List ( {recursive: State.Config.Recursive} );
         }
         
         else
@@ -1168,7 +1170,7 @@ class ArFSDir extends ArFSItem
         
         const L = args.Listing;
         
-        Sys.INFO (Util.GetSizeStr (L.Bytes_Reported, true, Settings.Config.SizeDigits) 
+        Sys.INFO (Util.GetSizeStr (L.Bytes_Reported, true, State.Config.SizeDigits) 
                   + " (reported) in " + L.ArFSEntitiesAmount + " entities (" 
                   + L.ArFSFilesAmount + " files, " + L.ArFSFoldersAmount + " folders)");
         Sys.INFO ("Listing done in " + (L.TimeTaken_ms / 1000) + "sec." );
@@ -1177,7 +1179,7 @@ class ArFSDir extends ArFSItem
 
 
 
-    GetContainedEntity (name, opts = { allow_wildcards: Settings.Config.AllowWildcards, entity_type: null } )
+    GetContainedEntity (name, opts = { allow_wildcards: State.Config.AllowWildcards, entity_type: null } )
     {
         // TODO: Make a name-entity lookup table
         const values = Object.values (this.Entities);
@@ -1311,7 +1313,7 @@ class ArFSFile extends ArFSItem
         if (data_claimedsize != null)
         {
             this.FileSize_Claimed_B = data_claimedsize;
-            Sys.VERBOSE (this.GetNameAndID () + ": Claimed file size: " + Util.GetSizeStr (data_claimedsize, true, Settings.Config.SizeDigits) 
+            Sys.VERBOSE (this.GetNameAndID () + ": Claimed file size: " + Util.GetSizeStr (data_claimedsize, true, State.Config.SizeDigits) 
                          + "(" + Util.GetSizeStr (data_claimedsize, false) + ")." );
         }
 
@@ -1378,7 +1380,7 @@ async function UserGetArFSEntity (arfs_id, entity_type = null, guessing = false)
     else if (entity_type == null)
     {
         let order;
-        if (Settings.Config.ArFSEntityTryOrder?.length > 0 && (order = Settings.Config.ArFSEntityTryOrder.split (","))?.length > 0)
+        if (State.Config.ArFSEntityTryOrder?.length > 0 && (order = State.Config.ArFSEntityTryOrder.split (","))?.length > 0)
         {
             const max_queries = order.length;
             if (max_queries > 1)
@@ -1845,7 +1847,7 @@ async function ListDriveFiles (drive_id)
 
 
             // Check that the data-field of the metadata tx is of reasonable size.
-            if (file.Metadata_Size > Settings.Config.MaxArFSMetadataSize)
+            if (file.Metadata_Size > State.Config.MaxArFSMetadataSize)
             {
                 Sys.ERR ("Unusually large data field: " + file.Metadata_Size + "B", prefix);
                 if (!Settings.IsForceful () )

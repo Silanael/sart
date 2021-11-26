@@ -14,6 +14,8 @@ const ReadLine = require ('readline');
 
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
@@ -37,12 +39,12 @@ async function HandleCommand (args)
 {    
     Sys.VERBOSE ("Entering the Command Interface.")
 
-    if (Settings.ConsoleActive == true)
+    if (State.ConsoleActive == true)
     {
         Sys.ERR ("Console already running.")
         return false;
     }
-    Settings.ConsoleActive = true;
+    State.ConsoleActive = true;
 
 
     // Banner
@@ -102,7 +104,7 @@ function PrintPrompt ()
 {
     let prompt = "SART> ";
 
-    if (Settings.Config.ANSIAllowed)
+    if (Settings.IsANSIAllowed () )
         prompt = ANSI_SAFE + prompt + ANSI_CLEAR;
 
     Sys.OUT_TXT_RAW (prompt);
@@ -134,7 +136,7 @@ function PrintBanner ()
              + "*************************\n"
              + Util.GetVersionStr () + "\n\n"             
 
-    if (Settings.Config.ANSIAllowed)
+    if (Settings.IsANSIAllowed () )
         text = ANSI_SAFE + text + ANSI_CLEAR;   
         
     Sys.OUT_TXT_RAW (text);

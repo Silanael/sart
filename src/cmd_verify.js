@@ -8,6 +8,8 @@
 //
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys          = require ('./sys.js');
 const Settings     = require ('./settings.js');
 const Util         = require ('./util.js');
@@ -265,7 +267,7 @@ class Results
                 this.Summary[e[0]] = e[1].length;
         }
 
-        const hr_chars = Settings.Config.SizeDigits;
+        const hr_chars = State.Config.SizeDigits;
 
         this.Summary.ReportedBytes_Processed = 0;
         this.Summary.ReportedBytes_Filtered  = 0;
@@ -425,11 +427,11 @@ async function Handler_Uploads (args)
     let last          = -1;
     let extension     = null;
     let prune         = true;
-    const req_delay   = Settings.Config.ConcurrentDelay_ms;
+    const req_delay   = State.Config.ConcurrentDelay_ms;
     
 
-    Sys.VERBOSE ("Concurrent delay: " + req_delay + "ms, Retries: " + Settings.Config.ErrorRetries + ", Retry delay: "
-                    + Settings.Config.ErrorWaitDelay_ms + "ms.")
+    Sys.VERBOSE ("Concurrent delay: " + req_delay + "ms, Retries: " + State.Config.ErrorRetries + ", Retry delay: "
+                    + State.Config.ErrorWaitDelay_ms + "ms.")
 
     let arg;
     while (args.HasNext () )
@@ -479,7 +481,7 @@ async function Handler_Uploads (args)
     // Autoset listmode
     if (list_mode == null)
     {
-        list_mode = numeric_mode ? Settings.Config.VerifyDefaults_Numeric : Settings.Config.VerifyDefaults;
+        list_mode = numeric_mode ? State.Config.VerifyDefaults_Numeric : State.Config.VerifyDefaults;
         Sys.VERBOSE ("Autoset list mode to '" + list_mode + "'.");
     }
 
@@ -695,7 +697,7 @@ function DisplayResults (files, sort = true)
         for (const file of sort ? files.sort ( (a, b) => a.Filename?.localeCompare (b.Filename)) : files)
         {            
             if (file != null)
-                Sys.OUT_TXT ((file.Filename       != null ? file.Filename.replace (",", Settings.Config.CSVReplacePeriodWith) : "") + "," 
+                Sys.OUT_TXT ((file.Filename       != null ? file.Filename.replace (",", State.Config.CSVReplacePeriodWith) : "") + "," 
                           +  (file.StatusText     != null ? file.StatusText      : "") + "," 
                           +  (file.FileID         != null ? file.FileID          : "") + "," 
                           +  (file.MetaTXID       != null ? file.MetaTXID        : "") + "," 
@@ -823,7 +825,7 @@ class File
 
     async Verify (tx_table)
     {
-        const tries_max       = Settings.Config.ErrorRetries;
+        const tries_max       = State.Config.ErrorRetries;
         let   tries_remaining = tries_max
         
         while (tries_remaining > 0)
@@ -837,8 +839,8 @@ class File
             {            
                 --tries_remaining;
 
-                const delay = Settings.Config.ErrorWaitDelay_ms + 
-                    Math.floor (Math.random () * (Settings.Config.ErrorWaitDelay_ms * Settings.Config.ErrorWaitVariationP) );
+                const delay = State.Config.ErrorWaitDelay_ms + 
+                    Math.floor (Math.random () * (State.Config.ErrorWaitDelay_ms * State.Config.ErrorWaitVariationP) );
 
                 await Util.Delay (delay > 0 ? delay : 1000);
 

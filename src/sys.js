@@ -8,7 +8,9 @@
 //
 
 // Local imports
-const Settings = require ('./settings.js');
+const Constants = require ("./CONST_SART.js");
+const Settings  = require ("./settings.js");
+const State     = require ('./ProgramState.js');
 
 
 // Constants
@@ -28,11 +30,6 @@ const ANSI_BLINK_OFF = "\033[25m";
 
 const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
-
-
-
-// Variables
-const IsPiped = !process.stdout.isTTY;
 
 
 
@@ -145,17 +142,24 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
     if (opts.recursive_fields == null)   opts.recursive_fields = [];        
     if (opts.header == null)             opts.header = true;
 
-
-    const out_fmt = opts.format != null ? opts.format : Settings.Config.OutputFormat;
+    const conf = State.GetConfig ();
+    if (conf == null)
+    {
+        console.error ("PROGRAM ERROR: Could not get config. Trying to display object still:");
+        console.log (obj);
+        return false;
+    }    
+    
+    const out_fmt = opts.format != null ? opts.format : Settings.GetOutputFormat ();
 
 
     switch (out_fmt) 
     {        
-        case Settings.OutputFormats.JSON:
+        case Constants.OUTPUTFORMATS.JSON:
        
             try
             { 
-                OUT_TXT (JSON.stringify (obj, null, Settings.Config.JSONSpacing) ); 
+                OUT_TXT (JSON.stringify (obj, null, conf?.JSONSpacing) ); 
             }
             catch (exception) 
             { 
@@ -166,7 +170,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
             break;
 
 
-        case Settings.OutputFormats.CSV:
+        case Constants.OUTPUTFORMATS.CSV:
 
 
             // Header
@@ -175,7 +179,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 let header = null;
                 for (const e of Object.entries (obj) )
                 {
-                    const var_str = !Settings.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
+                    const var_str = !conf.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
 
                     if (! var_str.startsWith ("__") )
                         header = header != null ? header + "," + var_str : var_str;
@@ -194,7 +198,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 if (val == "[object Object]") // Too ugly to be listed like this.
                     val = "<OBJECT>";
 
-                val = val.replace (/,/g, Settings.Config.CSVReplacePeriodWith);
+                val = val.replace (/,/g, conf.CSVReplacePeriodWith);
 
                 line = line != null ? line + "," + val : val;
             }
@@ -226,7 +230,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
             Object.entries (obj).forEach 
             (e => 
             {       
-                const var_str = !Settings.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
+                const var_str = !conf.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
 
                 const field = e[0];
                 const val   = e[1];
@@ -235,7 +239,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 if (field.startsWith ("__") )
                 {
                     if (field == FIELD_ANSI)
-                        if (Settings.Config.ANSIAllowed == true) 
+                        if (Settings.IsANSIAllowed () == true) 
                             OUT_TXT_RAW (val);                    
                 }
 
@@ -280,8 +284,8 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
 
 // Informative output, ie. for 'help'.
 function INFO (str, src)
-{            
-    if (Settings.IsMsg ())
+{       
+    if (Settings.IsMsg () )
     {
         const msg = src != null ? src + ": " + str : str;
         if (Settings.IsMsgSTDOUT () ) console.log  (msg);
@@ -387,7 +391,7 @@ function ERR_ABORT (str, src)
 {
     ERR (str, src);
 
-    if (!Settings.ConsoleActive)
+    if (!State.IsConsoleActive () )
         EXIT (-1);
 
     return false;
@@ -480,4 +484,4 @@ module.exports =
     EXIT,
     ON_EXCEPTION,
     ErrorHandler,    
-};EXIT
+};

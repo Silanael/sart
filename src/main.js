@@ -11,21 +11,24 @@
 
 
 // Imports
-const Package  = require ("../package.json");
-const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js');
-const Arweave  = require ('./arweave.js');
-const ArFS     = require ('./ArFS.js');
-const Util     = require ('./util.js');
-const Info     = require ('./cmd_info.js');
-const Status   = require ('./cmd_status.js');
-const List     = require ('./cmd_list.js');
-const Get      = require ('./cmd_get.js');
-const Verify   = require ('./cmd_verify.js');
-const Analyze  = require ('./TXAnalyze.js');
+const Package   = require ("../package.json");
+
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
+const Sys       = require ('./sys.js');
+const Settings  = require ('./settings.js');
+const Arweave   = require ('./arweave.js');
+const ArFS      = require ('./ArFS.js');
+const Util      = require ('./util.js');
+const Info      = require ('./cmd_info.js');
+const Status    = require ('./cmd_status.js');
+const List      = require ('./cmd_list.js');
+const Get       = require ('./cmd_get.js');
+const Verify    = require ('./cmd_verify.js');
+const Analyze   = require ('./TXAnalyze.js');
 //const Search   = require ('./cmd_search.js');
-const Console  = require ('./cmd_console.js');
-const GQL      = require ("./GQL");
+const Console   = require ('./cmd_console.js');
+const GQL       = require ("./GQL");
 
 
 const ArweaveLib  = require ('arweave');
@@ -87,7 +90,7 @@ const Commands =
         if (isNaN (b) )
             return Sys.ERR ("Not a number.");
         else
-            Sys.INFO (Util.GetSizeStr (b, true, Settings.Config.SizeDigits) );
+            Sys.INFO (Util.GetSizeStr (b, true, State.Config.SizeDigits) );
 
         return true;
     },    
@@ -112,16 +115,16 @@ const Flags =
     "--verbose"         : { "F": Settings.SetVerbose,    "A":false },
     "--quiet"           : { "F": Settings.SetQuiet,      "A":false },
     "--debug"           : { "F": Settings.SetDebug,      "A":false },
-    "--msg-out"         : { "F": function (args) { Settings.SetMsgOut (Util.StrToFlags (args, Settings.OutputDests ))}, "A":true  },
-    "--err-out"         : { "F": function (args) { Settings.SetErrOut (Util.StrToFlags (args, Settings.OutputDests ))}, "A":true  },
-    "--stderr"          : { "F": function () { Settings.Config.MsgOut = Settings.OutputDests.STDERR;  if (!Settings.IsMsg () ) Settings.SetMsg (); }  },
-    "--msg-stderr"      : { "F": function () { Settings.SetMsg (); 
-                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR },    "A":false },    
-    "--verbose-stderr"  : { "F": function () { Settings.SetVerbose (); 
-                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR; },   "A":false },
-    "--debug-stderr"    : { "F": function () { Settings.SetDebug  (); 
-                                               Settings.Config.MsgOut = Settings.OutputDests.STDERR; },   "A":false },
-    "--no-ansi"         : { "F": function () { Settings.Config.ANSIAllowed = false;}, "A":false },
+    "--msg-out"         : { "F": function (args) { State.Config.SetMsgOut (Util.StrToFlags (args, Constants.OUTPUTDESTS ))}, "A":true  },
+    "--err-out"         : { "F": function (args) { State.Config.SetErrOut (Util.StrToFlags (args, Constants.OUTPUTDESTS ))}, "A":true  },
+    "--stderr"          : { "F": function () { State.Config.MsgOut = Constants.OUTPUTDESTS.STDERR;  if (!State.Config.IsMsg () ) State.Config.SetMsg (); }  },
+    "--msg-stderr"      : { "F": function () { State.Config.SetMsg (); 
+                                               State.Config.MsgOut = Constants.OUTPUTDESTS.STDERR },    "A":false },    
+    "--verbose-stderr"  : { "F": function () { State.Config.SetVerbose (); 
+                                               State.Config.MsgOut = Constants.OUTPUTDESTS.STDERR; },   "A":false },
+    "--debug-stderr"    : { "F": function () { State.Config.SetDebug  (); 
+                                               State.Config.MsgOut = Constants.OUTPUTDESTS.STDERR; },   "A":false },
+    "--no-ansi"         : { "F": function () { State.Config.ANSIAllowed = false;}, "A":false },
     "-a"                : { "F": Settings.SetDisplayAll, "A":false },
     "--all"             : { "F": Settings.SetDisplayAll, "A":false },
     "-r"                : { "F": Settings.SetRecursive,  "A":false },
@@ -131,15 +134,15 @@ const Flags =
     "--host"            : { "F": Settings.SetHost,       "A":true  },
     "--port"            : { "F": Settings.SetPort,       "A":true  },
     "--proto"           : { "F": Settings.SetProto,      "A":true  },
-    "--timeout-ms"      : { "F": function (ms) { Settings.Config.ArweaveTimeout_ms  = ms; }, "A":true },
-    "--concurrent-ms"   : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = ms; }, "A":true },    
-    "--retries"         : { "F": function (n)  { Settings.Config.ErrorRetries       = n;  }, "A":true },
-    "--retry-ms"        : { "F": function (ms) { Settings.Config.ErrorWaitDelay_ms  = ms; }, "A":true },
-    "--fast"            : { "F": function (ms) { Settings.Config.ConcurrentDelay_ms = 50; }, "A":false},
+    "--timeout-ms"      : { "F": function (ms) { State.Config.ArweaveTimeout_ms  = ms; }, "A":true },
+    "--concurrent-ms"   : { "F": function (ms) { State.Config.ConcurrentDelay_ms = ms; }, "A":true },    
+    "--retries"         : { "F": function (n)  { State.Config.ErrorRetries       = n;  }, "A":true },
+    "--retry-ms"        : { "F": function (ms) { State.Config.ErrorWaitDelay_ms  = ms; }, "A":true },
+    "--fast"            : { "F": function (ms) { State.Config.ConcurrentDelay_ms = 50; }, "A":false},
     "--force"           : { "F": Settings.SetForce,           "A":false },
     "--less-filters"    : { "F": Settings.SetLessFiltersMode, "A":false },
     "--config-file"     : { "F": Handler_LoadConfig,          "A":true  },
-    "--config"          : { "F": Handler_AppendConfig,        "A":true  },
+    "--config"          : { "F": Settings.AppendConfig,       "A":true  },
     "--min-block"       : { "F": Settings.SetMinBlockHeight,  "A":true  },
     "--max-block"       : { "F": Settings.SetMaxBlockHeight,  "A":true  },
     "--format"          : { "F": Settings.SetFormat,          "A":true  }, 
@@ -179,9 +182,9 @@ async function Main (argv)
             {
                 const command_params = new Util.Args (Util.GetCmdArgs (argv, C, Flags) );
 
-                if (Settings.Config.QueryMinBlockHeight != null ||  Settings.Config.QueryMaxBlockHeight != null)
-                Sys.WARN ("Block range override in effect - min:" + Settings.Config.QueryMinBlockHeight 
-                           + " max:" + Settings.Config.QueryMaxBlockHeight);
+                if (State.Config.QueryMinBlockHeight != null ||  State.Config.QueryMaxBlockHeight != null)
+                Sys.WARN ("Block range override in effect - min:" + State.Config.QueryMinBlockHeight 
+                           + " max:" + State.Config.QueryMaxBlockHeight);
 
                 if (cmd.HandleCommand != null)
                     await cmd.HandleCommand (command_params);
@@ -387,63 +390,18 @@ function SetSetting (args)
 
     if (!args.RequireAmount (2, "USAGE: SET config-key value") )
         return false;
-
+    
     const key   = args.Pop ();
     const value = args.Pop ();
 
-    
-    if (Object.keys (Settings.Config)?.includes (key) )
-    {
-
-        if (! Settings.CanAlterConf (key) )
-        {        
-            Sys.ERR (Settings.FUP++ < 1 ? "Nope, won't change these." : Settings.FUP == 2 ? `What part of "Nope, won't change these" did you not understand?`:"..." );
-            return false;
-        }
-    
-        const lc = value?.toLowerCase ();
-        const num = value != null ? Number (value) : null;
-
-        if (lc === "null")            
-        {
-            Settings.Config[key] = null;
-            Sys.VERBOSE ("Value '" + value + "' set to null.");            
-        }
-
-        else if (num != null && !isNaN (num) )
-        {            
-            Settings.Config[key] = num;
-            Sys.VERBOSE ("Value '" + value + "' determined to be a number.");
-        }
-
-        else if (lc == "true" || lc == "false")
-        {            
-            Settings.Config[key] = lc == "true";
-            Sys.VERBOSE ("Value '" + value + "' determined to be a boolean.");
-        }
-
-        else
-        {
-            Settings.Config[key] = value;
-            Sys.VERBOSE ("Setting value as-is.");
-        }
-
-        Sys.INFO (key + " set to " + value + ".");
-        return true;
-    }
-    else
-    {
-        Sys.ERR ("Config setting '" + key + "' does not exist. This is case-sensitive.");
-        return false;    
-    }
-        
+    return Settings.SetConfigKey (key, value);        
 }
 
 
 function Handler_LoadConfig (arg)
 {
-    const console_active = Settings.ConsoleActive;
-    const success = LoadConfig (arg);
+    const console_active = State.IsConsoleActive ();
+    const success = Settings.LoadConfig (arg);
     
     if (!success && !console_active)
         Sys.EXIT (-1);
@@ -451,112 +409,6 @@ function Handler_LoadConfig (arg)
     return success;
 }
 
-
-function LoadConfig (arg)
-{
-    const in_console = Settings.ConsoleActive;
-
-    if (in_console && Settings.SystemAccess != true)
-        return Sys.ERR ("SYSTEM ACCESS RESTRICTED");
-
-
-    const filename = arg; //args.Pop ();
-        
-    if (filename == null)
-    {
-        const error = "Config-filename not provided."                    
-        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, "LoadConfig");
-    }
-
-    try
-    {
-        const stat = FS.statSync (filename);
-
-        if (stat != null)
-        {
-            Sys.VERBOSE ("Config file '" + filename + "' is " + stat.size + " bytes.");
-
-            if (stat.size > Settings.MAX_CONFIGFILE_SIZE_BYTES &&
-                Sys.ERR_OVERRIDABLE ("Config file size exceeds the maximum of " + Util.GetSizeStr (Settings.MAX_CONFIGFILE_SIZE_BYTES, true) 
-                                     + ". Use --force to load anyways.") == false)
-                return false;
-
-        }
-        else if (Sys.ERR_OVERRIDABLE ("Could not stat '" + filename +"'. Use --force to try to load anyways.") == false)
-            return false;
-
-        const data = FS.readFileSync (filename, Settings.CONFIGFILE_ENCODING);
-
-        if (data != null)
-        {
-            const json = JSON.parse (data);
-
-            if (json != null)            
-                return ApplyConfig (json);            
-            else
-                Sys.ERR ("Failed to parse config JSON for file '" + filename + "'.");
-        }
-        else
-            return Sys.ERR ("Failed to load config-file '" + filename + "'.");
-
-        
-
-    }
-    catch (exception)
-    { 
-        Sys.ON_EXCEPTION (exception, "LoadConfig: " + filename); 
-        const error = "Failed to load config-file '" + filename + "'.";
-        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, "LoadConfig");
-    }
-
-    return false;
-}
-
-
-function Handler_AppendConfig (config_json)
-{
-    try
-    {
-        const json = JSON.parse (config_json);
-
-        if (json != null)            
-            return ApplyConfig (json);
-    }
-    catch (exception )
-    {
-        Sys.ON_EXCEPTION (exception, "Handler_AppendConfig");
-        return Sys.ERR (`Failed to parse manual config JSON. Proper way to use: --config '{ "Settings": value }' <-- Note the single-quotes.`);
-    }
-
-    return false;
-}
-
-
-function ApplyConfig (config)
-{
-    if (config != null)
-    {
-        Settings.SetConfigToDefault ();
-        
-        for (e of Object.entries (config) )
-        {
-            const key   = e[0];
-            const value = e[1];
-
-            if (Settings.Config.hasOwnProperty (key) )
-            {
-                Settings.Config[key] = value;
-                Sys.VERBOSE ("Setting '" + key + "' set to '" + value + "'. ");
-            }
-            else            
-                Sys.ERR ("Config-key '" + key + "' not recognized and will be omitted.");            
-        }
-    }
-    else
-        Sys.ERR ("PROGRAM ERROR: config null", "ApplyConfig");
-
-    return true;
-}
 
 
 

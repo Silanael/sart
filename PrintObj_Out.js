@@ -29,7 +29,7 @@ function Print (obj, opts = { indent: 0, txt_obj: null}, fn_txt, fn_txt_raw, fn_
         return false;
 
 
-    switch (Settings.Config.OutputFormat) 
+    switch (State.Config.OutputFormat) 
     {        
         case Settings.OutputFormats.JSON:
             
@@ -68,7 +68,7 @@ function Print (obj, opts = { indent: 0, txt_obj: null}, fn_txt, fn_txt_raw, fn_
             Object.entries (obj).forEach 
             (e => 
             {       
-                const var_str = !Settings.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
+                const var_str = !State.Config.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
 
                 const field = e[0];
                 const val   = e[1];
@@ -77,7 +77,7 @@ function Print (obj, opts = { indent: 0, txt_obj: null}, fn_txt, fn_txt_raw, fn_
                 if (field.startsWith ("__") )
                 {
                     if (field == FIELD_ANSI)
-                        if (Settings.Config.ANSIAllowed == true) 
+                        if (State.Config.ANSIAllowed == true) 
                             fn_txt_raw (val);                    
                 }
 

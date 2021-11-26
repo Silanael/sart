@@ -8,6 +8,8 @@
 //
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys          = require ('./sys.js');
 const Settings     = require ('./settings.js');
 const Util         = require ('./util.js');
@@ -27,7 +29,7 @@ const SUBCOMMANDS =
     "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
     "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
     "folder" : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
-    "config" : function (args) { Sys.OUT_OBJ (Settings.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
+    "config" : function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
     "sart"   : Handler_SART,
     "author" : Handler_Author,
 };
@@ -155,7 +157,7 @@ async function Handler_TX (args, tx = null)
     
 
     // Check that we can understand this version.
-    if (Settings.Config.MaxTXFormat != null && tx.format > Settings.Config.MaxTXFormat)        
+    if (State.Config.MaxTXFormat != null && tx.format > State.Config.MaxTXFormat)        
     {
         Sys.ERR ("Transaction format '" + tx.format + "' unsupported. Use --force to override (or increase Config.MaxTXFormat).");
         if (! Settings.IsForceful () )

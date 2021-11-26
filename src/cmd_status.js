@@ -10,6 +10,8 @@
 // Imports
 const OS           = require ('os');
 
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys          = require ('./sys.js');
 const Settings     = require ('./settings.js');
 const Util         = require ('./util.js');
@@ -202,10 +204,9 @@ async function Handler_Arweave (args)
     
     if (network_status != null)
     {
-
+        
         // Append mempool size
         network_status["pending_tx_amount"] = await Arweave.GetPendingTXAmount ();
-
 
         // User wants a specific argument.
         if (args.HasNext () )
@@ -222,6 +223,8 @@ async function Handler_Arweave (args)
         else
             Sys.OUT_OBJ (network_status);
         
+        if (Object.keys (network_status)?.length > 60)
+            Sys.ERR ("Request response implausible.");
     }
     else
         Sys.ERR ("Unable to fetch Arweave network status.");

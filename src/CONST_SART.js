@@ -1,0 +1,131 @@
+//
+// *****************************
+// *** Silanael ARweave Tool ***
+// *****************************
+//
+// CONST_SART.js - 2021-11-25_01
+//
+// Constants values for SART.
+//
+
+const Package                   = require ("../package.json");
+const IS_TTY                    = process.stdout.isTTY;
+
+const CONFIG_VERSION            = 1;
+const CONFIG_FILESIZE_MAX_BYTES = 83886080;
+const CONFIGFILE_ENCODING       = "utf-8";
+const CONFIG_RECURSIVE_FIELDS   = ["ArFSTXQueryTags"]
+const CONFIG_LOCKED_ITEMS       = ["Type", "ConfigVersion", "AppVersion", "AppVersionCode"];
+
+
+// Whether to allow the program to access the system,
+// restricting fopen and SYS if set to false.
+const SYSTEM_ACCESS  = true;
+
+
+const LOGLEVELS =
+{
+    QUIET   : 0,
+    NOMSG   : 1,
+    MSG     : 2,
+    VERBOSE : 3,
+    DEBUG   : 4
+};
+
+
+const OUTPUTDESTS =
+{
+    NONE    : 0,
+    STDOUT  : 1,
+    STDERR  : 2,
+    FILE    : 4,
+
+    BOTH    : 3    
+};
+
+
+
+const OUTPUTFORMATS =
+{
+    TXT     : "txt",
+    LIST    : "list",
+    CSV     : "csv",
+    HTML    : "html",
+    JSON    : "json",
+}
+
+
+const CONFIG_DEFAULT =
+{
+    Type                   : "SART config",
+    ConfigVersion          : CONFIG_VERSION,
+    AppVersion             : Package.version,
+    AppVersionCode         : Package.versioncode,
+
+    LogLevel               : IS_TTY ? LOGLEVELS.MSG : LOGLEVELS.NOMSG,
+    MsgOut                 : OUTPUTDESTS.STDOUT,
+    ErrOut                 : OUTPUTDESTS.STDERR,
+              
+    ArweaveHost            : "arweave.net",
+    ArweavePort            : 443,
+    ArweaveProto           : "https",
+    ArweaveTimeout_ms      : 100000,   
+    ManualDest             : false,
+          
+    Recursive              : false,
+    DisplayAll             : false,    
+    AllowWildcards         : true,
+    ConcurrentDelay_ms     : 200,
+    ErrorWaitDelay_ms      : 5000,
+    ErrorWaitVariationP    : 1.0,
+    ErrorRetries           : 3,
+      
+    OutputFields           : null,
+    OutputFormat           : OUTPUTFORMATS.TXT,
+    SizeDigits             : 5,
+    VarNamesUppercase      : false,
+    ANSIAllowed            : true,
+    CSVReplacePeriodWith   : "#!#",
+    JSONSpacing            : 3,
+
+    VerifyDefaults         : "SUMMARY,NOT-VERIFIED",
+    VerifyDefaults_Numeric : "SUMMARY,ALL",
+
+    ArFSEntityTryOrder     : "drive,file,folder",
+    QueryMinBlockHeight    : null,
+    QueryMaxBlockHeight    : null,
+
+    Force                  : false,
+      
+    MaxArFSMetadataSize    : 1073741824, // 1MB ought to be enough for anybody?
+    MaxTXFormat            : 2,
+    MinArFSVersion         : 0.11,
+    MaxArFSVersion         : 0.11,
+    // Set to null to query solely based on tags like Entity-Type, Drive-Id etc.
+    ArFSTXQueryTags        : [ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ],
+    SafeConfirmationsMin   : 15,
+
+    LessFiltersMode        : false,
+    ContainerMode          : false,
+  
+};
+
+
+
+
+
+module.exports = 
+{         
+    CONFIG_VERSION,
+    CONFIG_FILESIZE_MAX_BYTES,
+    CONFIGFILE_ENCODING,
+    CONFIG_RECURSIVE_FIELDS,
+    CONFIG_LOCKED_ITEMS,
+    IS_TTY,
+
+    LOGLEVELS, 
+    OUTPUTDESTS, 
+    OUTPUTFORMATS,     
+    SYSTEM_ACCESS,
+    CONFIG_DEFAULT, 
+};

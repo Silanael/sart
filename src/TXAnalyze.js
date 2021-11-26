@@ -6,11 +6,13 @@
 // TXAnalyze.js - 2021-11-02
 //
 
-const Util     = require ('./util.js');
-const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js');
-const ArFSDefs = require ('./ArFS_DEF.js');
-const ZLib     = require('zlib');
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
+const Util      = require ('./util.js');
+const Sys       = require ('./sys.js');
+const Settings  = require ('./settings.js');
+const ArFSDefs  = require ('./ArFS_DEF.js');
+const ZLib      = require('zlib');
 
 
 

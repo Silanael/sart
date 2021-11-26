@@ -8,6 +8,8 @@
 //
 
 // Imports
+const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState.js");
 const Sys      = require ('./sys.js');
 const Settings = require ('./settings.js');
 const Util     = require ('./util.js');
@@ -25,7 +27,7 @@ const SUBCOMMANDS =
     "drive"       : ListARFS,
     "drives"      : ListDrives,
     "all-drives"  : async function (args) { await ListDrives (args, true); },
-    "config"      : function (args) { Sys.OUT_OBJ (Settings.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
+    "config"      : function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
 }
 
 
