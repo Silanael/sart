@@ -17,7 +17,7 @@ const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
 const GQL          = require ('./GQL.js');
 const Package      = require ('../package.json');
-const ArFS_DEF     = require('./ArFS_DEF.js');
+const ArFS_DEF     = require('./CONST_ARFS.js');
 const Analyze      = require ('./TXAnalyze.js');
 
 

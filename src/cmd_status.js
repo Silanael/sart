@@ -17,9 +17,9 @@ const Settings     = require ('./settings.js');
 const Util         = require ('./util.js');
 const Arweave      = require ('./arweave.js');
 const ArFS         = require ('./ArFS.js');
-const ArFSDefs     = require ('./ArFS_DEF.js');
+const ArFSDefs     = require ('./CONST_ARFS.js');
 const GQL          = require ('./GQL.js');
-const ArFS_DEF = require('./ArFS_DEF.js');
+const ArFS_DEF = require('./CONST_ARFS.js');
 
 
 
