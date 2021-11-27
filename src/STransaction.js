@@ -70,8 +70,8 @@ class TXTag
 
     static HasTag (tags = [], tag, value = null, case_sensitive = true)
     {
-        const tag = TXTag.GetTag (tags, tag, case_sensitive);
-        return tag != null && (value == null || tag.HasValue (value, case_sensitive) )  
+        const tag_obj = TXTag.GetTag (tags, tag, case_sensitive);
+        return tag_obj != null && (value == null || tag_obj.HasValue (value, case_sensitive) )  
     }
 
 }
