@@ -49,12 +49,20 @@ class ArFSDEf
 
     ENTITYSYMBOLS          = { [this.ENTITYTYPE_DRIVE] : 'D', [this.ENTITYTYPE_FOLDER] : 'd', [this.ENTITYTYPE_FILE] : '-'}
 
-    IsValidEntityType     (entity_type) { return this.ARFS_ENTITY_TYPES.includes (entity_type?.toLowerCase () );  }
-    GetIDTag              (entity_type) { return this.ENTITYTYPE_IDTAG_MAP [entity_type]; }
-    GetEntitySymbol       (entity_type) { const s = this.ENTITYSYMBOLS [entity_type]; return s != null ? s : '?'; }
-    IsFile                (entity_type) { return entity_type == this.ENTITYTYPE_FILE;   }
-    IsFolder              (entity_type) { return entity_type == this.ENTITYTYPE_FOLDER; }
-    IsDrive               (entity_type) { return entity_type == this.ENTITYTYPE_DRIVE;  }
+    IsValidEntityType       (entity_type)   { return this.ARFS_ENTITY_TYPES.includes (entity_type?.toLowerCase () );  }
+    GetIDTag                (entity_type)   { return this.ENTITYTYPE_IDTAG_MAP [entity_type]; }
+    GetEntitySymbol         (entity_type)   { const s = this.ENTITYSYMBOLS [entity_type]; return s != null ? s : '?'; }
+    IsFile                  (entity_type)   { return entity_type == this.ENTITYTYPE_FILE;   }
+    IsFolder                (entity_type)   { return entity_type == this.ENTITYTYPE_FOLDER; }
+    IsDrive                 (entity_type)   { return entity_type == this.ENTITYTYPE_DRIVE;  }
+
+    GetEntityTypeFromTX     (s_transaction) { return s_transaction?.GetTagValue (this.TAG_ENTITYTYPE);     }
+    GetDriveIDFromTX        (s_transaction) { return s_transaction?.GetTagValue (this.TAG_DRIVEID);        }
+    GetFileIDFromTX         (s_transaction) { return s_transaction?.GetTagValue (this.TAG_FILEID);         } 
+    GetFolderIDFromTX       (s_transaction) { return s_transaction?.GetTagValue (this.TAG_FOLDERID);       }
+    GetParentFolderIDFromTX (s_transaction) { return s_transaction?.GetTagValue (this.TAG_PARENTFOLDERID); }
+    GetUnixTimeFromTX       (s_transaction) { return s_transaction?.GetTagValue (this.TAG_UNIXTIME);       }
+
 };
 
 

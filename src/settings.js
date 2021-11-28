@@ -128,7 +128,7 @@ function ApplyConfig (config)
         }
     }
     else
-        Sys.ERR ("PROGRAM ERROR: config null", "ApplyConfig");
+        Sys.ERR_PROGRAM ("config null", "ApplyConfig");
 
     return true;
 }

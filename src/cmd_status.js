@@ -150,7 +150,7 @@ async function Handler_TX (args, txid = null)
             Sys.OUT_OBJ (info);
         }
         else
-            Sys.ERR ("PROGRAM ERROR: Failed to retrieve status-object for transaction '" + txid + "'.");
+            Sys.ERR_PROGRAM ("Failed to retrieve status-object for transaction '" + txid + "'.");
 
         
         return true;

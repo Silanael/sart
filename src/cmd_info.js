@@ -144,7 +144,7 @@ async function Handler_TX (args, tx = null)
         Util.CopyKeysToObj (Arweave.TXStatusToInfo (info.State), info);        
 
     else
-        Sys.ERR ("PROGRAM ERROR: Failed to retrieve TX status object!", info.TXID);
+        Sys.ERR_PROGRAM ("Failed to retrieve TX status object!", info.TXID);
 
 
     if (tx == null)

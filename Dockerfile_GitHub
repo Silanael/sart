@@ -1,0 +1,68 @@
+# SART Docker Image
+# Silanael 2021-11-27_01          
+#
+# GitHub:  https://github.com/silanael/sart
+# Website: silanael.com
+# Arweave: zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4
+# ArDrive: a44482fd-592e-45fa-a08a-e526c31b87f1
+#
+#
+# HOW TO BUILD:
+#
+#   Latest:           docker build . -f ./Dockerfile_GitHub -t silanael/sart:latest
+#   Dev:              docker build . -f ./Dockerfile_GitHub -t silanael/sart:dev   --build-arg BRANCH=dev
+#   Specific version: docker build . -f ./Dockerfile_GitHub -t silanael/sart:0.8.5 --build-arg VERSION=0.8.5
+#
+#
+# BUILD-ARGS: 
+#
+#     BRANCH   Set branch to fetch from GitHub-repo. If omitted, 'master' is used.
+#     VERSION  Version number for metadata. Can be omitted. If sets, sets branch to "v[VERSION]".
+#
+
+
+
+#####################
+# Application image #
+#####################
+
+FROM node:current-alpine
+
+
+# Update the packages and install the final dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache bash nano git
+
+
+# Copy files into the container
+COPY ./README.md /
+COPY ./Dockerfile_GitHub /
+
+
+# Fetch and build the project
+ARG BRANCH=auto
+ARG VERSION=latest
+RUN git clone https://github.com/silanael/sart $(if [ ${BRANCH} != "auto" ]; then echo "-b ${BRANCH}"; elif [ ${VERSION} != "latest" ]; then echo "-b v${VERSION}"; fi)
+WORKDIR /sart
+RUN npm install
+
+
+# Finalize
+ENTRYPOINT ["./sart"]
+CMD ["console"]
+
+
+# Label
+LABEL description="Silanael Arweave Tool (SART)"                            \
+      version="${VERSION}"                                                  \                          
+      author="Silanael"                                                     \
+      author.dockerfile="Silanael"                                          \
+      com.silanael.usage="docker run --rm -it <image>"                      \
+      com.silanael.url="silanael.com"                                       \
+      com.silanael.e-mail="sila@silanael.com"                               \
+      com.silanael.arweave="zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4"    \
+      com.silanael.ardrive="a44482fd-592e-45fa-a08a-e526c31b87f1"           \
+      com.silanael.createdwith="Visual Studio Code / Code OSS 1.60.2"       \
+      com.silanael.sys="Potato-01 MK3"                                      \
+      com.silanael.dockerfile_version="2021-11-27_01"
+

@@ -14,7 +14,6 @@ const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
 const Sys       = require ("./sys.js");
 const Package   = require ("../package.json");
-const STX       = require ("./STransaction.js");
 
 
 
@@ -200,6 +199,34 @@ function StrCmp_Wildcard (str, compare_to, lowercase = true)
 }
 
 
+function ArrayToStr (array, opts = { entry_separator: ", ", values_in_quotes: false} )
+{
+    if (array == null)
+        return null;
+    
+    if (opts.entry_separator == null)
+        opts.entry_separator = "";
+
+    let str = "";    
+    let sep = false;
+        
+    if (!opts.values_in_quotes)
+    {
+        for (const i of array)
+        {
+            str += (sep ? opts.entry_separator : "") + i;
+            sep = true;
+        }   
+    }
+    else for (const i of array)
+    {
+        str += (sep ? opts.entry_separator : "") + "\""  + i + "\"";
+        sep = true;
+    }
+
+    return str;
+}
+
 
 function ObjToStr (obj, opts = { kvp_separator: ":", entry_separator: " "} )
 {
@@ -214,7 +241,17 @@ function ObjToStr (obj, opts = { kvp_separator: ":", entry_separator: " "} )
     {
         const entry = entries[C];
         if (entry != null)
-            str += (C > 0 ? opts.entry_separator : "") + entry[0] + opts.kvp_separator  + entry[1];
+        {
+            str += (C > 0 ? opts.entry_separator : "") + entry[0] + opts.kvp_separator;
+            const val_str = entry[1].toString ();
+
+            // Recursive add            
+            if (val_str == "object Object" || val_str == "[object Object]")
+                str += ObjToStr (entry[1], opts);
+
+            else
+                str += val_str;
+        }
     }
 
     return str;
@@ -446,47 +483,12 @@ function RequireParam (param, name, src)
 
 
 
-function DecodeTXTags (tx, dest_obj = null, prefix = "")
-{
-    if (tx == null)
-    {
-        Sys.VERBOSE ("Util.DecodeTags: No TX given.");
-        return null;
-    }
-
-    const txid = tx.id;
-    const len  = tx.tags != null ? tx.tags.length : 0;
-            
-    if (len <= 0)
-        Sys.ERR ("No tags obtained from transaction " + txid + " !");
-
-    else
-    {
-        const decoded_tags = [];
-                         
-        let tag;
-        let e;
-        for (let C = 0; C < len; ++C)
-        {
-            tag = tx.tags[C];
-            e = new STX.TXTag 
-            (
-                tag.get ('name',  { decode: true, string: true } ),
-                tag.get ('value', { decode: true, string: true } )
-            );
-
-            decoded_tags.push (e);            
-            e.AddAsFieldTo (dest_obj, prefix);
-                
-        }        
-        return decoded_tags;
-    }    
-}
 
 
 
-module.exports = { Args, TXTag : STX.TXTag,
+
+module.exports = { Args, 
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
                    GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, DecodeTXTags, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
-                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray };
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
+                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr };

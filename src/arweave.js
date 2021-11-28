@@ -457,7 +457,7 @@ function GetTXStatusStr (statuscode, confirmations)
 
 
     else if (statuscode == null)
-        Sys.ERR ("PROGRAM ERROR: TXStatusCodeToStr: statuscode NULL");
+        Sys.ERR_PROGRAM ("statuscode NULL", "GetTXStatusStr");
 
 
     else
@@ -471,63 +471,16 @@ function GetTXStatusStr (statuscode, confirmations)
 function IsTxOKByCode (statuscode) {return statuscode == Constants.TXSTATUS_OK; }
 
 
-class TXStatusInfo
-{
-    Status        = null;
-    StatusCode    = null;
-    Confirmations = null;
-    MinedAtBlock  = null;
 
-    IsMined     () { return this.StatusCode == Constants.TXSTATUS_OK       };
-    IsPending   () { return this.StatusCode == Constants.TXSTATUS_PENDING  };
-    IsFailed    () { return this.StatusCode == Constants.TXSTATUS_NOTFOUND };
-    IsConfirmed () 
-    { 
-        if (State.Config.SafeConfirmationsMin == null || isNaN (State.Config.SafeConfirmationsMin) )
-        {
-            Sys.ERR_ONCE ("Config.SafeConfirmationsMin not properly set!");
-            return false;
-        }
 
-        else 
-            return this.IsMined () && this.Confirmations != null && this.Confirmations >= State.Config.SafeConfirmationsMin; 
-    }
-    
-}
 
-function TXStatusToInfo (txstatus)
-{
-    if (txstatus != null)
-    {
-        const info = new TXStatusInfo ();
-
-        const statuscode    = txstatus.status;
-        const confirmations = txstatus.confirmed?.number_of_confirmations;
-        const mined_at      = txstatus.confirmed?.block_height;
-
-        info.Status        = GetTXStatusStr (statuscode, confirmations);
-        info.StatusCode    = statuscode;
-        info.Confirmations = confirmations;
-        info.MinedAtBlock  = mined_at;
-
-        return info;
-    }
-    else
-        return null;
-
-}
-
-async function GetTXStatusInfo (txid)
-{
-    return TXStatusToInfo (await GetTXStatus (txid) );
-}
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
-                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode, TXStatusToInfo, GetTXStatusInfo,
+                   IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
                    TXSTATUS_OK       : Constants.TXSTATUS_OK, 
                    TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
                    TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,
                    CONNSTATES        : Constants.CONNSTATES, 
-                   TXStatusInfo };
+                   };

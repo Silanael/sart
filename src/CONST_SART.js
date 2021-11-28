@@ -23,6 +23,26 @@ const TXSTATUS_NOTFOUND         = 404;
 
 const ENDPOINT_PENDING          = "tx/pending";
 
+const GQL_MAX_RESULTS            = 100;
+const GQL_SORT_HEIGHT_DESCENDING = 'HEIGHT_DESC';
+const GQL_SORT_HEIGHT_ASCENDING  = 'HEIGHT_ASC';
+const GQL_SORT_OLDEST_FIRST      = GQL_SORT_HEIGHT_ASCENDING;
+const GQL_SORT_NEWEST_FIRST      = GQL_SORT_HEIGHT_DESCENDING;
+const GQL_SORT_DEFAULT           = GQL_SORT_HEIGHT_ASCENDING;
+const GQL_VALID_SORT             = [ GQL_SORT_HEIGHT_ASCENDING, GQL_SORT_HEIGHT_DESCENDING ];
+
+const HTTP_STATUS_OK             = 200;
+
+const ERROR_IDS =
+{
+    TXFORMAT_UNSUPPORTED     : 1,
+    SORT_NOT_SET             : 2,
+    ARFS_ENTITY_TYPE_UNKNOWN : 3,
+    ARFS_ID_INVALID          : 4
+}
+
+function IS_GQL_SORT_VALID (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
+
 
 
 // Whether to allow the program to access the system,
@@ -144,6 +164,18 @@ module.exports =
     TXSTATUS_NOTFOUND,
     ENDPOINT_PENDING,
 
+
+    GQL_MAX_RESULTS,
+    GQL_SORT_HEIGHT_DESCENDING,
+    GQL_SORT_HEIGHT_ASCENDING ,
+    GQL_SORT_OLDEST_FIRST,
+    GQL_SORT_NEWEST_FIRST,
+    GQL_SORT_DEFAULT,
+    GQL_VALID_SORT,
+    HTTP_STATUS_OK,
+    ERROR_IDS,
+    IS_GQL_SORT_VALID,
+    
     LOGLEVELS, 
     OUTPUTDESTS, 
     OUTPUTFORMATS,

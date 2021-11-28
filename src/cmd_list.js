@@ -115,7 +115,7 @@ async function ListAddress (args, address = null)
     const query_args =
     {
         owner: address,
-        sort:  GQL.SORT_OLDEST_FIRST,
+        sort:  Constants.GQL_SORT_OLDEST_FIRST,
         tags:  []
     }
     
@@ -145,13 +145,13 @@ async function ListAddress (args, address = null)
                     case asc:
                     case ascending:
                     case oldest:
-                        query_args.sort = GQL.SORT_HEIGHT_ASCENDING;
+                        query_args.sort = Constants.GQL_SORT_HEIGHT_ASCENDING;
                         break;
 
                     case desc:
                     case descending:
                     case newest:
-                        query_args.sort = GQL.SORT_HEIGHT_DESCENDING;
+                        query_args.sort = Constants.GQL_SORT_HEIGHT_DESCENDING;
                         break;
 
                     default:                    
@@ -167,7 +167,7 @@ async function ListAddress (args, address = null)
                 if ( ! args.RequireAmount (1, "Number of entries is required."))
                     return false;
                 query_args.first = args.Pop ();
-                query_args.sort = GQL.SORT_NEWEST_FIRST;
+                query_args.sort = Constants.GQL_SORT_NEWEST_FIRST;
                 
                 break;
 
@@ -175,7 +175,7 @@ async function ListAddress (args, address = null)
                 if ( ! args.RequireAmount (1, "Number of entries is required."))
                     return false;
                 query_args.first = args.Pop ();
-                query_args.sort = GQL.SORT_OLDEST_FIRST;
+                query_args.sort = Constants.GQL_SORT_OLDEST_FIRST;
                 break;
 
             default:
@@ -198,12 +198,12 @@ async function ListAddress (args, address = null)
     let e;
     if (query != null) 
     {
-        const amount = query.GetEntriesAmount ();
+        const amount = query.GetTransactionsAmount ();
         if (amount > 0)
         {
             for (let C = 0; C < amount; ++C)
             {
-                e = query.GetEntry (C);
+                e = query.GetTransactionByIndex (C);
                 
                 const d = e.HasData      () ? "D" : "-";
                 const t = e.HasTransfer  () ? "T" : "-";
@@ -259,7 +259,7 @@ async function ListDrive2 (args, drive_id = null)
     await query.ExecuteReqOwner
     ({ 
         owner: "<foo>",
-        sort: GQL.SORT_HEIGHT_DESCENDING,
+        sort: Constants.GQL_SORT_HEIGHT_DESCENDING,
         tags: [ {name:"Entity-Type", values: ["file"] } ,
                 {name:"Drive-Id",    values:"<foo>" } ] 
     });

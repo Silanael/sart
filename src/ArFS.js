@@ -8,15 +8,19 @@
 //
 
 // Imports
-const Constants = require ("./CONST_SART.js");
-const State     = require ("./ProgramState.js");
-const Arweave  = require ('./arweave.js');
-const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js');
-const Util     = require ('./util.js');
-const GQL      = require ('./GQL.js');
-const Listing  = require ('./Listing.js');
-const Tag      = GQL.Tag;
+const Constants  = require ("./CONST_SART.js");
+const ArFSConst  = require ("./CONST_ARFS.js");
+const State      = require ("./ProgramState.js");
+const Arweave    = require ('./arweave.js');
+const Sys        = require ('./sys.js');
+const Settings   = require ('./settings.js');
+const Util       = require ('./util.js');
+const GQL        = require ('./GQL.js');
+const Listing    = require ('./Listing.js');
+const Entity     = require ('./ArFSEntity.js');
+const STX        = require ("./Transaction.js");
+const TXTag      = require ("./TXTag.js");
+const ArFSEntity = require ("./ArFSEntity");
 
 
 
@@ -67,6 +71,116 @@ function IsDrive               (entity_type) { return entity_type == ENTITYTYPE_
 
 
 const __TAG = "arfs";
+
+
+
+class TXTag_EntityType extends TXTag
+{ 
+    constructor (value = null)
+    {
+        super (ArFSConst.TAG_ENTITYTYPE, value);
+        if (value != null && !ArFSConst.IsValidEntityType (value) )
+            Sys.WARN ("Unknown entity type '" + value + "' encountered.", "TXTag_EntityType", { error_id: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN });
+    }
+}
+
+
+class TXTag_ArFSID extends TXTag
+{ 
+    constructor (entity_type, arfs_id)
+    {
+        super (ArFSConst.GetIDTag (entity_type), arfs_id);
+
+        if (arfs_id != null && !Util.IsArFSID (arfs_id) )
+            Sys.WARN ("Invalid ArFS-ID '" + value + "'.", "TXTag_ArFSID", { error_id: Constants.ERROR_ID_ARFS_ID_INVALID });
+
+        if (entity_type == null)
+            Sys.ERR_PROGRAM ("'entity_type' not provided.", "TXTag_ArFSID");
+
+        else if (this.Name == null)
+            Sys.ERR ("Unknown Entity-Type '" + entity_type + "'.", "TXTag_ArFSID", { error_id: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN });
+        
+    }
+}
+
+class TXTag_DriveID        extends TXTag_ArFSID { constructor (drive_id)         { super (ENTITYTYPE_DRIVE,   drive_id);         } }
+class TXTag_FileID         extends TXTag_ArFSID { constructor (file_id)          { super (ENTITYTYPE_FILE,    file_id);          } }
+class TXTag_FolderID       extends TXTag_ArFSID { constructor (folder_id)        { super (ENTITYTYPE_FOLDER,  folder_id);        } }
+class TXTag_ParentFolderID extends TXTag        { constructor (parent_folder_id) { super (TAG_PARENTFOLDERID, parent_folder_id); } }
+
+
+
+
+
+class ArFSEntityQuery extends GQL.TXQuery
+{
+   
+    /* Override */ async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: Constants.GQL_SORT_OLDEST_FIRST} )
+    {
+        Sys.ERR ("ExecuteReqOwner not applicable to this query type.", this);
+        return false;        
+    }
+   
+
+    async Execute (arfs_id, entity_type)
+    {       
+        this.Sort = Constants.GQL_SORT_OLDEST_FIRST;
+
+        const tags = 
+        [ 
+            new TXTag_EntityType (entity_type),
+            new TXTag_ArFSID     (entity_type, arfs_id)            
+        ];
+        TXTag.ADD_NATIVE_TAGS (tags, State.Config.ArFSTXQueryTags);
+        
+
+        await super.Execute
+        (            
+            {                                                           
+                sort: this.Sort,
+                tags: tags,                
+            }
+        );
+
+        if (this.GetEdgesAmount () > 0)
+        {
+            const entity = ArFSEntity.FromTXQuery (this, {arfs_id: arfs_id, entity_type: entity_type} );
+                        
+            if (entity != null)
+            {
+                if (Settings.IsDebug () )
+                {
+                    Sys.DEBUG ("Fetched ArFS-entity " + arfs_id + " :");
+                    Sys.DEBUG (entity);
+                }
+
+                if (Settings.IsVerbose () )
+                {
+                    Sys.VERBOSE ("Fetched ArFS-entity - Owner:"  + entity.GetOwner () 
+                                    + " Privacy:"                + entity.GetPrivacy (), 
+                                    + " TXID:"                   + entity.GetNewestMetaTXID (), 
+                                    arfs_id);
+                }
+
+                return entity;
+            }                        
+            else
+                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID " + arfs_id + " - Errors: " + entity.GetErrorStr (), 
+                         "GQL.DriveEntityQuery.Execute");            
+        }
+        else
+            Sys.VERBOSE ("Did not find an ArFS-" + entity_type + "-entity for ID " + arfs_id + " .");                 
+
+        return null;
+    }
+
+}
+
+
+
+
+
+
 
 
 
@@ -267,7 +381,7 @@ class ArFSURL
 
 
 
-class ArFSEntity
+class ArFSEntity_Old
 {    
     ArFSID           = null;
     ArFSName         = null;
@@ -317,11 +431,11 @@ class ArFSEntity
                 return new ArFSDrive (arfs_id, master, gql_entry);
 
             case null:
-                Sys.ERR ("CREATE: Entity type not set!");
+                Sys.ERR ("Entity type not set!", "ArFSEntity.CREATE");
                 return null;
 
             default:
-                Sys.ERR ("CREATE: Unknown entity type " + entity_type);
+                Sys.ERR ("Unknown entity type " + entity_type, "ArFSEntity.CREATE", {ID: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN } );
                 return null;
         }            
     }
@@ -496,7 +610,7 @@ class ArFSEntity
         await query.Execute
         ({
             first: 1, 
-            sort: GQL.SORT_OLDEST_FIRST,
+            sort: Constants.GQL_SORT_OLDEST_FIRST,
             tags: 
             [ 
                 Tag.QUERYTAG (id_tag, this.ArFSID),
@@ -537,7 +651,7 @@ class ArFSEntity
         const queryconfig = 
         {
             first: 1, 
-            sort: GQL.SORT_NEWEST_FIRST,
+            sort: Constants.GQL_SORT_NEWEST_FIRST,
             owner: entity_owner,
             tags: 
             [ 
@@ -635,7 +749,7 @@ class ArFSEntity
             
             this.Valid = await this._OnARFSMetadataSet (entry, metadata);
         
-            Sys.VERBOSE ("Metadata parsed for entity " + this.ArFSID, ArFSEntity.name);
+            Sys.VERBOSE ("Metadata parsed for entity " + this.ArFSID, ArFSEntity_Old.name);
             Sys.DEBUG (this.Metadata_Latest);
         }
         else        
@@ -730,7 +844,7 @@ class ArFSEntity
 
 
 
-class ArFSItem extends ArFSEntity
+class ArFSItem extends ArFSEntity_Old
 {
     OwnerDrive       = null;
     MasterEntity     = null;
@@ -779,7 +893,7 @@ class ArFSItem extends ArFSEntity
 
 
 
-class ArFSDrive extends ArFSEntity
+class ArFSDrive extends ArFSEntity_Old
 {  
 
     RootFolderID    = null;    
@@ -1023,7 +1137,7 @@ class ArFSDir extends ArFSItem
         const query = new GQL.TXQuery (Arweave);
         await query.ExecuteReqOwner
         ({         
-            sort:  GQL.SORT_NEWEST_FIRST,
+            sort:  Constants.GQL_SORT_NEWEST_FIRST,
             owner: owner_addr,
             tags: 
             [ 
@@ -1052,7 +1166,7 @@ class ArFSDir extends ArFSItem
                 continue;
             }
 
-            const new_entity = await ArFSEntity.CREATE (null, null, this, entry);
+            const new_entity = await ArFSEntity_Old.CREATE (null, null, this, entry);
             
             // Failed to create.
             if (new_entity == null)
@@ -1346,7 +1460,7 @@ async function GetArFSEntity (arfs_id, entity_type)
 {
     if (entity_type == null)
     {
-        Sys.ERR ("PROGRAM ERROR: entity_type missing.", "GetArFSEntity");
+        Sys.ERR_PROGRAM ("entity_type missing.", "GetArFSEntity");
         return null;
     }
 
@@ -1354,7 +1468,7 @@ async function GetArFSEntity (arfs_id, entity_type)
     {
         Sys.VERBOSE ("Trying to fetch ArFS-entity of type '" + entity_type + "' with ID " + arfs_id + " ...");
         
-        const query  = new GQL.ArFSEntityQuery (Arweave);
+        const query  = new ArFSEntityQuery (Arweave);
         const entity = await query.Execute (arfs_id, entity_type);
         
         return entity;
@@ -1499,7 +1613,7 @@ async function FindDriveOwner (drive_id)
     ( { "cursor" : undefined, 
         "first"  : 1, 
         "owner"  : undefined, 
-        "sort"   : GQL.SORT_OLDEST_FIRST ,
+        "sort"   : Constants.GQL_SORT_OLDEST_FIRST ,
         "tags"   :[ Tag.QUERYTAG (TAG_DRIVEID, drive_id),
                     Tag.QUERYTAG (TAG_ENTITYTYPE, ENTITYTYPE_DRIVE) ], 
     } );
@@ -1580,7 +1694,7 @@ async function ListDrives (address)
         "cursor" : undefined,         
         "first"  : undefined,
         "owner"  : address, 
-        "sort"   : GQL.SORT_NEWEST_FIRST ,
+        "sort"   : Constants.GQL_SORT_NEWEST_FIRST ,
         "tags"   :[ Tag.QUERYTAG (TAG_ENTITYTYPE, ENTITYTYPE_DRIVE) ], 
     } );
     
@@ -1909,5 +2023,12 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag,
-                   UserGetArFSEntity };
+module.exports = { ARFS_VERSION, ArFSEntity: ArFSEntity_Old, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag,
+                    TXTag_EntityType,
+                    TXTag_ArFSID,
+                    TXTag_DriveID,
+                    TXTag_FileID,
+                    TXTag_FolderID,
+                    TXTag_ParentFolderID, 
+                    ArFSEntityQuery,                   
+                    UserGetArFSEntity };

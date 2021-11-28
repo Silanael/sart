@@ -285,7 +285,7 @@ class Results
                     bytes += Number(e.ReportedSize);
                 }
                 else
-                    Sys.ERR ("PROGRAM ERROR: Skipping " + e.FileID + " from calculations - ReportedSize not a number.");
+                    Sys.ERR_PROGRAM ("Skipping " + e.FileID + " from calculations - ReportedSize not a number.");
             }
             this.Summary.ProcessedBytes_Reported = bytes;
         }        
@@ -322,7 +322,7 @@ class Results
                     bytes += Number(e.ReportedSize);
                 }
                 else
-                    Sys.ERR ("PROGRAM ERROR: Skipping " + e.FileID + " from calculations - ReportedSize not a number.");
+                    Sys.ERR_PROGRAM ("Skipping " + e.FileID + " from calculations - ReportedSize not a number.", "cmd_verify.Results.__CountBytes");
             }
         }
         return bytes;
@@ -532,7 +532,7 @@ async function Handler_Uploads (args)
     await query.ExecuteReqOwner
     ({            
         owner: owner,        
-        sort: GQL.SORT_NEWEST_FIRST,        
+        sort: Constants.GQL_SORT_NEWEST_FIRST,        
     });
 
     const tx_amount = query.EntriesAmount;
@@ -1175,7 +1175,7 @@ async function Handler_Uploads_Old (args)
     await query.ExecuteReqOwner
     ({            
         owner: owner,        
-        sort: GQL.SORT_HEIGHT_DESCENDING,
+        sort: Constants.GQL_SORT_HEIGHT_DESCENDING,
         tags: [ Tag.QUERYTAG ("Entity-Type", "file"),
                 Tag.QUERYTAG ("Drive-Id", drive_id)  ] 
     });

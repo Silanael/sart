@@ -370,6 +370,15 @@ function ERR_CONFLICT (msg, src)
 }
 
 
+function ERR_PROGRAM (msg, src, opts = {Once: false} )
+{
+    if (opts.Once)
+        ERR_ONCE ("PROGRAM ERROR: " + msg, src);
+    else
+        ERR ("PROGRAM ERROR: " + msg, src);
+}
+
+
 // Display the same error only once.
 // I'd like to use a hash for the lookup here, but there doesn't
 // seem to be a fast built-in method for doing that.
@@ -478,6 +487,7 @@ module.exports =
     ERR_ABORT,
     ERR_OVERRIDABLE,
     ERR_CONFLICT,
+    ERR_PROGRAM,
     ERR_MISSING_ARG,
     ERR_ONCE,
     ERR_FATAL,
