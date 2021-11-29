@@ -10,9 +10,9 @@
 
 const Constants        = require ("./CONST_SART.js");
 const Constants_ArFS   = require ("./CONST_ARFS.js");
-const GQL              = require ("./GQL.js");
-const { STransaction } = require ("./Transaction");
-const Sys              = require ("./sys.js");
+const Sys              = require ("./System.js");
+const Util             = require ("./Util.js");
+const Settings         = require ("./Settings.js");
 
 
 
@@ -22,8 +22,8 @@ class ArFSEntity
 {
     Info =
     {
-        EntityType:          null,
-        "ArFS-ID":           null,
+        ArFSID:              null,
+        EntityType:          null,        
         Owner:               null,
         TXID_Created:        null,
         TXID_Latest:         null,
@@ -35,6 +35,7 @@ class ArFSEntity
         IsEncrypted:         null,
         IsPublic:            null,
         Errors:              null,
+        Warnings:            null,
     }
 
     Transactions    = null;        
@@ -51,11 +52,15 @@ class ArFSEntity
 
 
     constructor (args = { entity_type: null, arfs_id: null} ) 
-    {         
-        this.Info.EntityType = args?.entity_type;
-        this.Info["ArFS-ID"] = args?.arfs_id;
+    {
+        this.__SetArFSID (args?.arfs_id);
+        this.__SetEntityType (args?.entity_type);        
     }
 
+    toString    () { return (this.Info.EntityType != null ? "ArFS-" + this.Info.EntityType : "ArFS-entity (type missing)" 
+                    + " " + (this.ArFSID != null ? this.ArFSID : "(ArFS-ID missing)") 
+                    + " Latest TXID: " + (this.LatestTX != null ? this.LatestTX.GetTXID ()  : "NOT SET") 
+                    )  }
     GetErrorStr () { return this.Info.Errors != null || this.Info.Errors.length > 0 ? this.Info.Errors.toString () : "No errors."; }
 
 
@@ -63,11 +68,41 @@ class ArFSEntity
     {
         this.Info.EntityType = entity_type;
 
-        if (entity_type == null)
-            Sys.ERR_PROGRAM ("'entity_type' null", "ArFSEntity.__SetEntityType");
+        if (entity_type != null && ! Constants_ArFS.IsValidEntityType (entity_type) )
+        {
+            const warning = "Entity-Type " + entity_type + " not recognized.";
+            if (! Sys.WARN (warning, "ArFSEntity.__SetEntityType", { error_id: Constants.ERROR_IDS.ARFS_ENTITY_TYPE_UNKNOWN } ) )
+                this.AddWarning (warning);
+        }
+    }
 
-        else if (! Constants_ArFS.IsValidEntityType (entity_type) )
-            Sys.WARN ("Entity-Type " + entity_type + " not recognized.", "ArFSEntity.__SetEntityType");
+    __SetArFSID (arfs_id)
+    {
+        this.Info.ArFSID = arfs_id;
+
+        if (arfs_id != null && ! Util.IsArFSID (arfs_id) )
+        {
+            const warning = "ArFS-ID " + arfs_id + " doesn't seem to be a valid one.";
+            if (! Sys.WARN (warning, "ArFSEntity.__SetArFSID", { error_id: Constants.ERROR_IDS.ARFS_ID_INVALID } ) )
+                this.AddWarning (warning);
+        }
+    }
+
+    AddTransaction (tx)
+    {
+        if (tx == null)
+            return Sys.ERR_PROGRAM ("'tx' null.", "Entity.AddTransaction");
+        
+        if (this.Transactions == null)
+            this.Transactions = new TXGroup ();
+
+        else if (this.Transactions.HasTXID (tx.GetTXID () ) )
+        {
+            Sys.VERBOSE ("Already has transaction " + tx.GetTXID () )
+            return false;
+        }
+
+        return this.Transactions.AddTransaction (tx);        
     }
 
 
@@ -92,7 +127,7 @@ class ArFSEntity
             Sys.ERR_PROGRAM (error, "ArFSEntity.FromTXQuery");
             Sys.DEBUG (txquery);
 
-            return false;
+            return null;
         }
 
         entity.Transactions = all_transactions.GetTransactionsByOwner (owner);
@@ -100,22 +135,34 @@ class ArFSEntity
 
         if (first_tx != null)
         {
-            entity.__SetEntityType (Constants_ArFS.GetEntityTypeFromTX (first_tx) );
-            
+            // Fetch entity-type from the first TX if not given as parameter.
+            if (args.entity_type == null)
+                args.entity_type = first_tx.GetTagValue (Constants_ArFS.TAG_ENTITYTYPE);
+                            
+            // Same for ID
+            if (args.arfs_id == null)
+                args.arfs_id = first_tx.GetTagValue (Constants_ArFS.GetTagForEntityType (args.entity_type) );
+
+
             if (entity.FirstTX == null || entity.FirstTX.IsNewerThan (first_tx) )
             {
-                Sys.DEBUG ("First TX set to TXID:" + first_tx?.GetTXID () + " - was " + entity.FirstTX?.GetTXID () );
+                Sys.DEBUG ("First TX set to TXID:" + first_tx?.GetTXID () + " - was " 
+                    + (entity.FirstTX != null ? entity.FirstTX.GetTXID () : "not set yet.") );
+
                 entity.FirstTX  = first_tx;
             }
 
             if (entity.LatestTX == null || latest_tx.IsNewerThan (entity.LatestTX) )
             {
-                Sys.DEBUG ("Latest TX set to TXID:" + latest_tx?.GetTXID () + " - was " + entity.LatestTX?.GetTXID () );
+                Sys.DEBUG ("Latest TX set to TXID:" + latest_tx?.GetTXID () + " - was " 
+                    + (entity.LatestTX != null ? entity.LatestTX.GetTXID () : "not set yet.") );
+
                 entity.LatestTX = latest_tx;                
             }
             
-            entity.Info.EntityType           = entity_type;
-            entity.Info["ArFS-ID"]           = arfs_id;
+            entity.__SetEntityType (args.entity_type);
+            entity.__SetArFSID     (args.arfs_id);
+                        
             entity.Info.Owner                = owner;
             entity.Info.Created              = first_tx ?.GetBlockTime () != null ? Util.GetDate (first_tx. GetBlockTime () ) : null;
             entity.Info.LastModified         = latest_tx?.GetBlockTime () != null ? Util.GetDate (latest_tx.GetBlockTime () ) : null;
@@ -126,53 +173,49 @@ class ArFSEntity
             entity.Info.BlockHeight_Created  = first_tx ?.GetBlockHeight ();
             entity.Info.BlockHeight_Latest   = latest_tx?.GetBlockHeight ();
             entity.Info.Operations           = entity.Transactions?.GetAmount ();
-            entity.Info.IsEncrypted          = first_tx?.HasTag (ArFSDefs.TAG_CIPHER);
+            entity.Info.IsEncrypted          = first_tx?.HasTag (Constants_ArFS.TAG_CIPHER);
          
 
             if (entity.Operations <= 0)
-                Sys.ERR ("Something went wrong - couldn't get entries matching owner " + owner);
-
-
-            if (entity.Entries != null)
             {
-                for (const e of entity.Entries)
-                {
-                    entity.EntryByTXID[e.GetTXID ()] = e;
-                }
+                Sys.ERR ("Something went wrong - couldn't get entries for ArFS-ID " + Entity.Info["ArFS-ID"] + " matching owner " + owner);
+                this.AddError ("PROGRAM ERROR: Transactions not set or not populated.");
             }
-            else
-                Sys.ERR ("Entries null.", "ArFSEntityQuery");
-
 
  
             // Don't update the metadata yet.
             // This query can be used to retrieve things like owner,
             // where it's not necessary to have.                
             entity.UpdateBasic (this.Arweave, true, false, false);
+
+            return entity;
         }
         else
         {
             Sys.ERR_PROGRAM ("Could not set first TX from the query!", "ArFSEntity.FromTXQuery");  
+            this.AddError ("PROGRAM ERROR: Could not deduce the first transaction of the entity.");
             Sys.Debug (query);
         }
 
+        return null;
     }
 
 
-    IsPublic          ()      { return this.Info?.IsPublic    == true;                           }
-    IsEncrypted       ()      { return this.Info?.IsEncrypted == true;                           }
-    GetInfo           ()      { return this.Info;                                                }
-    GetOwner          ()      { return this.Info?.Owner;                                         }
+    IsPublic          ()      { return this.Info?.IsPublic    == true;                             }
+    IsEncrypted       ()      { return this.Info?.IsEncrypted == true;                             }
+    GetInfo           ()      { return this.Info;                                                  }
+    GetOwner          ()      { return this.Info?.Owner;                                           }
     GetPrivacy        ()      { return this.Info?.Privacy != null ? this.Info.Privacy 
-                               : this.Info?.IsEncrypted ? "private" : "public";                  }
-    GetName           ()      { return this.Info?.Name;                                          }
-    GetLastModified   ()      { return this.Info?.LastModified;                                  }
-    GetNewestMetaTXID ()      { return this.Info?.TXID_Latest;                                   }
-    GetFirstMetaTXID  ()      { return this.Info?.TXID_Created;                                  }
-    AddError          (error) { this.Info.Errors = Util.Append (this.Info.Errors, error, " ");   }    
-    GetStatus         ()      { return this.Info?.MetaTXStatus;                                  }
-    GetMetaStatusCode ()      { return this.Info?.MetaTXStatusCode;                              }
-    GetDataStatusCode ()      { return this.Info?.DataTXStatusCode;                              }
+                               : this.Info?.IsEncrypted ? "private" : "public";                    }
+    GetName           ()      { return this.Info?.Name;                                            }
+    GetLastModified   ()      { return this.Info?.LastModified;                                    }
+    GetNewestMetaTXID ()      { return this.Info?.TXID_Latest;                                     }
+    GetFirstMetaTXID  ()      { return this.Info?.TXID_Created;                                    }
+    AddError          (error) { this.Info.Errors   = Util.Append (this.Info.Errors,   error, " "); }    
+    AddWarning        (warn)  { this.Info.Warnings = Util.Append (this.Info.Warnings, warn,  " "); }    
+    GetStatus         ()      { return this.Info?.MetaTXStatus;                                    }
+    GetMetaStatusCode ()      { return this.Info?.MetaTXStatusCode;                                }
+    GetDataStatusCode ()      { return this.Info?.DataTXStatusCode;                                }
 
 
     GetStatusInfo ()
@@ -320,10 +363,10 @@ class ArFSEntity
                                     + "(>= " + safe_confirmations + " from Config).";
     
 
-        if (this.EntityType == ArFSDefs.ENTITYTYPE_DRIVE)
+        if (this.EntityType == Constants_ArFS.ENTITYTYPE_DRIVE)
             status_info.Analysis += " File integrity NOT ANALYZED - use the VERIFY-command for that.";
 
-        else if (this.EntityType == ArFSDefs.ENTITYTYPE_FOLDER)
+        else if (this.EntityType == Constants_ArFS.ENTITYTYPE_FOLDER)
             status_info.Analysis += " File integrity of the files in the folder NOT ANALYZED - use the VERIFY-command to check the entire drive.";            
 
      
@@ -347,7 +390,7 @@ class ArFSEntity
                 this.NewestMeta = meta;
         }
         else
-            Sys.ERR_PROGRAM ("Entity.GetNewestMetaTXID returned null.", "GQL.UpdateBasic", {Once: true} );
+            Sys.ERR_PROGRAM ("Entity.GetNewestMetaTXID returned null.", "GQL.UpdateBasic", {once: true} );
     }
 
   
@@ -355,7 +398,11 @@ class ArFSEntity
     async UpdateDetailed (arweave, verify = true, content = true)
     {
         if (this.Transactions == null)
+        {
+            Sys.ERR_PROGRAM ("Transactions not set for " + this.toString () );
+            this.AddError ("PROGRAM ERROR: Could not update detailed info - Transactions not set.");
             return;
+        }
         
         if (this.Info == null)
             this.Info = {};
@@ -369,11 +416,11 @@ class ArFSEntity
         let msg, str_changes;
         let newest_updated = false;
 
-        for (const e of this.Transactions)
+        for (const e of Object.values (this.Transactions.ByTXID) )
         {
             if (e == null)
             {
-                Sys.ERR_PROGRAM ("'e' NULL", "Entity.UpdateDetailed", { Once: true } );
+                Sys.ERR_PROGRAM ("'e' NULL", "Entity.UpdateDetailed", { once: true } );
                 continue;
             }
 
@@ -452,7 +499,7 @@ class ArFSEntity
         
         switch (this.EntityType)
         {
-            case ArFSDefs.ENTITYTYPE_DRIVE:
+            case Constants_ArFS.ENTITYTYPE_DRIVE:
 
                 const id    = this.Info != null ? this.Info['ArFS-ID'] : null;
                 const owner = this.Info?.Owner;
@@ -474,16 +521,16 @@ class ArFSEntity
             
                 break;
             
-            case ArFSDefs.ENTITYTYPE_FOLDER:
+            case Constants_ArFS.ENTITYTYPE_FOLDER:
                 // Passthrough intentional.
 
-            case ArFSDefs.ENTITYTYPE_FILE:
+            case Constants_ArFS.ENTITYTYPE_FILE:
 
                 // Verify that the drive metadata exists
                 if (this.Info?.DriveID != null)
                 {
                     const query = new ArFSEntityQuery (arweave);
-                    const de = await query.Execute (this.Info.DriveID, ArFSDefs.ENTITYTYPE_DRIVE);
+                    const de = await query.Execute (this.Info.DriveID, Constants_ArFS.ENTITYTYPE_DRIVE);
 
                     if (de == null)
                     {                                                
@@ -504,7 +551,7 @@ class ArFSEntity
                 if (this.Info?.ParentFolderID != null)
                 {
                     const query = new ArFSEntityQuery (arweave);
-                    const pfe = await query.Execute (this.Info.ParentFolderID, ArFSDefs.ENTITYTYPE_FOLDER);
+                    const pfe = await query.Execute (this.Info.ParentFolderID, Constants_ArFS.ENTITYTYPE_FOLDER);
                     
                     if (pfe == null)
                     {                        
@@ -554,28 +601,28 @@ class ArFSEntity
 
         if (tx_entry != null)
         {
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_FILEID),         state, "FileID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_DRIVEID),        state, "DriveID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_FOLDERID),       state, "FolderID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_PARENTFOLDERID), state, "ParentFolderID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_CIPHER),         state, "Cipher");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_CIPHER_IV),      state, "Cipher-IV");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (ArFSDefs.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FILEID),         state, "FileID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEID),        state, "DriveID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FOLDERID),       state, "FolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_PARENTFOLDERID), state, "ParentFolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER),         state, "Cipher");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER_IV),      state, "Cipher-IV");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
                         
             state.IsEncrypted = state.DrivePrivacy == "private" || state.Cipher != null;
             state.IsPublic    = !state.IsEncrypted;
 
             if (check_txstatus)
             {
-                const status = await arweave.GetTXStatusInfo (tx_entry.GetTXID () );
+                const status = await tx_entry.UpdateAndGetStatus ();
                 state.MetaTXStatus        = status?.Status;
                 state.MetaTXStatusCode    = status?.StatusCode;
                 state.MetaTXConfirmations = status?.Confirmations;
             }
         }
         else
-            Sys.ERR_PROGRAM ("tx_entry null.", "Entity.__GetState", { Once: true });
+            Sys.ERR_PROGRAM ("tx_entry null.", "Entity.__GetState", { once: true });
 
         return state;
     }
@@ -611,7 +658,7 @@ class ArFSEntity
 
     async __FetchTXEntry (arweave, txid)
     {
-        const existing = this.EntryByTXID[txid];
+        const existing = this.Transactions?.GetByTXID (txid);
         
         if (existing != null)
         {
@@ -632,8 +679,9 @@ class ArFSEntity
                     const query = new ByTXQuery (arweave);
                     const tx = await query.Execute (txid, owner);
 
-                    if (tx != null)                    
-                        this.EntryByTXID[txid] = tx;
+                    if (tx != null)
+                        this.AddTransaction (tx)                   
+                                        
                     else
                         Sys.ERR ("Failed to retrieve TX " + txid, "Entity.__FetchTXEntry");
 

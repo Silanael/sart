@@ -8,9 +8,9 @@
 
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
-const Util      = require ('./util.js');
-const Sys       = require ('./sys.js');
-const Settings  = require ('./settings.js');
+const Util      = require ('./Util.js');
+const Sys       = require ('./System.js');
+const Settings  = require ('./Settings.js');
 const ArFSDefs  = require ('./CONST_ARFS.js');
 const ZLib      = require('zlib');
 

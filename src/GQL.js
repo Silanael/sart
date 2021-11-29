@@ -10,12 +10,13 @@
 // Imports
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
-const Settings = require ('./settings.js');
-const Sys      = require ('./sys.js');
-const Util     = require ('./util.js');
-const ArFSDefs = require ('./CONST_ARFS.js');
-const STX      = require ('./Transaction.js');
-const TXTag    = require ("./TXTag.js");
+const Settings  = require ('./Settings.js');
+const Sys       = require ('./System.js');
+const Util      = require ('./Util.js');
+const ArFSDefs  = require ('./CONST_ARFS.js');
+const STX       = require ('./Transaction.js');
+const TXTag     = require ("./TXTag.js");
+const TXGroup   = require ("./TXGroup.js");
 
 
 
@@ -62,7 +63,7 @@ class Query
  
         Sys.DEBUG (query);
  
-        const arweave = await this.Arweave.Init ();
+        const arweave = await this.Arweave.Connect ();
         if (arweave != null)
         {
             this.Results  = await RunGQLQuery (this.Arweave, this.Query)
@@ -94,7 +95,7 @@ class Query
 class TXQuery extends Query
 {
 
-    Transactions = new STX.TXGroup (this.Sort);
+    Transactions = new TXGroup (this.Sort);
 
     constructor (arweave, query)
     {
@@ -201,10 +202,10 @@ class TXQuery extends Query
         if (config.sort == null)
         {
             config.sort = Constants.GQL_SORT_DEFAULT;
-            Sys.WARN ("Sort not set, using default ´" + config.sort + "`.", "TXQuery.Execute", { error_id: Constants.ERROR_IDS.SORT_NOT_SET} )
+            Sys.WARN ("Sort not set, using default ´" + config.sort + "`.", "TXQuery.Execute", { error_id: Constants.ERROR_IDS.SORT_NOT_SET } )
         }
         
-        this.Transactions = new STX.TXGroup (config.sort);
+        this.Transactions = new TXGroup (config.sort);
         this.SetSort (config.sort);
 
 
@@ -539,7 +540,7 @@ class ArFSDriveContentQuery extends TXQuery
             for (const e of this.Entries)
             {
                 const entity_type = e.GetTag (ArFSDefs.TAG_ENTITYTYPE);
-                const id          = e.GetTag (ArFSDefs.GetIDTag (entity_type) );
+                const id          = e.GetTag (ArFSDefs.GetTagForEntityType (entity_type) );
 
                 if (entity_type == null)
                 {
@@ -749,7 +750,7 @@ class ByTXQuery extends TXQuery
 // Returns raw results.
 async function RunGQLQuery (Arweave, query_str)
 {            
-    const arweave = await Arweave.Init ();
+    const arweave = await Arweave.Connect ();
 
     if (arweave != null)
     {

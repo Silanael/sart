@@ -12,7 +12,7 @@ const Path     = require ('path');
 
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
-const Sys       = require ("./sys.js");
+const Sys       = require ("./System.js");
 const Package   = require ("../package.json");
 
 
@@ -90,7 +90,7 @@ function PopArg (args)
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
 function IsFlag          (arg, flags)            { return flags[arg] != null; }
 function IsFlagWithArg   (arg, flags)            { return flags[arg]?.A; }
-function IsSet           (value)                 { return value != null && value.length > 0; }
+function IsSet           (value)                 { return value != null && value != "" && value.length > 0; }
 function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
 function GetUNIXTime     ()                      { return new Date ().getTime (); }

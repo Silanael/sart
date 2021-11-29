@@ -15,11 +15,11 @@ const Package   = require ("../package.json");
 
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
-const Sys       = require ('./sys.js');
-const Settings  = require ('./settings.js');
-const Arweave   = require ('./arweave.js');
+const Sys       = require ('./System.js');
+const Settings  = require ('./Settings.js');
+const Arweave   = require ('./Arweave.js');
 const ArFS      = require ('./ArFS.js');
-const Util      = require ('./util.js');
+const Util      = require ('./Util.js');
 const Info      = require ('./cmd_info.js');
 const Status    = require ('./cmd_status.js');
 const List      = require ('./cmd_list.js');

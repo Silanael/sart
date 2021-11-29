@@ -16,6 +16,7 @@ const CONFIG_FILESIZE_MAX_BYTES = 83886080;
 const CONFIGFILE_ENCODING       = "utf-8";
 const CONFIG_RECURSIVE_FIELDS   = ["ArFSTXQueryTags"]
 const CONFIG_LOCKED_ITEMS       = ["Type", "ConfigVersion", "AppVersion", "AppVersionCode"];
+const CONFIG_TX_TAGS_TOTAL_SIZE = 2048;
 
 const TXSTATUS_OK               = 200;
 const TXSTATUS_PENDING          = 202;
@@ -31,14 +32,17 @@ const GQL_SORT_NEWEST_FIRST      = GQL_SORT_HEIGHT_DESCENDING;
 const GQL_SORT_DEFAULT           = GQL_SORT_HEIGHT_ASCENDING;
 const GQL_VALID_SORT             = [ GQL_SORT_HEIGHT_ASCENDING, GQL_SORT_HEIGHT_DESCENDING ];
 
+
+
 const HTTP_STATUS_OK             = 200;
 
 const ERROR_IDS =
 {
-    TXFORMAT_UNSUPPORTED     : 1,
-    SORT_NOT_SET             : 2,
-    ARFS_ENTITY_TYPE_UNKNOWN : 3,
-    ARFS_ID_INVALID          : 4
+    TXFORMAT_UNSUPPORTED      : 1,
+    TAG_TOTAL_MAX_SIZE_EXCEED : 2,
+    SORT_NOT_SET              : 3,
+    ARFS_ENTITY_TYPE_UNKNOWN  : 4,
+    ARFS_ID_INVALID           : 5
 }
 
 function IS_GQL_SORT_VALID (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
@@ -140,6 +144,7 @@ const CONFIG_DEFAULT =
     // Set to null to query solely based on tags like Entity-Type, Drive-Id etc.
     ArFSTXQueryTags        : [ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ],
     SafeConfirmationsMin   : 15,
+    TXTagsMaxTotalBytes    : CONFIG_TX_TAGS_TOTAL_SIZE,
 
     LessFiltersMode        : false,
     ContainerMode          : false,

@@ -13,11 +13,9 @@ const ArweaveLib  = require ('arweave');
 
 const Constants   = require ("./CONST_SART.js");
 const State       = require ("./ProgramState.js");
-const Sys         = require ('./sys.js');
-const Settings    = require ('./settings.js');
-const Util        = require ('./util.js');
-const GQL         = require ('./GQL.js');
-const Tag         = GQL.Tag;
+const Sys         = require ('./System.js');
+const Settings    = require ('./Settings.js');
+
 
 
 
@@ -29,27 +27,13 @@ const _TAG             = "Arweave";
 
 
 
-
-async function Connect (args)
-{    
-    const hoststr = args.Pop ();
-
-    if (hoststr != null)
-        Settings.SetHost (hoststr);
-
-    State.ArweaveInstance = null;
-    
-    return await Init () != null;
-}
-
-
-
-async function Init (nofail = false)
+/** Initialize and/or get the Arweave-instance. */
+function Init ()
 {
     if (State.ArweaveInstance == null)
     {
         const Config = State.GetConfig ();
-        Sys.VERBOSE ("Settings connection params to " + Settings.GetHostString () + " .")
+        Sys.VERBOSE ("Initializing Arweave-js with host " + Settings.GetHostString () + " .")
 
         State.ArweaveInstance = ArweaveLib.init
         (
@@ -60,18 +44,46 @@ async function Init (nofail = false)
                 timeout:  Config.ArweaveTimeout_ms,
             }
         );    
-        // Test the connection.
-        if (await TestConnection () )
-        {
-            Sys.INFO ("Connected to " + GetHostStr (State.ArweaveInstance) + " (" + Config.ArweaveTimeout_ms + "ms timeout)" );
-            return State.ArweaveInstance;
-        }
-
-        return nofail == true ? State.ArweaveInstance : null;    
+ 
     }
 
     return State.ArweaveInstance;
 }
+
+
+
+/** Initialize Arweave and verify the connection. Re-initialize if different host. */
+async function Connect (args)
+{    
+    const hoststr = args != null ? args.Pop () : null;
+
+    if (hoststr != null)
+        Settings.SetHost (hoststr);
+
+    const desired_host = Settings.GetHostString ();
+    const config       = State.GetConfig ();
+
+    if (State.CurrentHost != desired_host)
+    {
+        State.ArweaveInstance = null;
+        
+        Init ();        
+        State.CurrentHost = desired_host;
+
+        // Test the connection.
+        if (await TestConnection () )
+        {
+            Sys.INFO ("Connected to " + GetHostStr (State.ArweaveInstance) );
+            Sys.VERBOSE ("Using " + config.ArweaveTimeout_ms + "ms timeout.");            
+            
+        }
+        else
+            return Settings.IsForceful () ? State.ArweaveInstance : null;           
+    }
+    
+    return State.ArweaveInstance; 
+}
+
 
 
 
@@ -97,7 +109,7 @@ async function TestConnection ()
 
 
 
-async function GetTargetHost ()
+function GetTargetHost ()
 {
     return State.ArweaveInstance != null ? GetHostStr (State.ArweaveInstance) : Settings.GetHostString ();
 }
@@ -151,7 +163,7 @@ async function Testing ()
 // HTTP POST request. Currently using 
 async function Post (host_str, data_obj)
 {
-    const arweave = await Init ();
+    const arweave = await Connect ();
 
     if (arweave != null && data_obj != null)
     {        
@@ -171,20 +183,19 @@ async function Post (host_str, data_obj)
 
 async function OwnerToAddress (owner)
 {
-    const arweave = await Init ();
+    const arweave = Init ();
     return arweave != null ? await arweave.wallets.ownerToAddress (owner) : null;
 }
 
 
 function WinstonToAR (winston_amount)
 {
-    // TODO: Make more reasonable.
-    const arweave  = State.ArweaveInstance != null ? State.ArweaveInstance : ArweaveLib.init ();
+    const arweave  = Init ();
     return arweave != null ? arweave.ar.winstonToAr (winston_amount) : null;
 }
 
-function QuantityToAR (quantity) { return WinstonToAR (quantity); }
-
+function QuantityToAR (quantity)   { return WinstonToAR (quantity); }
+function GetRecipient (arweave_tx) { return arweave_tx != null && arweave_tx.target != null && arweave_tx.target != "" ? arweave_tx.target : null }
 
 
 async function DisplayArweaveInfo ()
@@ -198,7 +209,7 @@ async function DisplayArweaveInfo ()
 
 async function GetNetworkInfo ()
 { 
-    const arweave = await Init ();
+    const arweave = await Connect ();
 
     if (arweave != null)
     {
@@ -222,7 +233,7 @@ async function GetNetworkInfo ()
 
 async function GetMemPool ()
 {
-    const arweave = await Init ();
+    const arweave = await Connect ();
     if (arweave != null)
     {
         try
@@ -239,7 +250,7 @@ async function GetMemPool ()
 
 async function GetPeers ()
 {
-    const arweave = await Init ();
+    const arweave = await Connect ();
     if (arweave != null)
     {
         try
@@ -270,7 +281,7 @@ function PrintNetworkInfo () { Sys.OUT_TXT (GetNetworkInfo); }
 // Don't use.
 async function SearchTag (tag, value)
 {
-    const arweave = await Init ();
+    const arweave = await Connect ();
 
     Sys.VERBOSE ("Searching for tag:'" + tag + "'='" + value + "':");
     const files = await arweave.transactions.search (tag, value);    
@@ -280,7 +291,7 @@ async function SearchTag (tag, value)
 // TODO: Separate this try-catch -stuff into a common function.
 async function GetTx (txid)
 {    
-    const arweave = await Init ();    
+    const arweave = await Connect ();    
     
     if (arweave != null)
     {
@@ -292,59 +303,25 @@ async function GetTx (txid)
 }
 
 
-
-async function GetLatestTxWithTags (tags, address = null, opts = { ret_if_notfound: null } )
-{
-    if (tags?.length > 0)
-    {
-        const query = new GQL.LatestQuery (this);
-        const entry = await query.Execute (tags, address);
-        return entry != null ? entry : opts?.ret_if_notfound;
-    }
-    return opts?.ret_if_notfound;
-}
-
-
-
 async function GetTXStatus (txid)
 {
-    const arweave  = await Init ();    
-    
-    try               
-    { 
-        let txstatus = await arweave.transactions.getStatus (txid);
-        
-        // Currently (2021-11-18), the gateway doesn't return TX-status for transactions
-        // that are contained inside bundles, yet a GQL-query is able to fetch them.
-        if (txstatus != null && txstatus.status == Constants.TXSTATUS_NOTFOUND)
-        {
-            Sys.DEBUG ("arweave.transactions.getStatus returned 404, trying with a GQL-query..", txid);
-            
-            const query = new GQL.ByTXQuery (this);
-            const res = await query.Execute (txid);
+    const arweave  = await Connect ();  
 
-            if (res != null)
-            {
-                if (res.IsMined () )
-                    return { status: Constants.TXSTATUS_OK, confirmed: {} };
-                else 
-                    return { status: Constants.TXSTATUS_PENDING, confirmed: null };
-            }
-            else
-                return { status: Constants.TXSTATUS_NOTFOUND, confirmed: null };
-        }
-
-        return txstatus; 
+    try
+    {
+        return await arweave.transactions.getStatus (txid);
     }
-    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")", GetHostStr (arweave) ); tx = null;  }
+    catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")", GetHostStr (arweave) ) }
 
     return null;
 }
 
 
+
+
 async function OutputTxData (txid)
 {    
-     const arweave = await Init ();
+     const arweave = await Connect ();
 
      try
      {
@@ -360,7 +337,7 @@ async function OutputTxData (txid)
 
 async function GetTxData (txid)
 { 
-    const arweave = await Init ();     
+    const arweave = await Connect ();     
     
     try               
     { 
@@ -376,7 +353,7 @@ async function GetTxData (txid)
 
 async function GetTxStrData (txid)
 {    
-    const arweave = await Init ();
+    const arweave = await Connect ();
     
     try
     { 
@@ -393,7 +370,7 @@ async function GetTxStrData (txid)
 
 async function GetTxRawData (txid)
 {    
-    const arweave = await Init ();
+    const arweave = await Connect ();
     
     try
     { 
@@ -478,7 +455,7 @@ function IsTxOKByCode (statuscode) {return statuscode == Constants.TXSTATUS_OK; 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
                    IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
-                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, GetLatestTxWithTags, Connect, GetTargetHost, GetConnectionStatus, Tag,
+                   GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, Connect, GetTargetHost, GetConnectionStatus, GetRecipient,
                    TXSTATUS_OK       : Constants.TXSTATUS_OK, 
                    TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
                    TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,

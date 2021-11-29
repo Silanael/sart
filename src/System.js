@@ -9,7 +9,7 @@
 
 // Local imports
 const Constants = require ("./CONST_SART.js");
-const Settings  = require ("./settings.js");
+const Settings  = require ("./Settings.js");
 const State     = require ('./ProgramState.js');
 
 
@@ -321,29 +321,29 @@ function DEBUG (str, src)
 
 
 
-// Warning
-function WARN (str, src)
+// Warning. Return true if the warning is suppressed.
+function WARN (str, src, args = {error_id: null} )
 {
     if (!Settings.IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
         if (Settings.IsErrSTDOUT () ) console.log   (ANSIWARNING (msg) );
         if (Settings.IsErrSTDERR () ) console.error (ANSIWARNING (msg) );        
-    }        
+    }
+    return false;    
 }
 
 
 
-// Error message output.
-function ERR (str, src)
+// Error message output. Abort on false - return true if error is suppressed.
+function ERR (str, src, args = {error_id: null})
 {
     if (!Settings.IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
         if (Settings.IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
         if (Settings.IsErrSTDERR () ) console.error (ANSIERROR (msg) );        
-    }
-       
+    }       
     return false;
 }
 
@@ -370,9 +370,9 @@ function ERR_CONFLICT (msg, src)
 }
 
 
-function ERR_PROGRAM (msg, src, opts = {Once: false} )
+function ERR_PROGRAM (msg, src, opts = {once: false} )
 {
-    if (opts.Once)
+    if (opts.once)
         ERR_ONCE ("PROGRAM ERROR: " + msg, src);
     else
         ERR ("PROGRAM ERROR: " + msg, src);
@@ -383,12 +383,12 @@ function ERR_PROGRAM (msg, src, opts = {Once: false} )
 // I'd like to use a hash for the lookup here, but there doesn't
 // seem to be a fast built-in method for doing that.
 const DISPLAYED_ERRORS = {};
-function ERR_ONCE (str, src)
+function ERR_ONCE (str, src, args = {error_id: null})
 {    
     if (!Settings.IsQuiet () && DISPLAYED_ERRORS[str] == null )
     {
         DISPLAYED_ERRORS [str] = true;
-        return ERR (str, src);
+        return ERR (str, src, args);
     }
 
     return false;
@@ -396,11 +396,11 @@ function ERR_ONCE (str, src)
 
 
 // Error message output + exit or return false.
-function ERR_ABORT (str, src)
+function ERR_ABORT (str, src, args = {error_id: null})
 {
     ERR (str, src);
 
-    if (!State.IsConsoleActive () )
+    if (!State.IsConsoleActive () )    
         EXIT (-1);
 
     return false;

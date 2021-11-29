@@ -10,15 +10,16 @@
 // Imports
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
-const Sys          = require ('./sys.js');
-const Settings     = require ('./settings.js');
-const Util         = require ('./util.js');
-const Arweave      = require ('./arweave.js');
+const Sys          = require ('./System.js');
+const Settings     = require ('./Settings.js');
+const Util         = require ('./Util.js');
+const Arweave      = require ('./Arweave.js');
 const ArFS         = require ('./ArFS.js');
 const GQL          = require ('./GQL.js');
 const Package      = require ('../package.json');
 const ArFS_DEF     = require('./CONST_ARFS.js');
 const Analyze      = require ('./TXAnalyze.js');
+const Transaction  = require ("./Transaction.js");
 
 
 
@@ -113,9 +114,7 @@ async function HandleCommand (args)
 
 async function Handler_TX (args, tx = null)
 {
-    info = { };
-    info.ItemType = "Transaction";
-
+ 
     if (tx == null)
     {
         if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
@@ -124,99 +123,27 @@ async function Handler_TX (args, tx = null)
         const txid = args.Pop ();
         Sys.VERBOSE ("INFO: Processing TXID: " + txid);
 
-        info.TXID = txid;
+        tx = new Transaction (txid);
 
-        if (Util.IsArweaveHash (txid) )
-            tx = await Arweave.GetTx (txid);
-            
-        else
+        if (!Util.IsArweaveHash (txid) )            
             return Sys.ERR_ABORT ("Not a valid transaction ID: " + txid);
                  
     }
-    else
-        info.TXID = tx.id;
-
-
-    // Get status and the actual transaction
-    info.State = await Arweave.GetTXStatus (info.TXID);
-
-    if (info.State != null)
-        Util.CopyKeysToObj (Arweave.TXStatusToInfo (info.State), info);        
-
-    else
-        Sys.ERR_PROGRAM ("Failed to retrieve TX status object!", info.TXID);
-
 
     if (tx == null)
-        return Sys.ERR_ABORT ("Could not find transaction '" + info.TXID + "'.");
-
+        return Sys.ERR_PROGRAM ("'tx' null.", "cmd_info.Handler_TX");
     
-
-    // Start parsing the transaction        
-    info.TXFormat = tx.format;
-    
-
-    // Check that we can understand this version.
-    if (State.Config.MaxTXFormat != null && tx.format > State.Config.MaxTXFormat)        
-    {
-        Sys.ERR ("Transaction format '" + tx.format + "' unsupported. Use --force to override (or increase Config.MaxTXFormat).");
-        if (! Settings.IsForceful () )
-            return info;
-    }
-    
-
-    info.Address  = await Arweave.OwnerToAddress (tx.owner);             
-    info.LastTX   = tx.last_tx;
-    
-    if (Util.IsSet (tx.target) )
-        info.Target   = tx.target;   
-    
-
-    // Tags
-    info.TagsAmount = tx.tags?.length > 0 ? tx.tags.length : 0;
-
-    if (info.TagsAmount > 0)
-    {
-        info.Tags = {}
-        Util.DecodeTXTags (tx, info.Tags);
-
-        if (info.Tags[ArFS_DEF.TAG_UNIXTIME] != null)
-            info.ReportedDate = Util.GetDate (info.Tags[ArFS_DEF.TAG_UNIXTIME]);
-    }
-
-
-    // Data
-    if (tx.data_size != null && tx.data_size > 0)
-    {
-        info.DataSizeBytes = tx.data_size;            
-        info.DataLocation  = tx.data?.length > 0 ? "TX" : "DataRoot";
         
-        if (tx.data_root != null && tx.data_root != "")
-            info.DataRoot = tx.data_root;
-    }
-
-    // Monetary transfer
-    if (tx.quantity > 0)
-    {            
-        info.TransferFrom     = info.Address;
-        info.TransferTo       = info.Target;
-        info.TransferQTY      = tx.quantity;
-        info.TransferQTY_AR   = Arweave.QuantityToAR (tx.quantity);
-
-        if (info.Target == null || info.Target == "")
-        {
-            Sys.ERR ("Transaction " + target + " has quantity set, but no target!");
-            info.Errors =  info.Errors != null ? info.Errors : "" + "Quantity set but no target. ";
-        }
-    }
+    // Get status of the transaction
+    await tx.FetchFromArweave   ();
+    await tx.UpdateAndGetStatus ();
+    
 
 
     // Further analysis
-    info.Description = Analyze.GetTXEntryDescription (GQL.Entry.FromTX (tx, info.Address) );
+    //info.Description = Analyze.GetTXEntryDescription (GQL.Entry.FromTX (tx, info.Address) );
 
-
-    // Output
-    Sys.OUT_OBJ (info, {recursive_fields: ["Tags", "State", "confirmed"] } );
+    tx.Output ();
     
 
     return true;

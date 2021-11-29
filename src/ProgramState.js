@@ -12,9 +12,10 @@ const Constants = require ("./CONST_SART.js");
 
 class ProgramState
 {    
-    Config           = this.SetConfigToDefault ().conf = {};
+    Config           = this.SetConfigToDefault ().conf;
     ConfigFilename   = null;
 
+    CurrentHost      = null;
     ArweaveInstance  = null;
     ConnectionState  = Constants.CONNSTATES.NOTCONN;
     ConsoleActive    = false;

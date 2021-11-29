@@ -8,7 +8,7 @@
 
 const Package       = require ("../package.json");
 const Constants     = require ("./CONST_SART.js");
-const Sys           = require ("./sys.js");
+const Sys           = require ("./System.js");
 const State         = require ("./ProgramState.js");
 const LogLevels     = Constants.LOGLEVELS;
 const OutputDests   = Constants.OUTPUTDESTS;

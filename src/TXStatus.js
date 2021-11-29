@@ -1,18 +1,49 @@
-const Sys     = require('./sys.js');
-const Arweave = require('./arweave.js');
+const Sys       = require('./System.js');
+const Arweave   = require('./Arweave.js');
+const Constants = require ("./CONST_SART.js");
 
 
 class TXStatus 
 {
-    Status = null;
-    StatusCode = null;
+    TXID          = null;
+    Status        = null;
+    StatusCode    = null;
     Confirmations = null;
-    MinedAtBlock = null;
+    MinedAtBlock  = null;
 
+
+    GetStatus        () { return this.Status };
+    GetConfirmations () { return this.Confirmations };
 
     async UpdateFromTXID (txid) 
     {
-        this.SetToArweaveTXStatus (await Arweave.GetTXStatus (txid) );
+        if (this.TXID != null && txid != this.TXID)
+            Sys.WARN ("TXID mismatch - was " + this.TXID + ", updating to " + txid, "TXStatus.UpdateFromTXID");
+        
+        this.TXID = txid;
+        let txstatus = await Arweave.GetTXStatus (txid);
+        
+        // Currently (2021-11-18), the gateway doesn't return TX-status for transactions
+        // that are contained inside bundles, yet a GQL-query is able to fetch them.
+        if (txstatus != null && txstatus.status == Constants.TXSTATUS_NOTFOUND)
+        {
+            Sys.DEBUG ("Arweave.GetTXStatus returned 404, trying with a GQL-query..", txid);
+            
+            const query = new GQL.ByTXQuery (this);
+            const res = await query.Execute (txid);
+
+            if (res != null)
+            {
+                if (res.IsMined () )
+                    txstatus = { status: Constants.TXSTATUS_OK, confirmed: {} };
+                else 
+                    txstatus = { status: Constants.TXSTATUS_PENDING, confirmed: null };
+            }
+            else
+                txstatus = { status: Constants.TXSTATUS_NOTFOUND, confirmed: null };
+        }
+
+        this.SetToArweaveTXStatus (txstatus);                
     }
 
 
@@ -52,7 +83,7 @@ class TXStatus
             return this.IsMined () && this.Confirmations != null && this.Confirmations >= State.Config.SafeConfirmationsMin;
     }
 
-    toString() { return this.Status != null ? this.Status : this.StatusCode != null ? this.StatusCode : "UNKNOWN"; }
+    //toString() { return this.Status != null ? this.Status : this.StatusCode != null ? this.StatusCode : "UNKNOWN"; }
 
 }
 

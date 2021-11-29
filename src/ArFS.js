@@ -11,10 +11,10 @@
 const Constants  = require ("./CONST_SART.js");
 const ArFSConst  = require ("./CONST_ARFS.js");
 const State      = require ("./ProgramState.js");
-const Arweave    = require ('./arweave.js');
-const Sys        = require ('./sys.js');
-const Settings   = require ('./settings.js');
-const Util       = require ('./util.js');
+const Arweave    = require ('./Arweave.js');
+const Sys        = require ('./System.js');
+const Settings   = require ('./Settings.js');
+const Util       = require ('./Util.js');
 const GQL        = require ('./GQL.js');
 const Listing    = require ('./Listing.js');
 const Entity     = require ('./ArFSEntity.js');
@@ -74,41 +74,6 @@ const __TAG = "arfs";
 
 
 
-class TXTag_EntityType extends TXTag
-{ 
-    constructor (value = null)
-    {
-        super (ArFSConst.TAG_ENTITYTYPE, value);
-        if (value != null && !ArFSConst.IsValidEntityType (value) )
-            Sys.WARN ("Unknown entity type '" + value + "' encountered.", "TXTag_EntityType", { error_id: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN });
-    }
-}
-
-
-class TXTag_ArFSID extends TXTag
-{ 
-    constructor (entity_type, arfs_id)
-    {
-        super (ArFSConst.GetIDTag (entity_type), arfs_id);
-
-        if (arfs_id != null && !Util.IsArFSID (arfs_id) )
-            Sys.WARN ("Invalid ArFS-ID '" + value + "'.", "TXTag_ArFSID", { error_id: Constants.ERROR_ID_ARFS_ID_INVALID });
-
-        if (entity_type == null)
-            Sys.ERR_PROGRAM ("'entity_type' not provided.", "TXTag_ArFSID");
-
-        else if (this.Name == null)
-            Sys.ERR ("Unknown Entity-Type '" + entity_type + "'.", "TXTag_ArFSID", { error_id: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN });
-        
-    }
-}
-
-class TXTag_DriveID        extends TXTag_ArFSID { constructor (drive_id)         { super (ENTITYTYPE_DRIVE,   drive_id);         } }
-class TXTag_FileID         extends TXTag_ArFSID { constructor (file_id)          { super (ENTITYTYPE_FILE,    file_id);          } }
-class TXTag_FolderID       extends TXTag_ArFSID { constructor (folder_id)        { super (ENTITYTYPE_FOLDER,  folder_id);        } }
-class TXTag_ParentFolderID extends TXTag        { constructor (parent_folder_id) { super (TAG_PARENTFOLDERID, parent_folder_id); } }
-
-
 
 
 
@@ -128,8 +93,8 @@ class ArFSEntityQuery extends GQL.TXQuery
 
         const tags = 
         [ 
-            new TXTag_EntityType (entity_type),
-            new TXTag_ArFSID     (entity_type, arfs_id)            
+            new ArFSConst.TXTag_EntityType (entity_type),
+            new ArFSConst.TXTag_ArFSID     (entity_type, arfs_id)            
         ];
         TXTag.ADD_NATIVE_TAGS (tags, State.Config.ArFSTXQueryTags);
         
@@ -148,25 +113,13 @@ class ArFSEntityQuery extends GQL.TXQuery
                         
             if (entity != null)
             {
-                if (Settings.IsDebug () )
-                {
-                    Sys.DEBUG ("Fetched ArFS-entity " + arfs_id + " :");
-                    Sys.DEBUG (entity);
-                }
-
-                if (Settings.IsVerbose () )
-                {
-                    Sys.VERBOSE ("Fetched ArFS-entity - Owner:"  + entity.GetOwner () 
-                                    + " Privacy:"                + entity.GetPrivacy (), 
-                                    + " TXID:"                   + entity.GetNewestMetaTXID (), 
-                                    arfs_id);
-                }
-
+                Sys.DEBUG ("Fetched ArFS-entity: " + entity.toString () );    
+                Sys.DEBUG (entity);
+                
                 return entity;
             }                        
             else
-                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID " + arfs_id + " - Errors: " + entity.GetErrorStr (), 
-                         "GQL.DriveEntityQuery.Execute");            
+                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID " + arfs_id, "ArFSEntityQuery.Execute");            
         }
         else
             Sys.VERBOSE ("Did not find an ArFS-" + entity_type + "-entity for ID " + arfs_id + " .");                 
@@ -2023,12 +1976,8 @@ async function ListDriveFiles (drive_id)
 }
 
 
-module.exports = { ARFS_VERSION, ArFSEntity: ArFSEntity_Old, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag,
-                    TXTag_EntityType,
-                    TXTag_ArFSID,
-                    TXTag_DriveID,
-                    TXTag_FileID,
-                    TXTag_FolderID,
-                    TXTag_ParentFolderID, 
-                    ArFSEntityQuery,                   
-                    UserGetArFSEntity };
+module.exports = { ARFS_VERSION, 
+                    ArFSEntity: ArFSEntity_Old, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag,
+                    ArFSEntityQuery,
+                    UserGetArFSEntity 
+                 };
