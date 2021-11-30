@@ -275,7 +275,7 @@ async function Handler_ArFS (args, arfs_id = null, entity_type = null)
     {
         await entity.UpdateDetailed (Arweave, true, false);
            
-        Sys.OUT_OBJ (entity.GetInfo (), { recursive_fields: entity.RecursiveFields } );
+        entity.Output ();
         Sys.INFO ("");
         Sys.INFO ("(Use STATUS to get " + entity.EntityType + " condition and VERIFY to verify success of uploads. --debug for metadata-JSON.)");
         return true;       

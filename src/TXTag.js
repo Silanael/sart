@@ -34,7 +34,7 @@ class TXTag
 
     HasValue (value, case_sensitive = true)
     {
-        return case_sensitive ? this.Value == value : this.Value?.toLowerCase () == value?.toLowerCase ();
+        return Util.StrCmp (this.Value, value, !case_sensitive);
     }
 
 }

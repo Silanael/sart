@@ -16,20 +16,22 @@ class TXGroup
         this.Sort = sort;
     }
 
-    static FROM_GQLQUERY (query)
+    
+    static async FROM_GQLQUERY (query)
     {
         if (query != null)
         {
-            const transactions = new TXGroup (query.GetSort () );
             const edges = query.GetEdges ();
+
             if (edges != null)
             {
+                const transactions = new TXGroup (query.GetSort () );            
                 for (const e of edges)
                 {
-                    transactions.Add (Transaction.FROM_GQL_EDGE (e) );
+                    transactions.Add (await Transaction.FROM_GQL_EDGE (e) );
                 }
-            }
-            return transaction;
+                return transactions;
+            }            
         }
         return null;
     }

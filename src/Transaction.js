@@ -25,6 +25,7 @@ const ByTXQuery    = require ("./GQL_ByTXQuery");
 class Transaction extends SARTObject
 {
     Type                = "Transaction";
+    Network             = "Arweave";
 
     State               = new TXStatus ();
     ArweaveTX           = null;
@@ -51,6 +52,7 @@ class Transaction extends SARTObject
     InfoFields = 
     [
         "Type",
+        "Network",
         "TXID",             
         "Owner",            
         "Target",
@@ -210,17 +212,17 @@ class Transaction extends SARTObject
             this.SetTXID  (edge.node?.id);
             this.SetOwner (edge.node?.owner?.address)
             
-            this.__SetValue ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
-            this.__SetValue ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
-            this.__SetValue ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
-            this.__SetValue ("BlockDate"          , this.GetDate ()                                                                  );     
-            this.__SetValue ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
+            this.__SetField ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
+            this.__SetField ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
+            this.__SetField ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
+            this.__SetField ("BlockDate"          , this.GetDate ()                                                                  );     
+            this.__SetField ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
             
-            this.__SetValue ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
-            this.__SetValue ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
-            this.__SetValue ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
-            this.__SetValue ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
-            this.__SetValue ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
+            this.__SetField ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
+            this.__SetField ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
+            this.__SetField ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
+            this.__SetField ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
+            this.__SetField ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
 
             this.Validate ();
         }
@@ -240,18 +242,18 @@ class Transaction extends SARTObject
             this.SetTXID      (arweave_tx.id);
             this.SetOwner     (await Arweave.OwnerToAddress (arweave_tx.owner) );   
             
-            this.__SetValue ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
-            this.__SetValue ("Fee_Winston"      , Number (arweave_tx.reward)                          );
-            this.__SetValue ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
-            this.__SetValue ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
-            this.__SetValue ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
-            this.__SetValue ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
-            this.__SetValue ("DataRoot"         , arweave_tx.data_root                                );            
-            this.__SetValue ("TXAnchor"         , arweave_tx.last_tx                                  );            
-            this.__SetValue ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
+            this.__SetField ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
+            this.__SetField ("Fee_Winston"      , Number (arweave_tx.reward)                          );
+            this.__SetField ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
+            this.__SetField ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
+            this.__SetField ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
+            this.__SetField ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
+            this.__SetField ("DataRoot"         , arweave_tx.data_root                                );            
+            this.__SetField ("TXAnchor"         , arweave_tx.last_tx                                  );            
+            this.__SetField ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
             
 
-            this.__SetValue ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
+            this.__SetField ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
                                                  : Util.IsSet (arweave_tx.data_root) ? "DataRoot" : "NO DATA" );
                                                  
             this.Validate ();
@@ -271,28 +273,7 @@ class Transaction extends SARTObject
     }
 
 
-    __SetValue (key, value)
-    {
-        if (key == null)                   
-            return this.OnProgramError ("Failed to set info, key provided was null.", "Transaction.__SetValue");
-            
-        if (value == null)
-            return false;
-
-        const existing = this[key];
-
-        if (!existing)
-        {
-            this[key] = value;
-            return true;
-        }
-
-        else if (existing?.toString () != value?.toString () )
-            return this.OnError ("Info key '" + key + "' already set to '" + existing + "' which is different than new value '" + value 
-                                  + "' !", "Transaction.___SetValue");
-                    
-
-    }
+    
 
     async FetchViaGet (txid = null)
     {

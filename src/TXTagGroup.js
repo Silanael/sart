@@ -12,6 +12,7 @@ const TXTag      = require ("./TXTag");
 const State      = require ("./ProgramState");
 const Sys        = require ("./System");
 const Constants  = require ("./CONST_SART");
+const Util       = require ("./Util");
 
 
 class TXTagGroup extends SARTObject
@@ -93,7 +94,7 @@ class TXTagGroup extends SARTObject
 
         let str = "tags:[";
         let comma = false;
-        for (const t of Tags)
+        for (const t of this.List)
         {
             str += (comma ? "," : "") + t.ToGQL ();
             comma = true;
@@ -108,10 +109,10 @@ class TXTagGroup extends SARTObject
         if (arweave_tx_tags == null || arweave_tx_tags.length <= 0) 
             return this.OnProgramError ("'arweave_tx_tags' is null or has no entries.", "TXTagGroup.AddArweaveTXTags");        
 
-        for (const t of src) 
+        for (const t of arweave_tx_tags) 
         {
             if (t.name != null && t.values != null)
-                this.List.Add (new TXTag (t.name, t.values) );
+                this.Add (new TXTag (t.name, t.values) );
                 
             else
                 Sys.ERR_ONCE ("Tag not in corrent format - need to be { name:'foo', values:['bar','baz'] } - " + Util.ObjToStr (t), "TXTag.ADD_NATIVE_TAGS");
@@ -128,7 +129,7 @@ class TXTagGroup extends SARTObject
         }
 
         else
-            return this.List?.find(e => Util.StrCmp(e, tag, !case_sensitive) );
+            return this.List?.find (e => Util.StrCmp (e?.GetName (), tag, !case_sensitive) );
     }
 
 

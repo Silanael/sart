@@ -7,8 +7,11 @@
 // A query for multiple transactions matching criteria.
 //
 
-const State   = require ("./ProgramState");
-const Query   = require ("./GQLQuery");
+const Constants = require ("./CONST_SART");
+const State     = require ("./ProgramState");
+const Sys       = require ("./System");
+const Query     = require ("./GQLQuery");
+
 
 
 class TXQuery extends Query
@@ -118,9 +121,10 @@ class TXQuery extends Query
             Sys.WARN ("Sort not set, using default ´" + config.sort + "`.", "TXQuery.Execute", { error_id: Constants.ERROR_IDS.SORT_NOT_SET } )
         }
         
-        this.Transactions = new TXGroup (config.sort);
         this.SetSort (config.sort);
-
+        this.Results       = null;
+        this.Edges         = null;
+        
 
         if (config.owner != null && !Util.IsArweaveHash (config.owner) )
             return Sys.ERR ("Invalid owner '" + config.owner + "'", "TXQuery.Execute");
@@ -157,7 +161,7 @@ class TXQuery extends Query
                } 
            );                         
            
-           results = await RunGQLQuery (this.Arweave, q_str);
+           results = await Query.POST_GQL_QUERY (this.Arweave, q_str);
            
            if (results == null)
            {
@@ -203,11 +207,10 @@ class TXQuery extends Query
        // Save the query results
        this.Results       = results;  
        this.Edges         = edges;
-       this.EntriesAmount = edges.length;
-       this._ProcessEdges ();
+       
 
-
-       Sys.VERBOSE ("Fetched " + this.EntriesAmount + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", "TXQuery.Execute")   
+       Sys.VERBOSE ("Fetched " + (this.Edges != null ? this.Edges.length : "no") 
+                     + (desired_amount > 0 ? " / " + desired_amount : "") + " transactions.", "TXQuery.Execute")   
        
        
        return !fail && this.EntriesAmount >= desired_amount;

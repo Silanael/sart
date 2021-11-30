@@ -33,6 +33,33 @@ class SARTObject
     WithInfoField      (field)                                 { this.InfoFields = Util.AppendToArray (this.InfoFields, field); return this; }
     GetRecursiveFields ()                                      { return this.RecursiveFields; }
 
+    GetFieldValue (field)
+    {
+        const custom = this.CustomFieldFuncs[field];
+        return custom == null ? this[field] : custom (this);        
+    }
+
+    __SetField (field, value)
+    {
+        if (field == null)                   
+            return this.OnProgramError ("Failed to set field, 'field' provided was null.", "SARTObject.__SetValue");
+            
+        if (value == null)
+            return false;
+
+        const existing = this[field];
+
+        if (!existing)
+        {
+            this[field] = value;
+            return true;
+        }
+
+        else if (existing?.toString () != value?.toString () )
+            return this.OnError ("Field '" + field + "' already set to '" + existing + "' which is different than new value '" + value 
+                                  + "' !", "SARTObject.___SetField");
+                    
+    }
 
     Output ()
     {
@@ -57,9 +84,20 @@ class SARTObject
         const info = {};
         
         for (const f of this.InfoFields)
-        {           
-            const custom = this.CustomFieldFuncs[f];
-            info[f] = custom == null ? this[f] : custom (this);
+        {      
+            // The field name starting with a '?' is an indication that it should
+            // only be displayed if its value is not null.
+            // Non-questionmarked ones will always be displayed.
+            if (f != null && f[0] == "?")
+            {
+                const field = f.slice (1);
+                const val = this.GetFieldValue (field);
+                if (val != null)
+                    info[field] = val;
+            }
+            else
+                info[f] = this.GetFieldValue (f);
+                                    
         }
         return info;
     }

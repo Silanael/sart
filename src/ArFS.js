@@ -21,6 +21,7 @@ const Listing    = require ('./Listing.js');
 const Entity     = require ('./ArFSEntity.js');
 const STX        = require ("./Transaction.js");
 const TXTag      = require ("./TXTag.js");
+const TXTagGroup = require ("./TXTagGroup");
 const ArFSEntity = require ("./ArFSEntity");
 
 
@@ -91,13 +92,11 @@ class ArFSEntityQuery extends TXQuery
     async Execute (arfs_id, entity_type)
     {       
         this.Sort = Constants.GQL_SORT_OLDEST_FIRST;
-
-        const tags = 
-        [ 
-            new ArFSConst.TXTag_EntityType (entity_type),
-            new ArFSConst.TXTag_ArFSID     (entity_type, arfs_id)            
-        ];
-        TXTag.ADD_NATIVE_TAGS (tags, State.Config.ArFSTXQueryTags);
+        
+        const tags = new TXTagGroup ();        
+        tags.Add              (new ArFSConst.TXTag_EntityType (entity_type),         );
+        tags.Add              (new ArFSConst.TXTag_ArFSID     (entity_type, arfs_id) );        
+        tags.AddArweaveTXTags (State.Config.ArFSTXQueryTags                          );
         
 
         await super.Execute
@@ -110,20 +109,20 @@ class ArFSEntityQuery extends TXQuery
 
         if (this.GetEdgesAmount () > 0)
         {
-            const entity = ArFSEntity.FromTXQuery (this, {arfs_id: arfs_id, entity_type: entity_type} );
+            const entity = await ArFSEntity.FROM_TXQUERY (this, {arfs_id: arfs_id, entity_type: entity_type} );
                         
             if (entity != null)
             {
-                Sys.DEBUG ("Fetched ArFS-entity: " + entity.toString () );    
+                Sys.DEBUG ("Fetched an ArFS-entity: " + entity.toString () );    
                 Sys.DEBUG (entity);
                 
                 return entity;
             }                        
             else
-                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID " + arfs_id, "ArFSEntityQuery.Execute");            
+                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID '" + arfs_id + "'.", "ArFSEntityQuery.Execute");            
         }
         else
-            Sys.VERBOSE ("Did not find an ArFS-" + entity_type + "-entity for ID " + arfs_id + " .");                 
+            Sys.ERR ("Did not find an ArFS-" + entity_type + "-entity for ArFS-ID '" + arfs_id + "'.");                 
 
         return null;
     }

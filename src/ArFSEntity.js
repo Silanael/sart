@@ -13,365 +13,262 @@ const Constants_ArFS   = require ("./CONST_ARFS.js");
 const Sys              = require ("./System.js");
 const Util             = require ("./Util.js");
 const Settings         = require ("./Settings.js");
+const SARTObject       = require ("./SARTObject");
+const TXGroup          = require ("./TXGroup.js");
 
 
 
 
-
-class ArFSEntity
+class ArFSEntity extends SARTObject
 {
-    Info =
-    {
-        ArFSID:              null,
-        EntityType:          null,        
-        Owner:               null,
-        TXID_Created:        null,
-        TXID_Latest:         null,
-        Block_Created:       null,
-        Block_Latest:        null,
-        BlockHeight_Created: null,
-        BlockHeight_Latest:  null,
-        Operations:          null,
-        IsEncrypted:         null,
-        IsPublic:            null,
-        Errors:              null,
-        Warnings:            null,
-    }
 
-    Transactions    = null;        
-    FirstTX         = null;
-    LatestTX        = null;
-    LatestMeta      = null;
-    MetaByTXID      = {};
-    Query           = null;
+    Type                = "ArFS-entity";
+    ArFSID              = null;
+    EntityType          = null;        
+    Owner               = null;
+    MetaTXID_First      = null;
+    MetaTXID_Latest     = null;
+    Created             = null;
+    Modified            = null;
+    Block_Created       = null;
+    Block_Latest        = null;
+    BlockHeight_Created = null;
+    BlockHeight_Latest  = null;
+    Operations          = null;
+    Encrypted           = null;
+    Public              = null;
+    
+    Transactions        = null;        
+    FirstTX             = null;
+    LatestTX            = null;
+    LatestMeta          = null;
+    MetaByTXID          = {};
+    Query               = null;
 
-    RecursiveFields = ["History", "Versions", "Content", "Orphans", "Parentless", "Errors"];
-    StatusFields    = ["Entity-Type", "ArFS-ID", "Name", "Created", "LastModified", "Owner", "DriveID", "DriveStatus", "ParentFolderID", "ParentStatus",
-                       "IsOrphaned", "IsEncrypted", "MetaTXID=TXID_Latest", "MetaTXStatus", "MetaTXConfirmations",
-                       "DataTXID", "DataTXStatus", "DataTXConfirmations", "Operations", "History", "Versions", "Content"];
+
+    RecursiveFields  = ["History", "Versions", "Content", "Orphans", "Parentless", "Errors"];
+    InfoFields = 
+    [ 
+        "Type", 
+        "Entity-Type", 
+        "ArFS-ID", 
+        "Name", 
+        "Created", 
+        "Modified", 
+        "Owner",
+        "?FileID",
+        "?FolderID",
+        "?DriveID",
+        "?Cipher",
+        "?Cipher-IV",
+        "?DrivePrivacy",
+        "?DriveAuthMode", 
+        "?DriveStatus", 
+        "?ParentFolderID", 
+        "?RootFolderID",
+        "?ReportedSizeB",
+        "?OriginalFileDate",
+        "?ParentStatus", 
+        "?Orphaned", 
+        "?Encrypted", 
+        "MetaTXID_First",
+        "MetaTXID_Latest",
+        "MetaTXStatus", 
+        "MetaTXConfirmations",
+        "?DataTXID", 
+        "?DataTXStatus", 
+        "?DataTXConfirmations", 
+        "Operations", 
+        "History", 
+        "?Versions", 
+        "?Content", 
+        "Warnings", 
+        "Errors"
+    ];
+
+    CustomFieldFuncs = {};
+
+    /*
+state = Util.AssignIfNotNull (metadata.name,                                 state, "Name");
+            state = Util.AssignIfNotNull (metadata.rootFolderId,                         state, "RootFolderID");
+            state = Util.AssignIfNotNull (metadata.size,                                 state, "Size");
+            state = Util.AssignIfNotNull (metadata.lastModifiedDate,                     state, "FileLastModified");
+            state = Util.AssignIfNotNull (metadata.dataTxId,                             state, "DataTXID");
+
+            if (check_txstatus && state.DataTXID != null)
+            {
+                const status = await arweave.GetTXStatusInfo (state.DataTXID);
+                state.DataTXStatus        = status?.Status;            
+                state.DataTXStatusCode    = status?.StatusCode;
+                state.DataTXConfirmations = status?.Confirmations;
+            }
+        }
+
+        if (tx_entry != null)
+        {
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FILEID),         state, "FileID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEID),        state, "DriveID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FOLDERID),       state, "FolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_PARENTFOLDERID), state, "ParentFolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER),         state, "Cipher");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER_IV),      state, "Cipher-IV");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
+            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
+                            
+    */
+
+
+    IsPublic          ()      { return this.Public    == true;                               }
+    IsEncrypted       ()      { return this.Encrypted == true;                               }
+    GetOwner          ()      { return this.Owner;                                           }
+    GetPrivacy        ()      { return this.Privacy != null ? this.Privacy 
+                               : this.IsEncrypted () ? "private" : "public";                 }
+    GetName           ()      { return this.Name;                                            }
+    GetARFSID         ()      { return this.ArFSID;                                          }
+    GetEntityType     ()      { return this.EntityType;                                      }
+    GetLastModified   ()      { return this.LastModified;                                    }
+    GetNewestMetaTXID ()      { return this.MetaTXID_Latest;                                 }
+    GetFirstMetaTXID  ()      { return this.MetaTXID_First;                                  }
+    GetStatus         ()      { return this.MetaTXStatus;                                    }
+    GetMetaStatusCode ()      { return this.MetaTXStatusCode;                                }
+    GetDataStatusCode ()      { return this.DataTXStatusCode;                                }
+
+    toString          ()      { return (this.EntityType != null ? "ArFS-" + this.EntityType : "ArFS-entity (type missing)" 
+                               + " " + (this.ArFSID != null ? this.ArFSID : "(ArFS-ID missing)") 
+                               + " Latest TXID: " + (this.MetaTXID_Latest != null ? this.MetaTXID_Latest : "NOT SET") 
+                               )  }
+
+
 
 
     constructor (args = { entity_type: null, arfs_id: null} ) 
     {
+        super ();
         this.__SetArFSID (args?.arfs_id);
         this.__SetEntityType (args?.entity_type);        
     }
 
-    toString    () { return (this.Info.EntityType != null ? "ArFS-" + this.Info.EntityType : "ArFS-entity (type missing)" 
-                    + " " + (this.ArFSID != null ? this.ArFSID : "(ArFS-ID missing)") 
-                    + " Latest TXID: " + (this.LatestTX != null ? this.LatestTX.GetTXID ()  : "NOT SET") 
-                    )  }
-    GetErrorStr () { return this.Info.Errors != null || this.Info.Errors.length > 0 ? this.Info.Errors.toString () : "No errors."; }
 
 
-    __SetEntityType (entity_type)
-    {
-        this.Info.EntityType = entity_type;
-
-        if (entity_type != null && ! Constants_ArFS.IsValidEntityType (entity_type) )
-        {
-            const warning = "Entity-Type " + entity_type + " not recognized.";
-            if (! Sys.WARN (warning, "ArFSEntity.__SetEntityType", { error_id: Constants.ERROR_IDS.ARFS_ENTITY_TYPE_UNKNOWN } ) )
-                this.AddWarning (warning);
-        }
-    }
-
-    __SetArFSID (arfs_id)
-    {
-        this.Info.ArFSID = arfs_id;
-
-        if (arfs_id != null && ! Util.IsArFSID (arfs_id) )
-        {
-            const warning = "ArFS-ID " + arfs_id + " doesn't seem to be a valid one.";
-            if (! Sys.WARN (warning, "ArFSEntity.__SetArFSID", { error_id: Constants.ERROR_IDS.ARFS_ID_INVALID } ) )
-                this.AddWarning (warning);
-        }
-    }
-
-    AddTransaction (tx)
-    {
-        if (tx == null)
-            return Sys.ERR_PROGRAM ("'tx' null.", "Entity.AddTransaction");
-        
-        if (this.Transactions == null)
-            this.Transactions = new TXGroup ();
-
-        else if (this.Transactions.HasTXID (tx.GetTXID () ) )
-        {
-            Sys.VERBOSE ("Already has transaction " + tx.GetTXID () )
-            return false;
-        }
-
-        return this.Transactions.AddTransaction (tx);        
-    }
-
-
-    static FromTXQuery (txquery, args = {entity_type: null, arfs_id: null} )
+    static async FROM_TXQUERY (txquery, args = {entity_type: null, arfs_id: null} )
     {
         if (txquery == null || txquery.GetEdgesAmount () <= 0)
             return null;
 
         const entity = new ArFSEntity (args);
-        entity.Query = this;
+        entity.Query = txquery;
 
-        const all_transactions = txquery.GetTransactions          ();
 
-        const first_tx         = all_transactions.GetOldestEntry  ();
-        const owner            = first_tx.GetOwner                ();
-        const latest_tx        = all_transactions.GetNewestEntry  (owner);
 
-        if (owner == null)
+        // Get transactions from the query
+        const all_transactions = await TXGroup.FROM_GQLQUERY (txquery);
+        if (all_transactions == null)
         {
-            const error = "Could not get owner for the ArFS-entity!";
-            this.AddError ("PROGRAM ERROR: " + error);
-            Sys.ERR_PROGRAM (error, "ArFSEntity.FromTXQuery");
-            Sys.DEBUG (txquery);
-
+            this.OnProgramError ("Failed to get transactions from query for " + entity);
             return null;
         }
 
-        entity.Transactions = all_transactions.GetTransactionsByOwner (owner);
 
-
-        if (first_tx != null)
+        // Seek for the first transaction for the ArFS-ID to establish ownership
+        const first_tx = all_transactions.GetOldestEntry  ();
+        if (first_tx == null)
         {
-            // Fetch entity-type from the first TX if not given as parameter.
-            if (args.entity_type == null)
-                args.entity_type = first_tx.GetTagValue (Constants_ArFS.TAG_ENTITYTYPE);
-                            
-            // Same for ID
-            if (args.arfs_id == null)
-                args.arfs_id = first_tx.GetTagValue (Constants_ArFS.GetTagForEntityType (args.entity_type) );
+            this.OnProgramError ("GetOldestEntry failed to provide the first transaction for " + entity);
+            return null;
+        }
 
 
-            if (entity.FirstTX == null || entity.FirstTX.IsNewerThan (first_tx) )
-            {
-                Sys.DEBUG ("First TX set to TXID:" + first_tx?.GetTXID () + " - was " 
-                    + (entity.FirstTX != null ? entity.FirstTX.GetTXID () : "not set yet.") );
 
-                entity.FirstTX  = first_tx;
-            }
+        // Set the owner to the owner of the first transaction thas has the ArFS-ID.
+        const owner = first_tx.GetOwner ();
+        if (owner == null)
+        {
+            this.OnProgramError ("Could not get owner for the ArFS-entity for " + entity + "!", "ArFSEntity:FROM_TXQUERY");
+            Sys.DEBUG (txquery);
+            return null;
+        }
 
-            if (entity.LatestTX == null || latest_tx.IsNewerThan (entity.LatestTX) )
-            {
-                Sys.DEBUG ("Latest TX set to TXID:" + latest_tx?.GetTXID () + " - was " 
-                    + (entity.LatestTX != null ? entity.LatestTX.GetTXID () : "not set yet.") );
 
-                entity.LatestTX = latest_tx;                
-            }
-            
-            entity.__SetEntityType (args.entity_type);
-            entity.__SetArFSID     (args.arfs_id);
-                        
-            entity.Info.Owner                = owner;
-            entity.Info.Created              = first_tx ?.GetBlockTime () != null ? Util.GetDate (first_tx. GetBlockTime () ) : null;
-            entity.Info.LastModified         = latest_tx?.GetBlockTime () != null ? Util.GetDate (latest_tx.GetBlockTime () ) : null;
-            entity.Info.TXID_Created         = first_tx ?.GetTXID        ();
-            entity.Info.TXID_Latest          = latest_tx?.GetTXID        ();
-            entity.Info.Block_Created        = first_tx ?.GetBlockID     ();
-            entity.Info.Block_Latest         = latest_tx?.GetBlockID     ();
-            entity.Info.BlockHeight_Created  = first_tx ?.GetBlockHeight ();
-            entity.Info.BlockHeight_Latest   = latest_tx?.GetBlockHeight ();
-            entity.Info.Operations           = entity.Transactions?.GetAmount ();
-            entity.Info.IsEncrypted          = first_tx?.HasTag (Constants_ArFS.TAG_CIPHER);
-         
 
-            if (entity.Operations <= 0)
-            {
-                Sys.ERR ("Something went wrong - couldn't get entries for ArFS-ID " + Entity.Info["ArFS-ID"] + " matching owner " + owner);
-                this.AddError ("PROGRAM ERROR: Transactions not set or not populated.");
-            }
-
- 
-            // Don't update the metadata yet.
-            // This query can be used to retrieve things like owner,
-            // where it's not necessary to have.                
-            entity.UpdateBasic (this.Arweave, true, false, false);
-
+        // Get all transactions
+        entity.Transactions = all_transactions.GetTransactionsByOwner (owner);
+        if (entity.Transactions == null || entity.Transactions.GetAmount () <= 0)
+        {
+            this.OnProgramError ("Failed to get transactions for " + entity);
             return entity;
         }
-        else
-        {
-            Sys.ERR_PROGRAM ("Could not set first TX from the query!", "ArFSEntity.FromTXQuery");  
-            this.AddError ("PROGRAM ERROR: Could not deduce the first transaction of the entity.");
-            Sys.Debug (query);
-        }
-
-        return null;
-    }
 
 
-    IsPublic          ()      { return this.Info?.IsPublic    == true;                             }
-    IsEncrypted       ()      { return this.Info?.IsEncrypted == true;                             }
-    GetInfo           ()      { return this.Info;                                                  }
-    GetOwner          ()      { return this.Info?.Owner;                                           }
-    GetPrivacy        ()      { return this.Info?.Privacy != null ? this.Info.Privacy 
-                               : this.Info?.IsEncrypted ? "private" : "public";                    }
-    GetName           ()      { return this.Info?.Name;                                            }
-    GetLastModified   ()      { return this.Info?.LastModified;                                    }
-    GetNewestMetaTXID ()      { return this.Info?.TXID_Latest;                                     }
-    GetFirstMetaTXID  ()      { return this.Info?.TXID_Created;                                    }
-    AddError          (error) { this.Info.Errors   = Util.Append (this.Info.Errors,   error, " "); }    
-    AddWarning        (warn)  { this.Info.Warnings = Util.Append (this.Info.Warnings, warn,  " "); }    
-    GetStatus         ()      { return this.Info?.MetaTXStatus;                                    }
-    GetMetaStatusCode ()      { return this.Info?.MetaTXStatusCode;                                }
-    GetDataStatusCode ()      { return this.Info?.DataTXStatusCode;                                }
 
+        // Get the newest TX that sets the current state.
+        const latest_tx = entity.Transactions.GetNewestEntry      (owner);
+        if (latest_tx == null)        
+            this.OnProgramError ("Failed to get latest transaction for " + entity);
+        
 
-    GetStatusInfo ()
-    {
-        const status_info = { };
-
-        // Copy the selected fields from the info-output
-        for (const sf of this.StatusFields)
-        {
-            const split = sf.split ("=");
+        
+        // Fetch entity-type from the first TX if not given as parameter.
+        if (args.entity_type == null)
+            args.entity_type = first_tx.GetTagValue (Constants_ArFS.TAG_ENTITYTYPE);
+                    
             
-            let val;
-            if (split?.length <= 1)
-            {
-                if ( (val = this.Info[sf]) != null)
-                    status_info[sf] = val;
-            }
-            else if ( (val = this.Info[split[1]]) )
-                status_info[split[0]] = val;
-        }
 
-        status_info.Errors = [];
-
-        // Copy main errors
-        if (this.Info?.Errors != null)                
-            Util.CopyKeysToObj (this.Info.Errors, status_info.Errors);
-
-        // Copy content errors
-        if (this.Info?.Content?.Errors != null)                
-            Util.CopyKeysToObj (this.Info.Content.Errors, status_info.Errors);
-        
-
-        if (this.Info.MetaTXStatusCode != null && this.Info.MetaTXStatusCode == 404)
-            status_info.Errors = Util.AppendToArray (status_info.Errors, "Metadata TX not found.");
-
-        if (this.Info.DataTXStatusCode != null && this.Info.DataTXStatusCode == 404)
-            status_info.Errors = Util.AppendToArray (status_info.Errors, "Data TX doesn't seem to exist.");            
+        // Same for ID
+        if (args.arfs_id == null)
+            args.arfs_id = first_tx.GetTagValue (Constants_ArFS.GetTagForEntityType (args.entity_type) );
 
 
-
-
-        // Categorize TX-state
-        const safe_confirmations = State.Config.SafeConfirmationsMin;
-
-        const confirmed = (this.Info.MetaTXStatusCode == 200 && this.Info.MetaTXConfirmations >= safe_confirmations) &&
-                        (this.Info.DataTXStatusCode == null || (this.Info.DataTXStatusCode == 202 && this.Info.DataTXConfirmations >= safe_confirmations) );
-
-        const mined   = (this.Info.MetaTXStatusCode == 200 && this.Info.MetaTXConfirmations < safe_confirmations) &&
-                        (this.Info.DataTXStatusCode == null || (this.Info.DataTXStatusCode == 202 && this.Info.DataTXConfirmations < safe_confirmations) );                        
-
-        const pending = (this.Info.MetaTXStatusCode != null && this.Info.MetaTXStatusCode == 202) ||
-                        (this.Info.DataTXStatusCode != null && this.Info.DataTXStatusCode == 202);
-
-        const failed  = (this.Info.MetaTXStatusCode == null || this.Info.MetaTXStatusCode == 404) ||
-                        (this.Info.DataTXStatusCode != null && this.Info.DataTXStatusCode == 404);                        
-
-        if (failed)
-            status_info.Errors = Util.AppendToArray (status_info.Errors, "The " + this.EntityType + " failed to be properly mined to Arweave.");
-    
-        if (this.Info?.Content?.OrphanedEntities >= 1)
-            status_info.Errors = Util.AppendToArray (status_info.Errors, 
-                (this.Info.Content.OrphanedEntities == 1 ? "One orphaned entity found." : this.Info.Content.OrphanedEntities + " orphaned entities found.") );
-
-
-
-        // Report
-        status_info.Status = "???";
-        status_info.Analysis = "The " + this.EntityType;
-
-
-
-        if (status_info.Errors?.length >= 1)
+        // Set first TX
+        if (entity.FirstTX == null || entity.FirstTX.IsNewerThan (first_tx) )
         {
-            status_info.Status = "FAULTY";            
+            Sys.DEBUG ("First TX set to TXID:" + first_tx?.GetTXID () + " - was " 
+                + (entity.FirstTX != null ? entity.FirstTX.GetTXID () : "not set yet.") );
 
-            status_info.Analysis += " has some errors."
-
-            if (this.Info.MetaTXStatusCode == null)
-                status_info.Analysis += " It seems that the status for the metadata could not be retrieved. This shouldn't be the case, "
-                                     +  "indicating a possible program error. Run the thing with --verbose or --debug for any clues of "
-                                     +  "why this might be happening - feel free to poke me about it. Contact details at 'INFO Silanael'.";
-
-            else if (this.Info.MetaTXStatusCode == 404)
-                status_info.Analysis += " The metadata-TX is for some reason not found. This is rather strange. "
-                                     +  "You could try running the thing with --verbose or --debug for any clues of "
-                                     +  "why this might be happening, or poke me about it. Contact details at 'INFO Silanael'.";
-
-            if (this.Info.DataTXID != null && this.info.DataTXStatusCode != null)
-                status_info.Analysis += " The status of the Data TX could not be retrieved for some reason. "
-                                     +  "You could try running the thing with --verbose or --debug for any clues of "
-                                     +  "why this might be happening, or poke me about it. Contact details at 'INFO Silanael'.";
-
-            if (this.Info.DataTXID != null && this.Info.DataTXStatusCode != null && this.Info.DataTXStatusCode == 404)
-                status_info.Analysis += " The data TX seems to be missing. This is the actual file data of the file."
-                                     + " This may happen during times of high network congestion when uploading without "
-                                     + " using a bundler. Re-uploading the file should solve the issue, though do "
-                                     + " manually confirm that the transaction " + this.Info.DataTXID + " doesn't exist. "
-                                     + " A block explorer such as "
-                                     + "https://viewblock.io/arweave/tx/" + this.Info.DataTXID + " can be used,"
-                                     + " or SART's command: 'INFO TX " + this.info.DataTXID + "'."
-
-            if (this.Info.IsOrphaned)
-            {
-                status_info.Analysis += " It seems to be orphaned, "
-
-                if (this.Info.ParentStatusCode == 404)
-                {
-                    if (this.Info.DriveStatusCode == 404)
-                        status_info.Analysis += "Both the containing drive (" + this.Info.DriveID + ") and "
-
-                    status_info.Analysis += "parent folder (" + this.Info.ParentFolderID + ") appearing to not exist. Verify this yourself.";
-                }
-                else if (this.Info.DriveStatusCode == 404)
-                    status_info.Analysis += "the containing drive (" + this.Info.DriveID + ") appearing to not exist. Verify this yourself."
-
-                else
-                    status_info.Analysis += " somehow. Can't determine how exactly, seems to be a program error. Give me a poke about it. "
-
-                status_info.Analysis += " The issue can be remedied by creating the missing ArFS-entities. SART can't do this yet"
-                                     +  " but it should be able to in the near future. For public drives, these entities can be created"
-                                     +  " by hand with a tool such as Arweave-Deploy. "
-            }
-
-            if (this.Info.Content?.OrphanedEntities > 0)
-                status_info.Analysis += " This thing seems to contain some orphaned files/folders, ie. ones that"
-                                     +  " are contained in a folder that doesn't exist. These folders are missing: "
-                                     + this.Info.Content?.MissingFolders?.toString () + " - the issue can be solved by creating"
-                                     + " metadata-entries for these folders. SART cannot yet do this, but it's on the TODO-list."
-
-            status_info.Analysis += " Other than this, it"
+            entity.FirstTX  = first_tx;
         }
 
-        else
-            status_info.Status = pending ? "PENDING" : mined ? "LOW CONFIRMATIONS" : confirmed ? "OK" : "???";
+        // Set newest TX
+        if (entity.LatestTX == null || latest_tx.IsNewerThan (entity.LatestTX) )
+        {
+            Sys.DEBUG ("Latest TX set to TXID:" + latest_tx?.GetTXID () + " - was " 
+                + (entity.LatestTX != null ? entity.LatestTX.GetTXID () : "not set yet.") );
 
-
-        if (pending)
-            status_info.Analysis += " has not yet been mined to Arweave. It may succeed or fail. Check again later.";
+            entity.LatestTX = latest_tx;                
+        }
         
-        else if (mined)
-            status_info.Analysis += " has been mined, but the amount of confirmations is low. A small chance exists "
-                                    +  " that a fork causes it to be dropped from the chain. Wait until status is CONFIRMED.";
-        else 
-            status_info.Analysis += " seems to be all good, mined into Arweave with an amount of confirmations deemed sufficient "
-                                    + "(>= " + safe_confirmations + " from Config).";
-    
 
-        if (this.EntityType == Constants_ArFS.ENTITYTYPE_DRIVE)
-            status_info.Analysis += " File integrity NOT ANALYZED - use the VERIFY-command for that.";
+        // Set rest of the fields
+        entity.__SetEntityType (args.entity_type);
+        entity.__SetArFSID     (args.arfs_id);                    
 
-        else if (this.EntityType == Constants_ArFS.ENTITYTYPE_FOLDER)
-            status_info.Analysis += " File integrity of the files in the folder NOT ANALYZED - use the VERIFY-command to check the entire drive.";            
+        entity.__SetField ("Owner"                , owner                                                                                );
+        entity.__SetField ("Created"              , first_tx ?.GetBlockTime () != null ? Util.GetDate (first_tx. GetBlockTime () ) : null);
+        entity.__SetField ("Modified"             , latest_tx?.GetBlockTime () != null ? Util.GetDate (latest_tx.GetBlockTime () ) : null);
+        entity.__SetField ("MetaTXID_First"       , first_tx ?.GetTXID        ()                                                         );
+        entity.__SetField ("MetaTXID_Latest"      , latest_tx?.GetTXID        ()                                                         );
+        entity.__SetField ("Block_Created"        , first_tx ?.GetBlockID     ()                                                         );
+        entity.__SetField ("Block_Latest"         , latest_tx?.GetBlockID     ()                                                         );
+        entity.__SetField ("BlockHeight_Created"  , first_tx ?.GetBlockHeight ()                                                         );
+        entity.__SetField ("BlockHeight_Latest"   , latest_tx?.GetBlockHeight ()                                                         );
+        entity.__SetField ("Operations"           , entity.Transactions?.GetAmount ()                                                    );
+        entity.__SetField ("Encrypted"            , first_tx?.HasTag (Constants_ArFS.TAG_CIPHER)                                         );
+        
 
-     
-        return status_info;
+
+        // Only update the basic information that's contained in the query edges.
+        entity.UpdateBasic (this.Arweave, true, false, false);
+
+
+        // All done.
+        return entity;
     }
+
+
+
+
+
+
+
 
 
     async UpdateBasic (arweave, update_tx = true, update_meta = true, verify = true)
@@ -384,7 +281,7 @@ class ArFSEntity
             const meta    = update_meta ? await this.__FetchMeta    (arweave, latest_txid) : null;
             
             const state = await this.__GetState (arweave, meta, txentry, verify);
-            Util.CopyKeysToObj (state, this.Info);            
+            Util.CopyKeysToObj (state, this);            
 
             if (meta != null)
                 this.NewestMeta = meta;
@@ -397,17 +294,15 @@ class ArFSEntity
 
     async UpdateDetailed (arweave, verify = true, content = true)
     {
-        if (this.Transactions == null)
+        if (this.Transactions == null || this.Transactions.GetAmount () <= 0)
         {
+            this.OnProgramError ("Could not update detailed info - Transactions missing.")
             Sys.ERR_PROGRAM ("Transactions not set for " + this.toString () );
             this.AddError ("PROGRAM ERROR: Could not update detailed info - Transactions not set.");
             return;
         }
         
-        if (this.Info == null)
-            this.Info = {};
-
-
+     
         // (Re)build history
         const history = [];
         const fileversions = {};
@@ -449,7 +344,7 @@ class ArFSEntity
             }
 
             // Update newest state
-            if (txid == this.Info?.TXID_Latest)
+            if (txid == this?.MetaTXID_Latest)
             {
                 this.__UpdateStateToNewest (newstate);
                 newest_updated = true;
@@ -465,7 +360,7 @@ class ArFSEntity
             }
 
             // First metadata
-            if (txid == this.Info?.TXID_Created)
+            if (txid == this?.MetaTXID_First)
                 msg += "Created" + (str_changes != null ? " with " + str_changes + "." : ".");
                                                         
 
@@ -489,11 +384,11 @@ class ArFSEntity
             this.UpdateBasic (arweave, true, true, true);
         }
 
-        this.Info.History = history;
+        this.History = history;
 
   
         if (Object.keys (fileversions)?.length >= 1)
-            this.Info.Versions = fileversions;
+            this.Versions = fileversions;
 
 
         
@@ -501,19 +396,19 @@ class ArFSEntity
         {
             case Constants_ArFS.ENTITYTYPE_DRIVE:
 
-                const id    = this.Info != null ? this.Info['ArFS-ID'] : null;
-                const owner = this.Info?.Owner;
+                const id    = this != null ? this['ArFS-ID'] : null;
+                const owner = this?.Owner;
         
                 if (content)
                 {
                     if (id != null && owner != null)
                     {
-                        Sys.INFO ("Retrieving drive content. This may take a while.");
+                        Sys ("Retrieving drive content. This may take a while.");
                         const query = new ArFSDriveContentQuery (arweave);
                         const results = await query.Execute (id, owner);
 
                         if (results != null)
-                            this.Info.Content = results.Info;
+                            this.Content = results;
                     }
                     else
                         Sys.ERR ("Could not retrieve drive content, either of these is null: " + id + " or " + owner);
@@ -527,44 +422,44 @@ class ArFSEntity
             case Constants_ArFS.ENTITYTYPE_FILE:
 
                 // Verify that the drive metadata exists
-                if (this.Info?.DriveID != null)
+                if (this?.DriveID != null)
                 {
                     const query = new ArFSEntityQuery (arweave);
-                    const de = await query.Execute (this.Info.DriveID, Constants_ArFS.ENTITYTYPE_DRIVE);
+                    const de = await query.Execute (this.DriveID, Constants_ArFS.ENTITYTYPE_DRIVE);
 
                     if (de == null)
                     {                                                
-                        this.Info.IsOrphaned      = true;
-                        this.Info.Errors          = Util.AppendToArray (this.Info.Errors, "Metadata for the drive (" + this.Info.DriveID + ") missing!");
-                        this.Info.DriveStatus     = " !!! DRIVE METADATA MISSING !!!";  
-                        this.Info.DriveStatusCode = 404;
+                        this.Orphaned        = true;
+                        this.Errors          = Util.AppendToArray (this.Errors, "Metadata for the drive (" + this.DriveID + ") missing!");
+                        this.DriveStatus     = " !!! DRIVE METADATA MISSING !!!";  
+                        this.DriveStatusCode = 404;
                     }
                     else                
                     {
                         await de.UpdateBasic (arweave);
-                        this.Info.DriveStatus     = de.GetStatus ();
-                        this.Info.DriveStatusCode = de.GetMetaStatusCode ();
+                        this.DriveStatus     = de.GetStatus ();
+                        this.DriveStatusCode = de.GetMetaStatusCode ();
                     }
                 }
                 
                 // Verify that the parent folder exists, ie. that the entry isn't orphaned.
-                if (this.Info?.ParentFolderID != null)
+                if (this?.ParentFolderID != null)
                 {
                     const query = new ArFSEntityQuery (arweave);
-                    const pfe = await query.Execute (this.Info.ParentFolderID, Constants_ArFS.ENTITYTYPE_FOLDER);
+                    const pfe = await query.Execute (this.ParentFolderID, Constants_ArFS.ENTITYTYPE_FOLDER);
                     
                     if (pfe == null)
                     {                        
-                        this.Info.IsOrphaned       = true;
-                        this.Info.Errors           = Util.AppendToArray (this.Info.Errors, "Parent folder " + this.Info.ParentFolderID + " does not exist.");
-                        this.Info.ParentStatus     = "!!! FOLDER DOES NOT EXIST !!!";
-                        this.Info.ParentStatusCode = 404;
+                        this.Orphaned         = true;
+                        this.Errors           = Util.AppendToArray (this.Errors, "Parent folder " + this.ParentFolderID + " does not exist.");
+                        this.ParentStatus     = "!!! FOLDER DOES NOT EXIST !!!";
+                        this.ParentStatusCode = 404;
                     }
                     else
                     {
                         await pfe.UpdateBasic (arweave);
-                        this.Info.ParentStatus     = pfe.GetStatus ();
-                        this.Info.ParentStatusCode = pfe.GetMetaStatusCode ();                        
+                        this.ParentStatus     = pfe.GetStatus ();
+                        this.ParentStatusCode = pfe.GetMetaStatusCode ();                        
                     }
                 }
                 break;
@@ -601,17 +496,17 @@ class ArFSEntity
 
         if (tx_entry != null)
         {
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FILEID),         state, "FileID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEID),        state, "DriveID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FOLDERID),       state, "FolderID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_PARENTFOLDERID), state, "ParentFolderID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER),         state, "Cipher");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER_IV),      state, "Cipher-IV");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_FILEID),         state, "FileID");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_DRIVEID),        state, "DriveID");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_FOLDERID),       state, "FolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_PARENTFOLDERID), state, "ParentFolderID");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_CIPHER),         state, "Cipher");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_CIPHER_IV),      state, "Cipher-IV");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
+            state = Util.AssignIfNotNull (tx_entry.GetTagValue (Constants_ArFS.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
                         
-            state.IsEncrypted = state.DrivePrivacy == "private" || state.Cipher != null;
-            state.IsPublic    = !state.IsEncrypted;
+            state.Encrypted = state.DrivePrivacy == "private" || state.Cipher != null;
+            state.Public    = !state.Encrypted;
 
             if (check_txstatus)
             {
@@ -696,11 +591,215 @@ class ArFSEntity
         return null;
     }
 
+
+
     __UpdateStateToNewest (state)
     {
         if (state != null)            
-            Util.CopyKeysToObj (state, this.Info);        
+            Util.CopyKeysToObj (state, this);        
     }
+
+
+    __SetEntityType (entity_type)
+    {
+        this.EntityType = entity_type;
+
+        if (entity_type != null && ! Constants_ArFS.IsValidEntityType (entity_type) )
+        {
+            const warning = "Entity-Type " + entity_type + " not recognized.";
+            if (! Sys.WARN (warning, "ArFSEntity.__SetEntityType", { error_id: Constants.ERROR_IDS.ARFS_ENTITY_TYPE_UNKNOWN } ) )
+                this.AddWarning (warning);
+        }
+    }
+
+    __SetArFSID (arfs_id)
+    {
+        this.ArFSID = arfs_id;
+
+        if (arfs_id != null && ! Util.IsArFSID (arfs_id) )
+        {
+            const warning = "ArFS-ID " + arfs_id + " doesn't seem to be a valid one.";
+            if (! Sys.WARN (warning, "ArFSEntity.__SetArFSID", { error_id: Constants.ERROR_IDS.ARFS_ID_INVALID } ) )
+                this.AddWarning (warning);
+        }
+    }
+
+    AddTransaction (tx)
+    {
+        if (tx == null)
+            return Sys.ERR_PROGRAM ("'tx' null.", "Entity.AddTransaction");
+        
+        if (this.Transactions == null)
+            this.Transactions = new TXGroup ();
+
+        else if (this.Transactions.HasTXID (tx.GetTXID () ) )
+        {
+            Sys.VERBOSE ("Already has transaction " + tx.GetTXID () )
+            return false;
+        }
+
+        return this.Transactions.AddTransaction (tx);        
+    }
+
+
+
+
+    GetStatusInfo ()
+    {
+        const status_info = { };
+
+        // Copy the selected fields from the info-output
+        for (const sf of this.StatusFields)
+        {
+            const split = sf.split ("=");
+            
+            let val;
+            if (split?.length <= 1)
+            {
+                if ( (val = this[sf]) != null)
+                    status_info[sf] = val;
+            }
+            else if ( (val = this[split[1]]) )
+                status_info[split[0]] = val;
+        }
+
+        status_info.Errors = [];
+
+        // Copy main errors
+        if (this?.Errors != null)                
+            Util.CopyKeysToObj (this.Errors, status_info.Errors);
+
+        // Copy content errors
+        if (this?.Content?.Errors != null)                
+            Util.CopyKeysToObj (this.Content.Errors, status_info.Errors);
+        
+
+        if (this.MetaTXStatusCode != null && this.MetaTXStatusCode == 404)
+            status_info.Errors = Util.AppendToArray (status_info.Errors, "Metadata TX not found.");
+
+        if (this.DataTXStatusCode != null && this.DataTXStatusCode == 404)
+            status_info.Errors = Util.AppendToArray (status_info.Errors, "Data TX doesn't seem to exist.");            
+
+
+
+
+        // Categorize TX-state
+        const safe_confirmations = State.Config.SafeConfirmationsMin;
+
+        const confirmed = (this.MetaTXStatusCode == 200 && this.MetaTXConfirmations >= safe_confirmations) &&
+                        (this.DataTXStatusCode == null || (this.DataTXStatusCode == 202 && this.DataTXConfirmations >= safe_confirmations) );
+
+        const mined   = (this.MetaTXStatusCode == 200 && this.MetaTXConfirmations < safe_confirmations) &&
+                        (this.DataTXStatusCode == null || (this.DataTXStatusCode == 202 && this.DataTXConfirmations < safe_confirmations) );                        
+
+        const pending = (this.MetaTXStatusCode != null && this.MetaTXStatusCode == 202) ||
+                        (this.DataTXStatusCode != null && this.DataTXStatusCode == 202);
+
+        const failed  = (this.MetaTXStatusCode == null || this.MetaTXStatusCode == 404) ||
+                        (this.DataTXStatusCode != null && this.DataTXStatusCode == 404);                        
+
+        if (failed)
+            status_info.Errors = Util.AppendToArray (status_info.Errors, "The " + this.EntityType + " failed to be properly mined to Arweave.");
+    
+        if (this?.Content?.OrphanedEntities >= 1)
+            status_info.Errors = Util.AppendToArray (status_info.Errors, 
+                (this.Content.OrphanedEntities == 1 ? "One orphaned entity found." : this.Content.OrphanedEntities + " orphaned entities found.") );
+
+
+
+        // Report
+        status_info.Status = "???";
+        status_info.Analysis = "The " + this.EntityType;
+
+
+
+        if (status_info.Errors?.length >= 1)
+        {
+            status_info.Status = "FAULTY";            
+
+            status_info.Analysis += " has some errors."
+
+            if (this.MetaTXStatusCode == null)
+                status_info.Analysis += " It seems that the status for the metadata could not be retrieved. This shouldn't be the case, "
+                                     +  "indicating a possible program error. Run the thing with --verbose or --debug for any clues of "
+                                     +  "why this might be happening - feel free to poke me about it. Contact details at 'INFO Silanael'.";
+
+            else if (this.MetaTXStatusCode == 404)
+                status_info.Analysis += " The metadata-TX is for some reason not found. This is rather strange. "
+                                     +  "You could try running the thing with --verbose or --debug for any clues of "
+                                     +  "why this might be happening, or poke me about it. Contact details at 'INFO Silanael'.";
+
+            if (this.DataTXID != null && this.DataTXStatusCode != null)
+                status_info.Analysis += " The status of the Data TX could not be retrieved for some reason. "
+                                     +  "You could try running the thing with --verbose or --debug for any clues of "
+                                     +  "why this might be happening, or poke me about it. Contact details at 'INFO Silanael'.";
+
+            if (this.DataTXID != null && this.DataTXStatusCode != null && this.DataTXStatusCode == 404)
+                status_info.Analysis += " The data TX seems to be missing. This is the actual file data of the file."
+                                     + " This may happen during times of high network congestion when uploading without "
+                                     + " using a bundler. Re-uploading the file should solve the issue, though do "
+                                     + " manually confirm that the transaction " + this.DataTXID + " doesn't exist. "
+                                     + " A block explorer such as "
+                                     + "https://viewblock.io/arweave/tx/" + this.DataTXID + " can be used,"
+                                     + " or SART's command: 'INFO TX " + this.DataTXID + "'."
+
+            if (this.Orphaned)
+            {
+                status_info.Analysis += " It seems to be orphaned, "
+
+                if (this.ParentStatusCode == 404)
+                {
+                    if (this.DriveStatusCode == 404)
+                        status_info.Analysis += "Both the containing drive (" + this.DriveID + ") and "
+
+                    status_info.Analysis += "parent folder (" + this.ParentFolderID + ") appearing to not exist. Verify this yourself.";
+                }
+                else if (this.DriveStatusCode == 404)
+                    status_info.Analysis += "the containing drive (" + this.DriveID + ") appearing to not exist. Verify this yourself."
+
+                else
+                    status_info.Analysis += " somehow. Can't determine how exactly, seems to be a program error. Give me a poke about it. "
+
+                status_info.Analysis += " The issue can be remedied by creating the missing ArFS-entities. SART can't do this yet"
+                                     +  " but it should be able to in the near future. For public drives, these entities can be created"
+                                     +  " by hand with a tool such as Arweave-Deploy. "
+            }
+
+            if (this.Content?.OrphanedEntities > 0)
+                status_info.Analysis += " This thing seems to contain some orphaned files/folders, ie. ones that"
+                                     +  " are contained in a folder that doesn't exist. These folders are missing: "
+                                     + this.Content?.MissingFolders?.toString () + " - the issue can be solved by creating"
+                                     + " metadata-entries for these folders. SART cannot yet do this, but it's on the TODO-list."
+
+            status_info.Analysis += " Other than this, it"
+        }
+
+        else
+            status_info.Status = pending ? "PENDING" : mined ? "LOW CONFIRMATIONS" : confirmed ? "OK" : "???";
+
+
+        if (pending)
+            status_info.Analysis += " has not yet been mined to Arweave. It may succeed or fail. Check again later.";
+        
+        else if (mined)
+            status_info.Analysis += " has been mined, but the amount of confirmations is low. A small chance exists "
+                                    +  " that a fork causes it to be dropped from the chain. Wait until status is CONFIRMED.";
+        else 
+            status_info.Analysis += " seems to be all good, mined into Arweave with an amount of confirmations deemed sufficient "
+                                    + "(>= " + safe_confirmations + " from Config).";
+    
+
+        if (this.EntityType == Constants_ArFS.ENTITYTYPE_DRIVE)
+            status_info.Analysis += " File integrity NOT ANALYZED - use the VERIFY-command for that.";
+
+        else if (this.EntityType == Constants_ArFS.ENTITYTYPE_FOLDER)
+            status_info.Analysis += " File integrity of the files in the folder NOT ANALYZED - use the VERIFY-command to check the entire drive.";            
+
+     
+        return status_info;
+    }
+
+
 
 }
 

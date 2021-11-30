@@ -82,66 +82,27 @@ class Query
     GetSort          ()           { return this.Sort;                                      }
     
 
-}
 
+    /** Returns raw results. */
+    static async POST_GQL_QUERY (Arweave, query_str)
+    {            
+        const arweave = await Arweave.Connect ();
 
+        if (arweave != null)
+        {
+            Sys.DEBUG ("Posting query:");
+            Sys.DEBUG (query_str);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Returns raw results.
-async function RunGQLQuery (Arweave, query_str)
-{            
-    const arweave = await Arweave.Connect ();
-
-    if (arweave != null)
-    {
-        Sys.DEBUG ("Running query:");
-        Sys.DEBUG (query_str);
-
-        const results = await Arweave.Post (Settings.GetGQLHostString (), { query: query_str } );
-        return results;
+            const results = await Arweave.Post (Settings.GetGQLHostString (), { query: query_str } );
+            return results;
+        }
+        else
+            return null;
     }
-    else
-        return null;
     
 }
 
 
-
-
-
-
-function GetGQLValueStr (value)
-{     
-    if (Array.isArray (value) )
-    {        
-        let str = "";
-        const len = value.length;
-        for (let C = 0; C < len; ++C)
-        {
-            if (C > 0)
-                str += `,"${value[C]}"`;
-            else
-                str += `"${value[C]}"`;
-        }
-        
-        return str;
-    }
-    else
-        return `"${value}"`;
-}
 
 
 
