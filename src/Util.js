@@ -103,7 +103,7 @@ function IsOutputPiped   ()                      { return !this.IsTTY (); }
 function IsFlagSet       (flags, mask)           { return (flags & mask) != 0; }
 function Or              (obj1, obj2)            { return obj1 != null ? obj1 : obj2; }
 function Append          (base, str, sep = " ")  { return base != null ? base + sep + str : str; }
-function AppendToArray   (array = [], val)       { if (val != null) array.push (val); return array; }
+function AppendToArray   (array = [], val)       { if (array == null) array = []; if (val != null) array.push (val); return array; }
 function CopyKeysToObj   (src, dest)             { if (src == null || dest == null) return; for (const e of Object.entries (src) ) { dest[e[0]] = e[1]; }  }
 async function Delay     (ms)                    { await new Promise (r => setTimeout (r, ms) ); }
 

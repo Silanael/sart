@@ -18,7 +18,7 @@ const Util         = require ('./Util.js');
 const Arweave      = require ('./Arweave.js');
 const ArFS         = require ('./ArFS.js');
 const ArFSDefs     = require ('./CONST_ARFS.js');
-const GQL          = require ('./GQL.js');
+const GQL          = require ('./GQLQuery.js');
 const ArFS_DEF = require('./CONST_ARFS.js');
 
 

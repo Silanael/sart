@@ -15,7 +15,7 @@ const Settings     = require ('./Settings.js');
 const Util         = require ('./Util.js');
 const Arweave      = require ('./Arweave.js');
 const ArFS         = require ('./ArFS.js');
-const GQL          = require ('./GQL.js');
+const GQL          = require ('./GQLQuery.js');
 const Package      = require ('../package.json');
 const ArFS_DEF     = require('./CONST_ARFS.js');
 const Analyze      = require ('./TXAnalyze.js');
@@ -135,8 +135,8 @@ async function Handler_TX (args, tx = null)
     
         
     // Get status of the transaction
-    await tx.FetchFromArweave   ();
-    await tx.UpdateAndGetStatus ();
+    await tx.FetchAll ();
+
     
 
 

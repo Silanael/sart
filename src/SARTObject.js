@@ -33,7 +33,7 @@ class SARTObject
     WithInfoField      (field)                                 { this.InfoFields = Util.AppendToArray (this.InfoFields, field); return this; }
     GetRecursiveFields ()                                      { return this.RecursiveFields; }
 
-    
+
     Output ()
     {
         Sys.OUT_OBJ (this.GetInfo (), { recursive_fields: this.GetRecursiveFields () } );
@@ -44,7 +44,7 @@ class SARTObject
     {
         if (!errfunc (error, src, opts) )
         {
-            this[field] = Util.Append (this[field], error, " "); 
+            this[field] = Util.AppendToArray (this[field], error, " "); 
             return false;
         }
         else

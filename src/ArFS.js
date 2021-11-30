@@ -15,7 +15,8 @@ const Arweave    = require ('./Arweave.js');
 const Sys        = require ('./System.js');
 const Settings   = require ('./Settings.js');
 const Util       = require ('./Util.js');
-const GQL        = require ('./GQL.js');
+const Query      = require ('./GQLQuery.js');
+const TXQuery    = require ("./GQL_TXQuery");
 const Listing    = require ('./Listing.js');
 const Entity     = require ('./ArFSEntity.js');
 const STX        = require ("./Transaction.js");
@@ -77,7 +78,7 @@ const __TAG = "arfs";
 
 
 
-class ArFSEntityQuery extends GQL.TXQuery
+class ArFSEntityQuery extends TXQuery
 {
    
     /* Override */ async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: Constants.GQL_SORT_OLDEST_FIRST} )

@@ -17,6 +17,7 @@ const TXTag        = require ("./TXTag.js");
 const TXTagGroup   = require ("./TXTagGroup");
 const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("./SARTObject.js");
+const ByTXQuery    = require ("./GQL_ByTXQuery");
 
 
 
@@ -31,7 +32,7 @@ class Transaction extends SARTObject
       
     TXID                = null;
     Owner               = null;
-    Recipient           = null;
+    Target              = null;
     Quantity_AR         = null;
     Quantity_Winston    = null;
     DataSize_Bytes      = null;
@@ -41,7 +42,8 @@ class Transaction extends SARTObject
     Fee_Winston         = null;
     BlockHeight         = null;
     BlockID             = null;
-    BlockUTime          = null;
+    BlockUNIXTime       = null;
+    BlockDate           = null;
     TXAnchor            = null;
     Tags                = null;
     Errors              = null;
@@ -51,21 +53,23 @@ class Transaction extends SARTObject
         "Type",
         "TXID",             
         "Owner",            
-        "Recipient",        
+        "Target",
+        "Fee_AR",           
+        "Fee_Winston",        
         "Quantity_AR",      
         "Quantity_Winston", 
         "DataSize_Bytes",   
-        "DataRoot",         
-        "DataLocation",     
-        "Fee_AR",           
-        "Fee_Winston",      
-        "BlockHeight",      
-        "BlockID",         
-        "BlockUTime",
-        "TXAnchor",     
-        "Tags",
         "TagsTotalSizeB",
+        "DataRoot",         
+        "DataLocation",             
+        "BlockID",
+        "BlockDate",
+        "BlockHeight",        
+        "BlockUNIXTime",        
+        "TXAnchor",     
+        "Tags",                
         "State",
+        "FetchedVia",
         "Warnings",
         "Errors",        
     ];      
@@ -74,7 +78,8 @@ class Transaction extends SARTObject
     CustomFieldFuncs = 
     { 
         "Tags":           function (t) { return t?.Tags?.HasDuplicates () ? t.Tags.GetList () : t?.Tags?.GetNameValueObj () },
-        "Recipient":      function (t) { return t?.HasRecipient        () ? t.GetRecipient () : "NONE" },
+        "Target":         function (t) { return t?.HasRecipient        () ? t.GetRecipient () : "NONE" },
+        "FetchedVia":     function (t) { return t?.GQL_Edge != null ? t?.ArweaveTX != null ?"GQL + GET" : "GQL" : t?.ArweaveTX != null ? "GET" : null},
         "TagsTotalSizeB": function (t) { return t?.Tags?.GetTotalBytes (); }  
     };
     
@@ -88,8 +93,75 @@ class Transaction extends SARTObject
         super ();
         this.SetTXID (txid);
     }
-    
+
+
+    static async FROM_GQL_EDGE   (edge)       { return edge != null ? await new Transaction ().SetGQLEdge   (edge)       : null;  }
+    static async FROM_ARWEAVE_TX (arweave_tx) { return edge != null ? await new Transaction ().SetArweaveTX (arweave_tx) : null;  }
+
+
   
+    GetTXID                  ()         { return this.TXID;                                                                       }
+    GetOwner                 ()         { return this.Owner;                                                                      }
+    GetBlockID               ()         { return this.BlockID;                                                                    }
+    GetBlockHeight           ()         { return this.BlockHeight;                                                                }
+    GetBlockTime             ()         { return this.BlockUNIXTime;                                                              }
+    GetDate                  ()         { return this.BlockUNIXTime    != null ? Util.GetDate (this.BlockUNIXTime) : null;        }
+    GetFee_AR                ()         { return this.Fee_AR           != null ? this.Fee_AR           : 0;                       }
+    GetQTY_AR                ()         { return this.Quantity_AR      != null ? this.Quantity_AR      : 0;                       }
+    GetFee_Winston           ()         { return this.Fee_Winston      != null ? this.Fee_Winston      : 0;                       }
+    GetQTY_Winston           ()         { return this.Quantity_Winston != null ? this.Quantity_Winston : 0;                       }    
+    GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                       }    
+    HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                       }
+    HasTransfer              ()         { return this.Quantity_AR      != null && this.Quantity_AR     > 0;                       }
+    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                       }
+    HasRecipient             ()         { return this.Recipient != null && this.Recipient != "";                                  }
+    GetRecipient             ()         { return this.HasRecipient   () ? this.Recipient : null;                                  }
+    HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                  }    
+    GetTag                   (tag)      { return this.Tags?.GetTag   (tag);                                                       }        
+    GetTagValue              (tag)      { return this.Tags?.GetValue (tag);                                                       }        
+    GetTags                  ()         { return this.Tags;                                                                       }        
+    IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                            }        
+    IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                            }        
+    IsMined                  ()         { return this.Status?.IsMined       ()                                                    }
+    IsPending                ()         { return this.Status?.IsPending     ()                                                    }
+    IsFailed                 ()         { return this.Status?.IsFailed      ()                                                    }
+    IsConfirmed              ()         { return this.Status?.IsConfirmed   ()                                                    }
+    GetStatus                ()         { return this.State;                                                                      }
+    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); return this.State;                 }
+
+
+    WithTag (name, value)
+    {
+        if (this.Tags == null) 
+            this.Tags = new TXTagGroup ();
+
+        this.Tags.Add (new TXTag (name, value) );
+        
+        return this; 
+    }
+
+    async FetchAll ()
+    {
+        if (Settings.IsConcurrentAllowed () )
+        {
+            Sys.DEBUG ("Running 3 concurrent tasks..");
+            const tasks = [
+                            this.FetchViaGet (), 
+                            this.FetchViaGQL (),
+                            this.UpdateAndGetStatus ()
+                          ];
+            await Promise.all (tasks);
+            Sys.DEBUG ("Tasks done.");
+        }
+        else
+        {
+            Sys.DEBUG ("Concurrent disabled, running 3 tasks in sequence..")
+            await this.FetchViaGet (), 
+            await this.FetchViaGQL (),
+            await this.UpdateAndGetStatus ()
+        }
+        
+    }
 
 
     SetTXID (txid)
@@ -138,16 +210,17 @@ class Transaction extends SARTObject
             this.SetTXID  (edge.node?.id);
             this.SetOwner (edge.node?.owner?.address)
             
-            this.__SetInfo ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
-            this.__SetInfo ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
-            this.__SetInfo ("BlockUTime"         , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);        
-            this.__SetInfo ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
+            this.__SetValue ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
+            this.__SetValue ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
+            this.__SetValue ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
+            this.__SetValue ("BlockDate"          , this.GetDate ()                                                                  );     
+            this.__SetValue ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
             
-            this.__SetInfo ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
-            this.__SetInfo ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
-            this.__SetInfo ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
-            this.__SetInfo ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
-            this.__SetInfo ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
+            this.__SetValue ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
+            this.__SetValue ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
+            this.__SetValue ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
+            this.__SetValue ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
+            this.__SetValue ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
 
             this.Validate ();
         }
@@ -156,7 +229,7 @@ class Transaction extends SARTObject
     }
 
 
-    async SetArweaveTXData (arweave_tx)
+    async SetArweaveTX (arweave_tx)
     {        
         this.ArweaveTX = arweave_tx;
 
@@ -167,18 +240,18 @@ class Transaction extends SARTObject
             this.SetTXID      (arweave_tx.id);
             this.SetOwner     (await Arweave.OwnerToAddress (arweave_tx.owner) );   
             
-            this.__SetInfo ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
-            this.__SetInfo ("Fee_Winston"      , Number (arweave_tx.reward)                          );
-            this.__SetInfo ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
-            this.__SetInfo ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
-            this.__SetInfo ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
-            this.__SetInfo ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
-            this.__SetInfo ("DataRoot"         , arweave_tx.data_root                                );            
-            this.__SetInfo ("TXAnchor"         , arweave_tx.last_tx                                  );            
-            this.__SetInfo ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
+            this.__SetValue ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
+            this.__SetValue ("Fee_Winston"      , Number (arweave_tx.reward)                          );
+            this.__SetValue ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
+            this.__SetValue ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
+            this.__SetValue ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
+            this.__SetValue ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
+            this.__SetValue ("DataRoot"         , arweave_tx.data_root                                );            
+            this.__SetValue ("TXAnchor"         , arweave_tx.last_tx                                  );            
+            this.__SetValue ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
             
 
-            this.__SetInfo ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
+            this.__SetValue ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
                                                  : Util.IsSet (arweave_tx.data_root) ? "DataRoot" : "NO DATA" );
                                                  
             this.Validate ();
@@ -198,10 +271,10 @@ class Transaction extends SARTObject
     }
 
 
-    __SetInfo (key, value)
+    __SetValue (key, value)
     {
         if (key == null)                   
-            return this.OnProgramError ("Failed to set info, key provided was null.", "Transaction.__SetInfo");
+            return this.OnProgramError ("Failed to set info, key provided was null.", "Transaction.__SetValue");
             
         if (value == null)
             return false;
@@ -214,15 +287,21 @@ class Transaction extends SARTObject
             return true;
         }
 
-        else if (existing != value)
+        else if (existing?.toString () != value?.toString () )
             return this.OnError ("Info key '" + key + "' already set to '" + existing + "' which is different than new value '" + value 
-                                  + "' !", "Transaction.__SetInfo");
+                                  + "' !", "Transaction.___SetValue");
                     
 
     }
 
-    async FetchFromArweave (txid = null)
+    async FetchViaGet (txid = null)
     {
+        if (this.ArweaveTX != null)
+        {
+            Sys.DEBUG ("Already fetched via get.", this.GetTXID () );
+            return true;
+        }
+
         if (txid != null)
             this.SetTXID (txid);
 
@@ -233,59 +312,47 @@ class Transaction extends SARTObject
         
         if (arweave_tx != null)
         {
-            await this.SetArweaveTXData (arweave_tx)
+            await this.SetArweaveTX (arweave_tx)
             return true;
         }
 
         else
-            return this.OnError ("Failed to fetch " + txid + " from Arweave-network!", "Transaction.FetchFromArweave");
+            return this.OnError ("Failed to fetch " + txid + " via GET!", "Transaction.FetchViaGet");
             
         
     }
 
-
-    GetTXID                  ()         { return this.TXID;                                                                       }
-    GetOwner                 ()         { return this.Owner;                                                                      }
-    GetBlockID               ()         { return this.BlockID;                                                                    }
-    GetBlockHeight           ()         { return this.BlockHeight;                                                                }
-    GetBlockTime             ()         { return this.BlockUTime;                                                                 }
-    GetDate                  ()         { return this.BlockUTime       != null ? Util.GetDate (this.BlockUTime) : null;           }
-    GetFee_AR                ()         { return this.Fee_AR           != null ? this.Fee_AR           : 0;                       }
-    GetQTY_AR                ()         { return this.Quantity_AR      != null ? this.Quantity_AR      : 0;                       }
-    GetFee_Winston           ()         { return this.Fee_Winston      != null ? this.Fee_Winston      : 0;                       }
-    GetQTY_Winston           ()         { return this.Quantity_Winston != null ? this.Quantity_Winston : 0;                       }    
-    GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                       }    
-    HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                       }
-    HasTransfer              ()         { return this.Quantity_AR      != null && this.Quantity_AR     > 0;                       }
-    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                       }
-    HasRecipient             ()         { return this.Recipient != null && this.Recipient != "";                                  }
-    GetRecipient             ()         { return this.HasRecipient   () ? this.Recipient : null;                                  }
-    HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                  }    
-    GetTag                   (tag)      { return this.Tags?.GetTag   (tag);                                                       }        
-    GetTagValue              (tag)      { return this.Tags?.GetValue (tag);                                                       }        
-    GetTags                  ()         { return this.Tags;                                                                       }        
-    IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                            }        
-    IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                            }        
-    IsMined                  ()         { return this.Status?.IsMined       ()                                                    }
-    IsPending                ()         { return this.Status?.IsPending     ()                                                    }
-    IsFailed                 ()         { return this.Status?.IsFailed      ()                                                    }
-    IsConfirmed              ()         { return this.Status?.IsConfirmed   ()                                                    }
-    GetStatus                ()         { return this.State;                                                                      }
-    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); return this.State;                 }
-
-
-    WithTag (name, value)
+    async FetchViaGQL (txid = null)
     {
-        if (this.Tags == null) 
-            this.Tags = new TXTagGroup ();
+        if (this.GQL_Edge != null)
+        {
+            Sys.DEBUG ("Already fetched via GQL.", this.GetTXID () );
+            return true;
+        }
 
-        this.Tags.Add (new TXTag (name, value) );
+        if (txid != null)
+            this.SetTXID (txid);
+
+        else if ( (txid = this.GetTXID ()) == null)
+            return Sys.OnProgramError ("TXID not supplied.", "Transaction.FetchViaGQL");
+
+        const query = new ByTXQuery (Arweave);        
+        const gql_edge = await query.Execute (txid);
         
-        return this; 
+        if (gql_edge != null)
+        {
+            await this.SetGQLEdge (gql_edge)
+            return true;
+        }
+
+        else
+            return this.OnError ("Failed to fetch " + txid + " via GQL!", "Transaction.FetchViaGQL");
+                    
     }
 
-
 }
+
+
    
 
 module.exports = Transaction;

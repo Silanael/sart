@@ -1,7 +1,8 @@
-const Constants   = require("./CONST_SART.js");
-const Settings    = require('./Settings.js');
-const Sys         = require('./System.js');
-const Transaction = require("./Transaction");
+const Constants   = require ("./CONST_SART.js");
+const Settings    = require ('./Settings.js');
+const Sys         = require ('./System.js');
+const Transaction = require ("./Transaction.js");
+
 
 class TXGroup 
 {
@@ -15,12 +16,28 @@ class TXGroup
         this.Sort = sort;
     }
 
-    
+    static FROM_GQLQUERY (query)
+    {
+        if (query != null)
+        {
+            const transactions = new TXGroup (query.GetSort () );
+            const edges = query.GetEdges ();
+            if (edges != null)
+            {
+                for (const e of edges)
+                {
+                    transactions.Add (Transaction.FROM_GQL_EDGE (e) );
+                }
+            }
+            return transaction;
+        }
+        return null;
+    }
+
+
     GetAmount              ()           { const k = Object.keys (this.ByTXID); return k != null ? k.length : 0;                               }
     GetByTXID              (txid)       { return this.ByTXID[txid];                                                                           }
     GetByIndex             (index)      { const e = Object.entries (this.ByTXID); return index >= 0 && index < e.length ? e[index][1] : null; }
-    AddFromGQLEdge         (edge)       { this.Add (new Transaction ().SetGQLEdge (edge) );                                                   }
-    async AddFromArweaveTX (arweave_tx) { const tx = new Transaction (); await tx.SetArweaveTXData (arweave_tx);                              }
     AsArray                ()           { return Object.values (this.ByTXID);                                                                 }
 
 

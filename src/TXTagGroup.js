@@ -209,7 +209,8 @@ class TXTagGroup extends SARTObject
 
         return null;
     }
-    
+
+    toString () { return this.List.toString (); }
 
 }
 

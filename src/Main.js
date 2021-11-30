@@ -28,7 +28,7 @@ const Verify    = require ('./cmd_verify.js');
 const Analyze   = require ('./TXAnalyze.js');
 //const Search   = require ('./cmd_search.js');
 const Console   = require ('./cmd_console.js');
-const GQL       = require ("./GQL");
+const GQL       = require ("./GQLQuery");
 
 
 const ArweaveLib  = require ('arweave');

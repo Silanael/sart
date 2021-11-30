@@ -15,11 +15,11 @@ const Settings     = require ('./Settings.js');
 const Util         = require ('./Util.js');
 const Arweave      = require ('./Arweave.js');
 const ArFS         = require ('./ArFS.js');
-const GQL          = require ('./GQL.js');
+const GQL          = require ('./GQLQuery.js');
 const Package      = require ('../package.json');
 const Status       = require ('./cmd_status.js');
 const Analyze      = require ('./TXAnalyze.js');
-const { Entry }    = require('./GQL.js');
+const { Entry }    = require('./GQLQuery.js');
 const Tag          = GQL.Tag;
 
 
