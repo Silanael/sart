@@ -8,16 +8,16 @@
 //
 
 // Imports
-const Constants = require ("./CONST_SART.js");
-const State     = require ("./ProgramState.js");
-const Sys       = require ('./System.js');
-const Settings  = require ('./Settings.js');
-const Util      = require ('./Util.js');
-const Arweave   = require ('./Arweave.js');
-const ArFS      = require ('./ArFS.js');
-const GQL       = require ('./GQLQuery.js');
-const Listing   = require ('./Listing.js');
-const Analyze   = require ('./TXAnalyze.js');
+const Constants = require ("../CONST_SART.js");
+const State     = require ("../ProgramState.js");
+const Sys       = require ('../System.js');
+const Settings  = require ('../Settings.js');
+const Util      = require ('../Util.js');
+const Arweave   = require ('../Arweave.js');
+const ArFS      = require ('../ArFS.js');
+const GQL       = require ('../GQL/GQLQuery.js');
+const Listing   = require ('../Listing.js');
+const Analyze   = require ('../TXAnalyze.js');
 
 
 const SUBCOMMANDS =

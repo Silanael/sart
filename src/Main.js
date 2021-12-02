@@ -20,15 +20,15 @@ const Settings  = require ('./Settings.js');
 const Arweave   = require ('./Arweave.js');
 const ArFS      = require ('./ArFS.js');
 const Util      = require ('./Util.js');
-const Info      = require ('./cmd_info.js');
-const Status    = require ('./cmd_status.js');
-const List      = require ('./cmd_list.js');
-const Get       = require ('./cmd_get.js');
-const Verify    = require ('./cmd_verify.js');
+const Info      = require ('./Commands/cmd_info.js');
+const Status    = require ('./Commands/cmd_status.js');
+const List      = require ('./Commands/cmd_list.js');
+const Get       = require ('./Commands/cmd_get.js');
+const Verify    = require ('./Commands/cmd_verify.js');
+const Console   = require ('./Commands/cmd_console.js');
 const Analyze   = require ('./TXAnalyze.js');
-//const Search   = require ('./cmd_search.js');
-const Console   = require ('./cmd_console.js');
-const GQL       = require ("./GQLQuery");
+
+const GQL       = require ("./GQL/GQLQuery");
 
 
 const ArweaveLib  = require ('arweave');

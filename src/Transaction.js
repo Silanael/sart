@@ -17,7 +17,7 @@ const TXTag        = require ("./TXTag.js");
 const TXTagGroup   = require ("./TXTagGroup");
 const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("./SARTObject.js");
-const ByTXQuery    = require ("./GQL_ByTXQuery");
+const ByTXQuery    = require ("./GQL/GQL_ByTXQuery");
 
 
 

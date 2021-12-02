@@ -103,14 +103,15 @@ class ArFSMetaTX extends ArFSTX
     {        
         if (this.MetaObj != null)
         {
-            Util.AssignIfNotNull (this.ArFSFields, "Name"               , this.MetaObj.name                            );            
-            Util.AssignIfNotNull (this.ArFSFields, "RootFolderID"       , this.MetaObj.rootFolderId                    );            
-            Util.AssignIfNotNull (this.ArFSFields, "DataTXID"           , this.MetaObj.dataTxId                        );
-            Util.AssignIfNotNull (this.ArFSFields, "DataContentType"    , this.MetaObj.dataContentType                 );            
-            Util.AssignIfNotNull (this.ArFSFields, "FileDate"           , Util.GetDate (this.MetaObj.lastModifiedDate / 1000) );
-            Util.AssignIfNotNull (this.ArFSFields, "FileDate_UTMS"      , this.MetaObj.lastModifiedDate                );
-            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSize"   , Util.GetSizeStr (this.MetaObj.size, true, State.Config.SizeDigits)    );            
-            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSize_B" , this.MetaObj.size                            );            
+            const json = this.MetaObj;
+            Util.AssignIfNotNull (this.ArFSFields, "Name"               , json.name                            );            
+            Util.AssignIfNotNull (this.ArFSFields, "RootFolderID"       , json.rootFolderId                    );            
+            Util.AssignIfNotNull (this.ArFSFields, "DataTXID"           , json.dataTxId                        );
+            Util.AssignIfNotNull (this.ArFSFields, "DataContentType"    , json.dataContentType                 );            
+            Util.AssignIfNotNull (this.ArFSFields, "FileDate"           , json.lastModifiedDate != null ? Util.GetDate (json.lastModifiedDate / 1000)    : null);
+            Util.AssignIfNotNull (this.ArFSFields, "FileDate_UTMS"      , json.lastModifiedDate                );
+            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSize"   , json.size != null ? Util.GetSizeStr (json.size, true, State.Config.SizeDigits) : null);            
+            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSize_B" , json.size                            );            
             
             
         }

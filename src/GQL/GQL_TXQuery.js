@@ -7,9 +7,10 @@
 // A query for multiple transactions matching criteria.
 //
 
-const Constants = require ("./CONST_SART");
-const State     = require ("./ProgramState");
-const Sys       = require ("./System");
+const Constants = require ("../CONST_SART");
+const State     = require ("../ProgramState");
+const Sys       = require ("../System");
+const Util      = require ("../Util");
 const Query     = require ("./GQLQuery");
 
 
@@ -174,7 +175,15 @@ class TXQuery extends Query
            
            if (pass_edges == undefined)
            {               
-               Sys.ERR ("Query failed at pass #" + pass_num + ". Errors: " + Util.ObjToStr (results?.data?.errors) );
+               const errors = Util.ObjToStr (results?.data?.errors);
+               Sys.ERR ("Query failed at pass #" + pass_num + ": Status code " + results.status + " (" 
+                         + (results.statusText != null ? results.statusText : "no statusText set") + ")."
+                         + (errors != null ? " Errors: " + errors : "")
+                         );
+                         
+               if (results.status == 403)
+                    Sys.ERR ("Too many queries or the gateway/node (host " + State.CurrentHost + ") acting up.");
+
                Sys.DEBUG ("Query results:", "TXQuery.Execute");
                Sys.DEBUG (results);
 

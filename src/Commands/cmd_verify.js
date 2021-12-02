@@ -8,18 +8,18 @@
 //
 
 // Imports
-const Constants = require ("./CONST_SART.js");
-const State     = require ("./ProgramState.js");
-const Sys          = require ('./System.js');
-const Settings     = require ('./Settings.js');
-const Util         = require ('./Util.js');
-const Arweave      = require ('./Arweave.js');
-const ArFS         = require ('./ArFS.js');
-const GQL          = require ('./GQLQuery.js');
-const Package      = require ('../package.json');
+const Package      = require ('../../package.json');
+const Constants    = require ("../CONST_SART.js");
+const State        = require ("../ProgramState.js");
+const Sys          = require ('../System.js');
+const Settings     = require ('../Settings.js');
+const Util         = require ('../Util.js');
+const Arweave      = require ('../Arweave.js');
+const ArFS         = require ('../ArFS.js');
+const GQL          = require ('../GQL/GQLQuery.js');
 const Status       = require ('./cmd_status.js');
-const Analyze      = require ('./TXAnalyze.js');
-const { Entry }    = require('./GQLQuery.js');
+const Analyze      = require ('../TXAnalyze.js');
+const { Entry }    = require ('../GQL/GQLQuery.js');
 const Tag          = GQL.Tag;
 
 

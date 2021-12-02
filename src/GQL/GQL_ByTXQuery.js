@@ -1,5 +1,5 @@
-const Constants = require ("./CONST_SART");
-const Util      = require ("./Util");
+const Constants = require ("../CONST_SART");
+const Util      = require ("../Util");
 const TXQuery   = require ("./GQL_TXQuery");
 
 

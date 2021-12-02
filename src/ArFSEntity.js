@@ -17,7 +17,7 @@ const Settings         = require ("./Settings.js");
 const Arweave          = require ("./Arweave");
 const SARTObject       = require ("./SARTObject");
 const TXGroup          = require ("./TXGroup.js");
-const TXQuery          = require ("./GQL_TXQuery");
+const TXQuery          = require ("./GQL/GQL_TXQuery");
 const TXTag            = require ("./TXTag");
 const TXTagGroup       = require ("./TXTagGroup");
 const Transaction      = require ("./Transaction");
@@ -80,8 +80,8 @@ class ArFSEntity extends SARTObject
     Query               = null;
 
 
-    RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": {depth: 1}, 
-                        "Versions": {}, "Content": {}, "Orphans": {}, "Parentless": {}, "Errors": {}};
+    RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1}, 
+                        "Versions": {}, "Content": {}, "Orphans": {}, "Parentless": {}, "Warnings": {}, "Errors": {} };
     InfoFields = 
     [ 
         "Type", 
@@ -426,12 +426,12 @@ class ArFSEntity extends SARTObject
 
                 if (m != null)
                 {
-                    key   = m.GetDate ();
+                    key   = index;
                     txid  = m.GetTXID ();                    
                     owner = m.GetOwner ();
                     changed = [];
 
-                    this.History[key] = { Description: null, Event: null};
+                    this.History[key] = { Date: m.GetDate (), Description: null, Event: null};
                     this.History[key].TXID = txid;                        
                     
                     

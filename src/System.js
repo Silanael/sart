@@ -247,8 +247,8 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
 
                 // Value is an object that's set to recursive display
                 else if (opts.recursive_depth > 0 
-                          || (val  != null && val[FIELD_RECURSIVE] == true) 
-                          || (opts != null && (opts.recursive[field] != null || opts.recursive_fields?.includes (field) ) )
+                          || (val != null && val[FIELD_RECURSIVE] == true) 
+                          || (val != null && opts != null && (opts.recursive[field] != null || opts.recursive_fields?.includes (field) ) )
                           )
                 {
                     OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 

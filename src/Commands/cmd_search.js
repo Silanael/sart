@@ -8,11 +8,11 @@
 //
 
 // Imports
-const Constants = require ("./CONST_SART.js");
-const State     = require ("./ProgramState.js");
-const Sys      = require ('./sys.js');
-const Settings = require ('./settings.js');
-const Util     = require ('./util.js');
+const Constants = require ("../CONST_SART.js");
+const State     = require ("../ProgramState.js");
+const Sys       = require ('../sys.js');
+const Settings  = require ('../settings.js');
+const Util      = require ('../util.js');
 
 
 function HandleCommand (args)
