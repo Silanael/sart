@@ -129,8 +129,8 @@ function OUT_TXT_RAW (str)
     process.stdout.write (str);    
 }
 
-
-function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], header: true, format:null } ) 
+/** Fields for 'recursive': 'depth', integer */
+function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], recursive: {}, header: true, format: null, recursive_depth: 0 } ) 
 {
 
     if (obj == null)
@@ -138,8 +138,10 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
 
 
     // Default values
-    if (opts.indent == null)             opts.indent = 0;
-    if (opts.recursive_fields == null)   opts.recursive_fields = [];        
+    if (opts.indent == null)             opts.indent           = 0;
+    if (opts.recursive_depth == null)    opts.recursive_depth  = 0;
+    if (opts.recursive_fields == null)   opts.recursive_fields = [];
+    if (opts.recursive == null)          opts.recursive        = {};
     if (opts.header == null)             opts.header = true;
 
     const conf = State.GetConfig ();
@@ -244,17 +246,25 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 }
 
                 // Value is an object that's set to recursive display
-                else if (val != null && (val[FIELD_RECURSIVE] == true || (opts != null && opts.recursive_fields?.includes (field)) ) )
+                else if (opts.recursive_depth > 0 
+                          || (val  != null && val[FIELD_RECURSIVE] == true) 
+                          || (opts != null && (opts.recursive[field] != null || opts.recursive_fields?.includes (field) ) )
+                          )
                 {
                     OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
                             + " ".repeat (FIELD_VALUE_SPACER) + "-----");
-                                 
+                            
+                    const set_recursion = opts.recursive[field]?.depth;
+                                                            
                     OUT_OBJ (e[1], 
                     { 
                         indent:           opts.indent + longest_len + FIELD_VALUE_SPACER, 
-                        recursive_fields: opts.recursive_fields, 
-                        header:           opts.header,
-                        format:           out_fmt 
+                        recursive_depth:  set_recursion != null ? set_recursion : opts.recursive_depth - 1,
+                        format:           out_fmt,
+
+                        recursive:        opts.recursive,
+                        recursive_fields: opts.recursive_fields,
+                        header:           opts.header                        
                     });
                 }
 

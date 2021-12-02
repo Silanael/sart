@@ -9,6 +9,8 @@ class TXGroup extends SARTObject
 {
 
     SortOrder = null;
+    SortDone  = false;
+
     List   = [];
     ByTXID = {};
 
@@ -21,6 +23,7 @@ class TXGroup extends SARTObject
         "TransactionInfo"      : function (e) { return e?.GenerateInfo ();             },        
     };
 
+    toString () { return "TXGroup"; }
 
     constructor (sort) 
     {
@@ -51,29 +54,55 @@ class TXGroup extends SARTObject
 
     GetAmount              ()           { const k = Object.keys (this.ByTXID); return k != null ? k.length : 0;                               }
     GetByTXID              (txid)       { return this.ByTXID[txid];                                                                           }
-    GetByIndex             (index)      { const e = Object.entries (this.ByTXID); return index >= 0 && index < e.length ? e[index][1] : null; }
+    HasTXID                (txid)       { return this.GetByTXID (txid) != null;                                                               }
+    GetByIndex             (index)      { return index >= 0 && index < this.List.length ? this.List[index] : null;                            }
     AsArray                ()           { return this.List;                                                                                   }
-    SetSortOrder           (sort)       { this.SortOrder = sort; return this; }
+    
+    
+    SetSortOrder (sort) 
+    { 
+        if (sort == null)
+            this.OnProgramError ("Tried to set null sort order!", this);
+
+        else if (sort != this.SortOrder)
+        {
+            this.SortOrder = sort;
+            this.SortDone  = false;
+        }
+        return this; 
+    }
 
 
     Sort (sort)
     {
         this.SetSortOrder (sort);
 
-        if (sort == Constants.GQL_SORT_OLDEST_FIRST)
-            this.List.sort ( (a, b) => a.GetBlockHeight () - b.GetBlockHeight () );
+        if (!this.SortDone)
+        {
+            if (sort == Constants.GQL_SORT_OLDEST_FIRST)
+            {
+                this.List.sort ( (a, b) => a.GetBlockHeight () - b.GetBlockHeight () );
+                this.SortDone = true;
+            }
 
-        else if (sort == Constants.GQL_SORT_NEWEST_FIRST)
-            this.List.sort ( (a, b) => b.GetBlockHeight () - a.GetBlockHeight () );
+            else if (sort == Constants.GQL_SORT_NEWEST_FIRST)
+            {
+                this.List.sort ( (a, b) => b.GetBlockHeight () - a.GetBlockHeight () );
+                this.SortDone = true;
+            }
 
+            else
+                this.OnError ("Invalid sort mode '" + sort + this, "TXGroup.Sort");        
+        }
         else
-            this.OnError ("Invalid sort mode '" + sort + "'", "TXGroup.Sort");        
+            Sys.DEBUG ("Sort already marked as done, not re-sorting.", this);
     }
 
 
     GenerateInfo ()
     {
         const Info = {};
+
         for (const t of this.AsArray () )
         {
             Info[t.GetDate] = t.toString ();

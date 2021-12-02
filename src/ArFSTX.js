@@ -9,6 +9,7 @@
 
 const Sys         = require ("./System");
 const Const_ArFS  = require ("./CONST_ARFS");
+const State       = require ("./ProgramState");
 const Transaction = require ("./Transaction");
 const Settings    = require ("./Settings");
 const Util        = require ("./Util");
@@ -36,7 +37,8 @@ class ArFSTX extends Transaction
     }
 
 
-    IsEncrypted () { return this.Encrypted; }
+    IsEncrypted   () { return this.Encrypted;  }
+    GetArFSFields () { return this.ArFSFields; }
 
 
     __OnTXFetched ()
@@ -101,11 +103,16 @@ class ArFSMetaTX extends ArFSTX
     {        
         if (this.MetaObj != null)
         {
-            Util.AssignIfNotNull (this.ArFSFields, "Name"              , this.MetaObj.name             );
-            Util.AssignIfNotNull (this.ArFSFields, "RootFolderID"      , this.MetaObj.rootFolderId     );
-            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSizeB" , this.MetaObj.size             );
-            Util.AssignIfNotNull (this.ArFSFields, "FileDateUT"        , this.MetaObj.lastModifiedDate );
-            Util.AssignIfNotNull (this.ArFSFields, "DataTXID"          , this.MetaObj.dataTxId         );
+            Util.AssignIfNotNull (this.ArFSFields, "Name"               , this.MetaObj.name                            );            
+            Util.AssignIfNotNull (this.ArFSFields, "RootFolderID"       , this.MetaObj.rootFolderId                    );            
+            Util.AssignIfNotNull (this.ArFSFields, "DataTXID"           , this.MetaObj.dataTxId                        );
+            Util.AssignIfNotNull (this.ArFSFields, "DataContentType"    , this.MetaObj.dataContentType                 );            
+            Util.AssignIfNotNull (this.ArFSFields, "FileDate"           , Util.GetDate (this.MetaObj.lastModifiedDate / 1000) );
+            Util.AssignIfNotNull (this.ArFSFields, "FileDate_UTMS"      , this.MetaObj.lastModifiedDate                );
+            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSize"   , Util.GetSizeStr (this.MetaObj.size, true, State.Config.SizeDigits)    );            
+            Util.AssignIfNotNull (this.ArFSFields, "ReportedFileSize_B" , this.MetaObj.size                            );            
+            
+            
         }
 
         const dtxid = this.GetDataTXID ();
@@ -113,8 +120,7 @@ class ArFSMetaTX extends ArFSTX
         if (this.TX_Data == null && dtxid != null)
         {
             this.TX_Data = new ArFSDataTX (this.EntityObj, dtxid);
-            this.EntityObj?.__AddTransaction (this.TX_Data);
-            Sys.ERR ("FOO");
+            this.EntityObj?.__AddTransaction (this.TX_Data);            
         }
     }
 
@@ -126,7 +132,7 @@ class ArFSMetaTX extends ArFSTX
 
         if (this.MetaObj != null && !force)
         {
-            Sys.DEBUG ("Metadata-object for TXID " + this.GetTXID () + " already fetched. Use --force to re-fetch.");
+            Sys.VERBOSE ("Metadata-object for TXID " + this.GetTXID () + " already fetched. Use --force to re-fetch.");
             return this.MetaObj;
         }
 
@@ -144,6 +150,8 @@ class ArFSMetaTX extends ArFSTX
         {
             this.MetaObj = JSON.parse (await this.FetchDataStr () );     
             this.__OnJSONFetched ();
+
+            Sys.VERBOSE ("Fetched metadata-JSON for " + this + ".");
             return this.MetaObj;
         }
         catch (exception) { Sys.ON_EXCEPTION (exception, "ArFSMetaTx.FetchMetaOBJ (" + txid + ")"); }   

@@ -21,7 +21,7 @@ class SARTObject
 
     InfoFields       = ["Warnings", "Errors"];
     NoInfoFields     = ["NoInfoFields", "CustomFieldFuncs"];
-    RecursiveFields  = ["Warnings", "Errors"];
+    RecursiveFields  = {"Warnings": {}, "Errors": {} };
 
     CustomFieldFuncs = {};
 
@@ -70,7 +70,7 @@ class SARTObject
 
     Output ()
     {
-        Sys.OUT_OBJ (this.GetInfo (), { recursive_fields: this.GetRecursiveFields () } );
+        Sys.OUT_OBJ (this.GetInfo (), { recursive: this.GetRecursiveFields () } );
     }
 
 

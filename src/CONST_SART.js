@@ -119,6 +119,7 @@ const CONFIG_DEFAULT =
     ErrorWaitDelay_ms      : 5000,
     ErrorWaitVariationP    : 1.0,
     ErrorRetries           : 3,
+    MaxConcurrentConnections : 5,
       
     OutputFields           : null,
     OutputFormat           : OUTPUTFORMATS.TXT,

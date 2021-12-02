@@ -439,6 +439,7 @@ async function Testing (argv)
     const entity = new arfs_entity ( {entity_type: argv.PopLC (), arfs_id: argv.Pop() } )
 
     await entity.FetchMetaTransactions ();
+    await entity.GenerateHistory ();
     entity.Output ();
 }
 

@@ -168,6 +168,7 @@ function SetDisplayAll       ()            { State.Config.DisplayAll   = true;  
 function SetRecursive        ()            { State.Config.Recursive    = true;                                              }
 function CanAlterConf        (field)       { return ! Constants.CONFIG_LOCKED_ITEMS.includes (field);                       }
 function GetOutputFormat     ()            { return State.Config.OutputFormat;                                              }
+function GetMaxConcurrentConn ()           { return State.Config.MaxConcurrentConnections;                                  }
 
 
 function SetConfigKey (key, value)
@@ -384,6 +385,7 @@ module.exports =
     SetConfigToDefault,
     LoadConfig,
     AppendConfig,
-    GetOutputFormat
+    GetOutputFormat,
+    GetMaxConcurrentConn
 };
 
