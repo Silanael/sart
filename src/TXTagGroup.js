@@ -123,11 +123,7 @@ class TXTagGroup extends SARTObject
     GetTag (tag, case_sensitive = true)
     {
         if (!tag)
-        {
-            Sys.ERR_PROGRAM ("'tag' null.", "TXTag.GetTag");
-            return null;
-        }
-
+            return null;        
         else
             return this.List?.find (e => Util.StrCmp (e?.GetName (), tag, !case_sensitive) );
     }

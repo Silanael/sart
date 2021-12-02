@@ -108,10 +108,10 @@ function CopyKeysToObj   (src, dest)             { if (src == null || dest == nu
 async function Delay     (ms)                    { await new Promise (r => setTimeout (r, ms) ); }
 
 
-function AssignIfNotNull (src, dest, varname)
+function AssignIfNotNull (dest, varname, value)
 {
-    if (src != null && dest != null)
-        dest[varname] = src;
+    if (value != null && dest != null)
+        dest[varname] = value;
 
     return dest;
 }

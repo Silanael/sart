@@ -2,18 +2,30 @@ const Constants   = require ("./CONST_SART.js");
 const Settings    = require ('./Settings.js');
 const Sys         = require ('./System.js');
 const Transaction = require ("./Transaction.js");
+const SARTObject  = require ("./SARTObject");
 
 
-class TXGroup 
+class TXGroup extends SARTObject
 {
 
-    Sort = null;
+    SortOrder = null;
+    List   = [];
     ByTXID = {};
+
+
+    InfoFields       = ["Transactions", "TransactionInfo"];
+    RecursiveFields  = this.InfoFields;
+    CustomFieldFuncs = 
+    {
+        "Transactions"         : function (e) { return e?.AsArray ();                  },
+        "TransactionInfo"      : function (e) { return e?.GenerateInfo ();             },        
+    };
 
 
     constructor (sort) 
     {
-        this.Sort = sort;
+        super ();
+        this.SortOrder = sort;
     }
 
     
@@ -40,15 +52,33 @@ class TXGroup
     GetAmount              ()           { const k = Object.keys (this.ByTXID); return k != null ? k.length : 0;                               }
     GetByTXID              (txid)       { return this.ByTXID[txid];                                                                           }
     GetByIndex             (index)      { const e = Object.entries (this.ByTXID); return index >= 0 && index < e.length ? e[index][1] : null; }
-    AsArray                ()           { return Object.values (this.ByTXID);                                                                 }
+    AsArray                ()           { return this.List;                                                                                   }
+    SetSortOrder           (sort)       { this.SortOrder = sort; return this; }
 
 
-    SetSort (sort) 
+    Sort (sort)
     {
-        this.Sort = sort;
-        return this;
+        this.SetSortOrder (sort);
+
+        if (sort == Constants.GQL_SORT_OLDEST_FIRST)
+            this.List.sort ( (a, b) => a.GetBlockHeight () - b.GetBlockHeight () );
+
+        else if (sort == Constants.GQL_SORT_NEWEST_FIRST)
+            this.List.sort ( (a, b) => b.GetBlockHeight () - a.GetBlockHeight () );
+
+        else
+            this.OnError ("Invalid sort mode '" + sort + "'", "TXGroup.Sort");        
     }
 
+
+    GenerateInfo ()
+    {
+        const Info = {};
+        for (const t of this.AsArray () )
+        {
+            Info[t.GetDate] = t.toString ();
+        }
+    }
 
 
     Add (stx, txid = null) 
@@ -62,22 +92,38 @@ class TXGroup
             if (txid == null)
                 txid = stx.GetTXID ();
 
-            if (this.ByTXID[txid] != null) {
+            if (this.ByTXID[txid] != null) 
+            {
                 Sys.VERBOSE ("TXID " + txid + " already exists in the set, not replacing it", "STransactions.Add");
                 return this;
             }
 
             this.ByTXID[txid] = stx;
+            this.List.push (stx);
         }
 
         return this;
     }
+    
+
+    AddAll (txgroup)
+    {
+        if (txgroup == null)
+            return false;
+
+        for (const t of txgroup.AsArray () )
+        {
+            this.Add (t);
+        }
+        return true;
+    }
+
 
 
     /** Set value to null to get entries that contain the tag (with any value). */
     GetTransactionsMatching (criteria = { owner: null, tag: null, tagvalue: null } ) 
     {
-        const ret = new TXGroup (this.Sort);
+        const ret = new TXGroup (this.SortOrder);
 
         for (const e of Object.entries (this.ByTXID) )
         {
@@ -96,7 +142,7 @@ class TXGroup
     /** Set value to null to get entries that contain the tag (with any value). */
     GetTransactionsByTag (tag, value = null)
     {
-        const ret = new TXGroup (this.Sort);
+        const ret = new TXGroup (this.SortOrder);
 
         for (const e of Object.entries (this.ByTXID) ) 
         {
@@ -121,7 +167,7 @@ class TXGroup
 
     GetTransactionsByOwner (owner) 
     {
-        const ret = new TXGroup (this.Sort);
+        const ret = new TXGroup (this.SortOrder);
 
         if (owner == null) 
         {
@@ -166,8 +212,8 @@ class TXGroup
 
         else 
         {
-            let oldest = this.Sort == Constants.GQL_SORT_OLDEST_FIRST ? listfe
-                                                                      : this.Sort == Constants.GQL_SORT_NEWEST_FIRST ? entries[entries.length - 1]
+            let oldest = this.SortOrder == Constants.GQL_SORT_OLDEST_FIRST ? listfe
+                                                                      : this.SortOrder == Constants.GQL_SORT_NEWEST_FIRST ? entries[entries.length - 1]
                                                                                                                      : null;
 
             Sys.DEBUG ("Initial set oldest to " + (oldest != null ? oldest.GetTXID () : null) );
@@ -244,6 +290,7 @@ class TXGroup
             return newest;
         }
     }
+
 
 }
 

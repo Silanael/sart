@@ -10,11 +10,52 @@
 
 const Constants        = require ("./CONST_SART.js");
 const Constants_ArFS   = require ("./CONST_ARFS.js");
+const State            = require ("./ProgramState");
 const Sys              = require ("./System.js");
 const Util             = require ("./Util.js");
 const Settings         = require ("./Settings.js");
+const Arweave          = require ("./Arweave");
 const SARTObject       = require ("./SARTObject");
 const TXGroup          = require ("./TXGroup.js");
+const TXQuery          = require ("./GQL_TXQuery");
+const TXTag            = require ("./TXTag");
+const TXTagGroup       = require ("./TXTagGroup");
+const Transaction      = require ("./Transaction");
+const ArFSTX           = require ("./ArFSTX");
+
+
+
+class MetaTXQuery extends TXQuery
+{
+   
+    /* Override */ async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: Constants.GQL_SORT_OLDEST_FIRST} )
+    {
+        Sys.ERR ("ExecuteReqOwner not applicable to this query type.", this);
+        return false;        
+    }
+   
+
+    async Execute (arfs_id, entity_type)
+    {       
+        this.Sort = Constants.GQL_SORT_OLDEST_FIRST;
+        
+        const tags            = new TXTagGroup ();        
+        tags.Add              ( new Constants_ArFS.TXTag_EntityType (entity_type),         );
+        tags.Add              ( new Constants_ArFS.TXTag_ArFSID     (entity_type, arfs_id) );        
+        tags.AddArweaveTXTags ( State.GetConfig ().ArFSTXQueryTags                         );
+        
+
+        await super.Execute
+        (            
+            {                                                           
+                sort: this.Sort,
+                tags: tags,                
+            }
+        );
+
+    }
+
+}
 
 
 
@@ -26,32 +67,25 @@ class ArFSEntity extends SARTObject
     ArFSID              = null;
     EntityType          = null;        
     Owner               = null;
-    MetaTXID_First      = null;
-    MetaTXID_Latest     = null;
-    Created             = null;
-    Modified            = null;
-    Block_Created       = null;
-    Block_Latest        = null;
-    BlockHeight_Created = null;
-    BlockHeight_Latest  = null;
+
     Operations          = null;
     Encrypted           = null;
     Public              = null;
-    
-    Transactions        = null;        
-    FirstTX             = null;
-    LatestTX            = null;
-    LatestMeta          = null;
-    MetaByTXID          = {};
+
+    TX_All              = new TXGroup ();       
+    TX_Meta             = new TXGroup ();
+    TX_Data             = null;    
+    TX_First            = null;
+    TX_Latest           = null;
     Query               = null;
 
 
-    RecursiveFields  = ["History", "Versions", "Content", "Orphans", "Parentless", "Errors"];
+    RecursiveFields  = ["MetaTransactions", "DataTransactions", "History", "Versions", "Content", "Orphans", "Parentless", "Errors"];
     InfoFields = 
     [ 
         "Type", 
-        "Entity-Type", 
-        "ArFS-ID", 
+        "EntityType", 
+        "ArFSID", 
         "Name", 
         "Created", 
         "Modified", 
@@ -70,7 +104,9 @@ class ArFSEntity extends SARTObject
         "?OriginalFileDate",
         "?ParentStatus", 
         "?Orphaned", 
-        "?Encrypted", 
+        "?Encrypted",
+        "MetaTransactions",
+        "?DataTransactions", 
         "MetaTXID_First",
         "MetaTXID_Latest",
         "MetaTXStatus", 
@@ -86,39 +122,24 @@ class ArFSEntity extends SARTObject
         "Errors"
     ];
 
-    CustomFieldFuncs = {};
-
-    /*
-state = Util.AssignIfNotNull (metadata.name,                                 state, "Name");
-            state = Util.AssignIfNotNull (metadata.rootFolderId,                         state, "RootFolderID");
-            state = Util.AssignIfNotNull (metadata.size,                                 state, "Size");
-            state = Util.AssignIfNotNull (metadata.lastModifiedDate,                     state, "FileLastModified");
-            state = Util.AssignIfNotNull (metadata.dataTxId,                             state, "DataTXID");
-
-            if (check_txstatus && state.DataTXID != null)
-            {
-                const status = await arweave.GetTXStatusInfo (state.DataTXID);
-                state.DataTXStatus        = status?.Status;            
-                state.DataTXStatusCode    = status?.StatusCode;
-                state.DataTXConfirmations = status?.Confirmations;
-            }
-        }
-
-        if (tx_entry != null)
-        {
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FILEID),         state, "FileID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEID),        state, "DriveID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_FOLDERID),       state, "FolderID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_PARENTFOLDERID), state, "ParentFolderID");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER),         state, "Cipher");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_CIPHER_IV),      state, "Cipher-IV");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEPRIVACY),   state, "DrivePrivacy");
-            state = Util.AssignIfNotNull (tx_entry.GetTag (Constants_ArFS.TAG_DRIVEAUTHMODE),  state, "DriveAuthMode");    
-                            
-    */
+    CustomFieldFuncs = 
+    {
+        "MetaTransactions"     : function (e) { return e.TX_Meta?.AsArray ();          },
+        "DataTransactions"     : function (e) { return e.TX_Data?.AsArray ();          },
+        "Created"              : function (e) { return e.TX_First?. GetDate        (); }, 
+        "Modified"             : function (e) { return e.TX_Latest?.GetDate        (); }, 
+        "MetaTXID_First"       : function (e) { return e.TX_First?. GetTXID        (); }, 
+        "MetaTXID_Latest"      : function (e) { return e.TX_Latest?.GetTXID        (); }, 
+        "Block_Created"        : function (e) { return e.TX_First?. GetBlockID     (); }, 
+        "Block_Latest"         : function (e) { return e.TX_Latest?.GetBlockID     (); }, 
+        "BlockHeight_Created"  : function (e) { return e.TX_First?. GetBlockHeight ();_}, 
+        "BlockHeight_Latest"   : function (e) { return e.TX_Latest?.GetBlockHeight (); }, 
+        "Operations"           : function (e) { return e.TX_Meta?.  GetAmount      (); }, 
+    };
 
 
-    IsPublic          ()      { return this.Public    == true;                               }
+
+    IsPublic          ()      { return this.Encrypted == false;                              }
     IsEncrypted       ()      { return this.Encrypted == true;                               }
     GetOwner          ()      { return this.Owner;                                           }
     GetPrivacy        ()      { return this.Privacy != null ? this.Privacy 
@@ -147,6 +168,157 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
         this.__SetArFSID (args?.arfs_id);
         this.__SetEntityType (args?.entity_type);        
     }
+
+
+
+    __SetEntityType (entity_type)
+    {
+        this.EntityType = entity_type;
+
+        if (entity_type != null && ! Constants_ArFS.IsValidEntityType (entity_type) )
+        {
+            const warning = "Entity-Type " + entity_type + " not recognized.";
+
+            if (! Sys.WARN (warning, "ArFSEntity.__SetEntityType", { error_id: Constants.ERROR_IDS.ARFS_ENTITY_TYPE_UNKNOWN } ) )
+                this.AddWarning (warning);
+        }
+    }
+
+    __SetArFSID (arfs_id)
+    {
+        this.ArFSID = arfs_id;
+
+        if (arfs_id != null && ! Util.IsArFSID (arfs_id) )
+        {
+            const warning = "ArFS-ID " + arfs_id + " doesn't seem to be a valid one.";
+
+            if (! Sys.WARN (warning, "ArFSEntity.__SetArFSID", { error_id: Constants.ERROR_IDS.ARFS_ID_INVALID } ) )
+                this.AddWarning (warning);
+
+            this.SetInvalid ();
+        }
+    }
+
+    __SetOwner (owner)
+    {
+        if (this.Owner == null)
+        {
+            this.Owner = owner;
+            Sys.VERBOSE ("Owner of " + this + " set to '" + this.Owner + "'.");
+        }
+        else if (this.Owner != owner)
+            this.OnProgramError ("Attempted to set owner to '" + owner + "' when it was already set to '" + this.Owner + "'. Will keep the existing owner.");
+            
+    }
+
+
+    __SetFirstTX (tx)
+    {
+        if (tx == null)
+            return false;
+
+        const new_txid = tx.GetTXID ();
+
+        if (this.TX_First == null || tx.IsOlderThan (this.TX_First) )
+        {
+            Sys.VERBOSE ("First transaction for " + this + " set to TXID: " + new_txid + " (was " + this.TX_First?.GetTXID ()  + ")");
+            this.TX_First = tx;
+            this.__SetOwner (tx.GetOwner () );
+        }
+        else
+            return this.OnError ("Attempted to set the first TX to be " + new_txid + " when an older " + this.TX_First.GetTXID () + " was already set.");
+    }
+
+
+    async __SetLatestTX (tx)
+    {
+        if (tx == null)
+            return false;
+
+        const new_txid      = tx             .GetTXID ();
+        const existing_txid = this.TX_Latest?.GetTXID ();
+
+        if (this.TX_Latest == null || tx.IsNewerThan (this.TX_Latest) )
+        {
+            Sys.VERBOSE ("Latest transaction for " + this + " set to TXID: " + new_txid + " (was " + existing_txid + ")");
+            this.TX_Latest = tx;
+
+            // Update metadata
+            if (tx instanceof ArFSTX.ArFSMetaTX)
+            {
+                await tx.FetchMetaOBJ ();                
+                tx.SetFieldsToEntity ();
+            }
+
+            else
+                this.OnProgramError ("Latest TX " + tx + " is not of class ArFSMetaTX - cannot extract data!", "ArFSEntity.__SetLatestTX");
+        }
+        else
+            return this.OnError ("Attempted to set the latest TX to be " + new_txid + " when a newer " + existing_txid + " was already set.");
+    }
+
+
+
+    async FetchMetaTransactions ()
+    {
+        const arfs_id     = this.GetARFSID ();
+        const entity_type = this.GetEntityType ();
+
+        if (!this.IsValid () || !Util.IsArFSID (arfs_id) || !Util.IsSet (entity_type) )
+        {
+            this.OnProgramError ("Object not in a valid state: " + this, "ArFSEntity.FetchMetaTransactions");
+            return false;
+        }
+
+        const query = new MetaTXQuery (Arweave);        
+        await query.Execute (arfs_id, entity_type);        
+        
+        if (query.GetEdgesAmount () <= 0)
+        {
+            this.OnError ("Failed to fetch metadata-transactions for ArFS-ID:" + arfs_id + ", Entity-Type:" + entity_type);
+            this.SetInvalid ();
+            return false;
+        }
+
+        const txes_received = new TXGroup ();
+        for (const e of query.GetEdges () )
+        { 
+            txes_received.Add (new ArFSTX.ArFSMetaTX (this).SetGQLEdge (e) );
+        }
+
+        
+
+        // Seek for the first transaction for the ArFS-ID to establish ownership.
+        // This call also sets Owner.
+        this.__SetFirstTX (txes_received.GetOldestEntry () );
+        
+
+        // Verify that Owner is set.
+        if (this.Owner == null)
+        {
+            this.SetInvalid ();
+            return this.OnProgramError ("Owner was not set properly.", this);            
+        }
+            
+        // Filter transactions matching the owner.
+        this.TX_All  = new TXGroup ();
+        this.TX_Meta = txes_received.GetTransactionsByOwner (this.Owner);
+        this.TX_Meta.Sort (Constants.GQL_SORT_OLDEST_FIRST);
+        this.TX_All.AddAll (this.TX_Meta);
+        
+
+        if (this.TX_All == null || this.TX_All.GetAmount () <= 0 || this.TX_Meta == null || this.TX_Meta.GetAmount <= 0)
+            return this.OnProgramError ("Failed to setup transaction arrays for " + this);
+            
+
+
+        // Get the newest TX
+        await this.__SetLatestTX (this.TX_All.GetNewestEntry (this.Owner) );
+    
+                  
+    }
+
+
 
 
 
@@ -191,8 +363,8 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
 
 
         // Get all transactions
-        entity.Transactions = all_transactions.GetTransactionsByOwner (owner);
-        if (entity.Transactions == null || entity.Transactions.GetAmount () <= 0)
+        entity.TX_All = all_transactions.GetTransactionsByOwner (owner);
+        if (entity.TX_All == null || entity.TX_All.GetAmount () <= 0)
         {
             this.OnProgramError ("Failed to get transactions for " + entity);
             return entity;
@@ -201,7 +373,7 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
 
 
         // Get the newest TX that sets the current state.
-        const latest_tx = entity.Transactions.GetNewestEntry      (owner);
+        const latest_tx = entity.TX_All.GetNewestEntry      (owner);
         if (latest_tx == null)        
             this.OnProgramError ("Failed to get latest transaction for " + entity);
         
@@ -219,21 +391,21 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
 
 
         // Set first TX
-        if (entity.FirstTX == null || entity.FirstTX.IsNewerThan (first_tx) )
+        if (entity.TX_First == null || entity.TX_First.IsNewerThan (first_tx) )
         {
             Sys.DEBUG ("First TX set to TXID:" + first_tx?.GetTXID () + " - was " 
-                + (entity.FirstTX != null ? entity.FirstTX.GetTXID () : "not set yet.") );
+                + (entity.TX_First != null ? entity.TX_First.GetTXID () : "not set yet.") );
 
-            entity.FirstTX  = first_tx;
+            entity.TX_First  = first_tx;
         }
 
         // Set newest TX
-        if (entity.LatestTX == null || latest_tx.IsNewerThan (entity.LatestTX) )
+        if (this.LatestTX == null || latest_tx.IsNewerThan (this.LatestTX) )
         {
             Sys.DEBUG ("Latest TX set to TXID:" + latest_tx?.GetTXID () + " - was " 
-                + (entity.LatestTX != null ? entity.LatestTX.GetTXID () : "not set yet.") );
+                + (this.LatestTX != null ? this.LatestTX.GetTXID () : "not set yet.") );
 
-            entity.LatestTX = latest_tx;                
+            this.LatestTX = latest_tx;                
         }
         
 
@@ -250,7 +422,7 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
         entity.__SetField ("Block_Latest"         , latest_tx?.GetBlockID     ()                                                         );
         entity.__SetField ("BlockHeight_Created"  , first_tx ?.GetBlockHeight ()                                                         );
         entity.__SetField ("BlockHeight_Latest"   , latest_tx?.GetBlockHeight ()                                                         );
-        entity.__SetField ("Operations"           , entity.Transactions?.GetAmount ()                                                    );
+        entity.__SetField ("Operations"           , this.AllTransactions?.GetAmount ()                                                   );
         entity.__SetField ("Encrypted"            , first_tx?.HasTag (Constants_ArFS.TAG_CIPHER)                                         );
         
 
@@ -294,7 +466,7 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
 
     async UpdateDetailed (arweave, verify = true, content = true)
     {
-        if (this.Transactions == null || this.Transactions.GetAmount () <= 0)
+        if (this.TX_All == null || this.TX_All.GetAmount () <= 0)
         {
             this.OnProgramError ("Could not update detailed info - Transactions missing.")
             Sys.ERR_PROGRAM ("Transactions not set for " + this.toString () );
@@ -311,7 +483,7 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
         let msg, str_changes;
         let newest_updated = false;
 
-        for (const e of Object.values (this.Transactions.ByTXID) )
+        for (const e of Object.values (this.TX_All.ByTXID) )
         {
             if (e == null)
             {
@@ -553,7 +725,7 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
 
     async __FetchTXEntry (arweave, txid)
     {
-        const existing = this.Transactions?.GetByTXID (txid);
+        const existing = this.TX_All?.GetByTXID (txid);
         
         if (existing != null)
         {
@@ -575,7 +747,7 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
                     const tx = await query.Execute (txid, owner);
 
                     if (tx != null)
-                        this.AddTransaction (tx)                   
+                        this.__AddTransaction (tx)                   
                                         
                     else
                         Sys.ERR ("Failed to retrieve TX " + txid, "Entity.__FetchTXEntry");
@@ -600,45 +772,40 @@ state = Util.AssignIfNotNull (metadata.name,                                 sta
     }
 
 
-    __SetEntityType (entity_type)
-    {
-        this.EntityType = entity_type;
+  
 
-        if (entity_type != null && ! Constants_ArFS.IsValidEntityType (entity_type) )
-        {
-            const warning = "Entity-Type " + entity_type + " not recognized.";
-            if (! Sys.WARN (warning, "ArFSEntity.__SetEntityType", { error_id: Constants.ERROR_IDS.ARFS_ENTITY_TYPE_UNKNOWN } ) )
-                this.AddWarning (warning);
-        }
-    }
-
-    __SetArFSID (arfs_id)
-    {
-        this.ArFSID = arfs_id;
-
-        if (arfs_id != null && ! Util.IsArFSID (arfs_id) )
-        {
-            const warning = "ArFS-ID " + arfs_id + " doesn't seem to be a valid one.";
-            if (! Sys.WARN (warning, "ArFSEntity.__SetArFSID", { error_id: Constants.ERROR_IDS.ARFS_ID_INVALID } ) )
-                this.AddWarning (warning);
-        }
-    }
-
-    AddTransaction (tx)
+    __AddTransaction (tx)
     {
         if (tx == null)
             return Sys.ERR_PROGRAM ("'tx' null.", "Entity.AddTransaction");
         
-        if (this.Transactions == null)
-            this.Transactions = new TXGroup ();
-
-        else if (this.Transactions.HasTXID (tx.GetTXID () ) )
+        else if (this.TX_All.HasTXID (tx.GetTXID () ) )
         {
             Sys.VERBOSE ("Already has transaction " + tx.GetTXID () )
             return false;
         }
 
-        return this.Transactions.AddTransaction (tx);        
+        else if (this.TX_All.Add (tx) )
+        {
+            if (tx instanceof ArFSTX.ArFSMetaTX)
+            { 
+                this.TX_Meta.Add (tx); 
+                Sys.VERBOSE ("MetaTX added: " + tx, this); 
+            }
+            else if (tx instanceof ArFSTX.ArFSDataTX)
+            { 
+                if (this.TX_Data == null)
+                    this.TX_Data = new TXGroup ();
+
+                this.TX_Data.Add (tx);
+                Sys.VERBOSE ("DataTX added: " + tx, this); 
+            }
+            else
+                return this.OnProgramError ("Transaction '" + tx?.toString () + " isn't a member of ArFS-TX-classes.", "ArFSEntity.__AddTransaction");
+
+        }
+        
+        return true;
     }
 
 

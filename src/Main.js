@@ -435,6 +435,11 @@ function DisplayReadme ()
 
 async function Testing (argv)
 { 
+    const arfs_entity = require ("./ArFSEntity");
+    const entity = new arfs_entity ( {entity_type: argv.PopLC (), arfs_id: argv.Pop() } )
+
+    await entity.FetchMetaTransactions ();
+    entity.Output ();
 }
 
 

@@ -14,12 +14,15 @@ const Util = require ("./Util.js");
 class SARTObject
 {
 
+    Valid            = true;
+
     Errors           = null;
     Warnings         = null;
 
     InfoFields       = ["Warnings", "Errors"];
     NoInfoFields     = ["NoInfoFields", "CustomFieldFuncs"];
     RecursiveFields  = ["Warnings", "Errors"];
+
     CustomFieldFuncs = {};
 
 
@@ -31,7 +34,10 @@ class SARTObject
     HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }
     SetInfoFields      (fields)                                { this.InfoFields = fields;                                                   }
     WithInfoField      (field)                                 { this.InfoFields = Util.AppendToArray (this.InfoFields, field); return this; }
-    GetRecursiveFields ()                                      { return this.RecursiveFields; }
+    GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
+    IsValid            ()                                      { return this.Valid == true;                                                  }
+    SetInvalid         ()                                      { this.Valid = false; return this;                                            }
+
 
     GetFieldValue (field)
     {
@@ -39,6 +45,7 @@ class SARTObject
         return custom == null ? this[field] : custom (this);        
     }
 
+    
     __SetField (field, value)
     {
         if (field == null)                   
