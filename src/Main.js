@@ -15,6 +15,7 @@ const Package   = require ("../package.json");
 
 const Constants = require ("./CONST_SART.js");
 const State     = require ("./ProgramState.js");
+const Cache     = require ("./Cache");
 const Sys       = require ('./System.js');
 const Settings  = require ('./Settings.js');
 const Arweave   = require ('./Arweave.js');
@@ -30,9 +31,9 @@ const Analyze   = require ('./TXAnalyze.js');
 
 const GQL       = require ("./GQL/GQLQuery");
 
-
 const ArweaveLib  = require ('arweave');
 const FS          = require ("fs");
+
 
 
 
@@ -432,15 +433,119 @@ function DisplayReadme ()
     }
 }
 
+const CONCURRENT = 5;
+class ConcTest
+{    
+    Tasks_Running = [];
+    Tasks_Queued  = [];
+    __Running     = 0;
+
+
+    GetActiveTaskAmount () { return this.Tasks_Running.length; }
+
+     AddTask (task)
+    {
+        const t = new ConcTask (this);
+        
+        let slot_found = false;
+        for (let i = 0; i < CONCURRENT; i++)
+        {
+            if (this.Tasks_Running[i] == null)
+            {
+                this.Tasks_Running[i] = t;                
+                this.Tasks_Running[i].Task = t.Start (i, null);
+                slot_found = true;        
+                break;
+            }
+        }
+
+        if (!slot_found)
+        {
+            this.Tasks_Queued.push (task);
+            Sys.INFO ("Queued a task.");
+        }
+             
+    }
+
+    __GetAwaitList ()
+    {
+        const pending = [];
+        for (let i = 0; i < CONCURRENT; i++)
+        {
+            if (this.Tasks_Running[i] != null)
+                pending.push (this.Tasks_Running[i].Task);
+        }
+        return pending;      
+    }
+    
+    __OnTaskFinished (slot)
+    {
+        this.Tasks_Running[slot] = null;        
+        --this.__Running;
+    }
+
+
+
+    async Run ()
+    {
+        Sys.INFO ("Exec start.");
+        
+        let await_list;
+
+        while ( (await_list = this.__GetAwaitList () )?.length > 0 )
+        {
+            Sys.INFO ("Awaiting for " + await_list.length + " entries..");        
+            await Promise.race (await_list);
+
+            if (this.Tasks_Queued.length > 0)
+                this.AddTask (this.Tasks_Queued.shift () );            
+        }
+        
+        Sys.INFO ("Exec end.");
+        Sys.OUT_OBJ (this.Tasks_Running);
+        Sys.OUT_OBJ (this.Tasks_Queued);
+    }
+}
+
+class ConcTask
+{       
+    Manager = null;     
+    Task    = null;
+
+    constructor (manager)
+    {
+        this.Manager = manager;
+    }
+    
+    async Start (slot, task)
+    {   
+        Sys.INFO ("Starting in slot " + slot);  
+        await new Promise (r => setTimeout (r, Math.random () * 200) );            
+        Sys.INFO ("Slot " + slot + " done.");
+        this.Manager?.__OnTaskFinished (slot);
+    }
+}
 
 async function Testing (argv)
 { 
+    /*
     const arfs_entity = require ("./ArFSEntity");
-    const entity = new arfs_entity ( {entity_type: argv.PopLC (), arfs_id: argv.Pop() } )
+    const entity = arfs_entity.GET_ENTITY ( {entity_type: argv.PopLC (), arfs_id: argv.Pop() } )
 
-    await entity.FetchMetaTransactions ();
-    await entity.GenerateHistory ();
+    await entity.FetchAll ();    
     entity.Output ();
+    */
+
+    const Manager = new ConcTest ();
+    for (let C = 0; C < 1000; C++)
+    {
+        Manager.AddTask ();
+    }
+
+    
+    await Manager.Run ();
+    Sys.INFO ("Stopped waiting.");
+
 }
 
 
@@ -457,4 +562,6 @@ process.on ("uncaughtException", Sys.ErrorHandler);
 
 // Entrypoint
 Console.SetMain (Main);
+//Cache.CREATE ();
+
 Main (process.argv);

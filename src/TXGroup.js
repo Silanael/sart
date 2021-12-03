@@ -1,8 +1,8 @@
 const Constants   = require ("./CONST_SART.js");
-const Settings    = require ('./Settings.js');
 const Sys         = require ('./System.js');
 const Transaction = require ("./Transaction.js");
 const SARTObject  = require ("./SARTObject");
+
 
 
 class TXGroup extends SARTObject
@@ -99,6 +99,50 @@ class TXGroup extends SARTObject
     }
 
 
+    async FetchStatusOfAll ()
+    {
+        const report =
+        {
+            Total:     0,
+            Confirmed: 0,
+            Mined:     0,
+            Pending:   0,
+            Missing:   0,
+
+            Transactions: {}
+        }
+
+        for (const tx of this.List)
+        {
+            const txid = tx.GetTXID ();
+
+            if (report.Transactions[txid] != null)
+                this.OnError ("Duplicate TXID encountered: " + txid);
+
+            else
+            {
+                const status = await tx.UpdateAndGetStatus ();
+
+                if (status == null)
+                    this.OnProgramError ("Failed to get status object for tx " + tx);
+
+                else
+                {                
+                    report.Total++;                
+                    if      (status.IsConfirmed () ) report.Confirmed++ ; 
+                    else if (status.Mined       () ) report.Mined++     ; 
+                    else if (status.Pending     () ) report.Pending++   ; 
+                    else if (status.Failed      () ) report.Missing++   ; 
+
+                    report.Transactions[txid] = tx.GetTypeShort () + " - " + status.GetStatusFull ();
+                }
+            }
+        }
+
+        return report;
+    }
+
+
     GenerateInfo ()
     {
         const Info = {};
@@ -182,14 +226,10 @@ class TXGroup extends SARTObject
                 ret.Add (obj, txid);
         }
 
-        if (Settings.IsVerbose () )
-        {
-            const sel_amount  = ret.GetAmount  ();
-            const this_amount = this.GetAmount ();
-            Sys.VERBOSE ("Selected " + sel_amount + " / " + this_amount + " transactions by tag " + tag + ":" + value
-                         + " (" + (this_amount - sel_amount) + " omitted)");
-        }
-
+        const sel_amount  = ret.GetAmount  ();
+        const this_amount = this.GetAmount ();
+        Sys.VERBOSE ("Selected " + sel_amount + " / " + this_amount + " transactions by tag " + tag + ":" + value
+                     + " (" + (this_amount - sel_amount) + " omitted)");
         return ret;
     }
 
@@ -213,14 +253,12 @@ class TXGroup extends SARTObject
                 ret.Add (obj, txid);
         }
 
-        if (Settings.IsVerbose () )
-        {
-            const sel_amount  = ret.GetAmount  ();
-            const this_amount = this.GetAmount ();
-            Sys.VERBOSE ("Selected " + sel_amount + " / " + this_amount + " transactions by owner '" + owner + "'"
+        
+        const sel_amount  = ret.GetAmount  ();
+        const this_amount = this.GetAmount ();
+        Sys.VERBOSE ("Selected " + sel_amount + " / " + this_amount + " transactions by owner '" + owner + "'"
                           + " (" + (this_amount - sel_amount) + " omitted)");
-        }
-
+        
         return ret;
     }
 
@@ -247,14 +285,12 @@ class TXGroup extends SARTObject
 
             Sys.DEBUG ("Initial set oldest to " + (oldest != null ? oldest.GetTXID () : null) );
 
-            const debug = Settings.IsDebug ();
-
+        
             for (const e of entries) 
             {
                 if (oldest == null || e.IsOlderThan (oldest) ) 
-                {
-                    if (debug)
-                        Sys.DEBUG (e.GetTXID () + " at block height " + e.GetBlockHeight () + " is older than "
+                {                    
+                    Sys.DEBUG (e.GetTXID () + " at block height " + e.GetBlockHeight () + " is older than "
                                    + (oldest != null ? oldest.GetTXID () + " at " + oldest.GetBlockHeight () : null));
                     oldest = e;
                 }
@@ -288,8 +324,7 @@ class TXGroup extends SARTObject
         else
         {
             let newest = null;
-            const debug = Settings.IsDebug ();
-
+            
             for (const e of entries) 
             {
                 if (criteria.owner != null && e.GetOwner () != criteria.owner) 
@@ -301,9 +336,8 @@ class TXGroup extends SARTObject
                 }
 
                 else if (newest == null || e.IsNewerThan (newest) )
-                {
-                    if (debug)
-                        Sys.DEBUG (e.GetTXID () + " at block height " + e.GetBlockHeight () + " is newer than "
+                {                    
+                    Sys.DEBUG (e.GetTXID () + " at block height " + e.GetBlockHeight () + " is newer than "
                             + (newest != null ? newest.GetTXID () + " at " + newest.GetBlockHeight () : null) );
                     newest = e;
                 }

@@ -121,6 +121,8 @@ class ArFSDEf
     TXTag_FileID           = TXTag_FileID;
     TXTag_FolderID         = TXTag_FolderID;
     TXTag_ParentFolderID   = TXTag_ParentFolderID;
+
+    DidArDriveFuckUpTheFileDate (new_utms, old_utms) { return !isNaN (new_utms) && !isNaN (old_utms) && new_utms == Math.floor (old_utms / 1000) * 1000; }
 };
 
 const DEFS = Object.freeze (new ArFSDEf () );

@@ -20,6 +20,10 @@ class ProgramState
     ConnectionState  = Constants.CONNSTATES.NOTCONN;
     ConsoleActive    = false;
 
+    Cache            = null;
+    CacheHits        = 0;
+    CacheMisses      = 0;
+    
 
     GetConfig       () { return this.Config != null ? this.Config : this.SetConfigToDefault ().conf; }
     IsConsoleActive () { return this.ConsoleActive;                                                  }
@@ -39,6 +43,26 @@ class ProgramState
         const error = Object.keys (this.Config)?.length < 20 ? "Failed to set default config!" : null;
         
         return { conf: this.Config, error: error }
+    }
+
+    GetArFSEntity (args = { entity_type: null, arfs_id: null} )
+    {
+        if (this.Cache == null)
+        {
+            ++this.CacheMisses;
+            return null;
+        }
+        else
+            return this.Cache?.GetArFSEntity (args);
+    }
+
+    AddArFSEntity (args = { entity_type: null, arfs_id: null} )
+    {
+        if (this.Cache == null)
+            return false;
+
+        else
+            return this.Cache.AddArFSEntity (args);
     }
 }
 

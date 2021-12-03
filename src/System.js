@@ -10,7 +10,8 @@
 // Local imports
 const Constants = require ("./CONST_SART.js");
 const Settings  = require ("./Settings.js");
-const State     = require ('./ProgramState.js');
+const State     = require ("./ProgramState.js");
+
 
 
 // Constants
@@ -144,7 +145,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
     if (opts.recursive == null)          opts.recursive        = {};
     if (opts.header == null)             opts.header = true;
 
-    const conf = State.GetConfig ();
+    const conf = Settings.GetConfig ();
     if (conf == null)
     {
         console.error ("PROGRAM ERROR: Could not get config. Trying to display object still:");

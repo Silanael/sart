@@ -62,62 +62,70 @@ class MetaTXQuery extends TXQuery
 
 class ArFSEntity extends SARTObject
 {
+    // Primary
+    Type                    = "ArFS-entity";
+    ArFSID                  = null;
+    EntityType              = null;        
+    Owner                   = null;    
+    Operations              = null;
+    Encrypted               = null;
+    Public                  = null;
+    
+    // Internal
+    TX_All                  = new TXGroup ();
+    TX_Entity               = new TXGroup ();     
+    TX_Meta                 = new TXGroup ();
+    TX_Data                 = null;    
+    TX_First                = null;
+    TX_Latest               = null;
+    ParentEntity_Drive      = null;
+    ParentEntity_Folder     = null;
+    ParentEntity_RootFolder = null;
+    Query                   = null;
 
-    Type                = "ArFS-entity";
-    ArFSID              = null;
-    EntityType          = null;        
-    Owner               = null;
 
-    Operations          = null;
-    Encrypted           = null;
-    Public              = null;
-
-    TX_All              = new TXGroup ();       
-    TX_Meta             = new TXGroup ();
-    TX_Data             = null;    
-    TX_First            = null;
-    TX_Latest           = null;
-    Query               = null;
-
-
-    RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1}, 
+    RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1 }, "AllTXStatus": {}, "Transactions": {}, 
                         "Versions": {}, "Content": {}, "Orphans": {}, "Parentless": {}, "Warnings": {}, "Errors": {} };
     InfoFields = 
     [ 
         "Type", 
         "EntityType", 
         "ArFSID", 
-        "Name", 
+        "Name",
+        "?DataContentType",
         "Created", 
         "Modified", 
         "Owner",
         "?FileID",
         "?FolderID",
         "?DriveID",
+        "?DriveName",
         "?Cipher",
         "?Cipher-IV",
         "?DrivePrivacy",
         "?DriveAuthMode", 
         "?DriveStatus", 
         "?ParentFolderID", 
-        "?RootFolderID",        
+        "?ParentFolderName",
+        "?RootFolderID",    
         "?FileDate",
         "?ReportedFileSize",
         "?ReportedFileSize_B",
         "?FileDate_UTMS",
         "?ParentStatus",
-        "?DataContentType",
         "?Orphaned", 
         "?Encrypted",
         //"MetaTransactions",
         //"?DataTransactions",                 
         "MetaTXID_First",
         "MetaTXID_Latest",
+        "?Transactions",
         "MetaTXStatus", 
         "MetaTXConfirmations",
         "?DataTXID", 
         "?DataTXStatus", 
-        "?DataTXConfirmations", 
+        "?DataTXConfirmations",
+        "?AllTXStatus", 
         "Operations", 
         "History", 
         "?Versions", 
@@ -128,36 +136,43 @@ class ArFSEntity extends SARTObject
 
     CustomFieldFuncs = 
     {
-        "MetaTransactions"     : function (e) { return e.TX_Meta?.AsArray ();          },
-        "DataTransactions"     : function (e) { return e.TX_Data?.AsArray ();          },
-        "Created"              : function (e) { return e.TX_First?. GetDate        (); }, 
-        "Modified"             : function (e) { return e.TX_Latest?.GetDate        (); }, 
-        "MetaTXID_First"       : function (e) { return e.TX_First?. GetTXID        (); }, 
-        "MetaTXID_Latest"      : function (e) { return e.TX_Latest?.GetTXID        (); }, 
-        "Block_Created"        : function (e) { return e.TX_First?. GetBlockID     (); }, 
-        "Block_Latest"         : function (e) { return e.TX_Latest?.GetBlockID     (); }, 
-        "BlockHeight_Created"  : function (e) { return e.TX_First?. GetBlockHeight ();_}, 
-        "BlockHeight_Latest"   : function (e) { return e.TX_Latest?.GetBlockHeight (); }, 
-        "Operations"           : function (e) { return e.TX_Meta?.  GetAmount      (); }, 
+        "MetaTransactions"     : function (e) { return e.TX_Meta?.  AsArray           (); },
+        "DataTransactions"     : function (e) { return e.TX_Data?.  AsArray           (); },
+        "Created"              : function (e) { return e.TX_First?. GetDate           (); }, 
+        "Modified"             : function (e) { return e.TX_Latest?.GetDate           (); }, 
+        "MetaTXID_First"       : function (e) { return e.TX_First?. GetTXID           (); }, 
+        "MetaTXID_Latest"      : function (e) { return e.TX_Latest?.GetTXID           (); }, 
+        "Block_Created"        : function (e) { return e.TX_First?. GetBlockID        (); }, 
+        "Block_Latest"         : function (e) { return e.TX_Latest?.GetBlockID        (); }, 
+        "BlockHeight_Created"  : function (e) { return e.TX_First?. GetBlockHeight    ();_}, 
+        "BlockHeight_Latest"   : function (e) { return e.TX_Latest?.GetBlockHeight    (); }, 
+        "Operations"           : function (e) { return e.TX_Meta?.  GetAmount         (); }, 
+        "DriveName"            : function (e) { return e.ParentEntity_Drive?.GetName  (); }, 
+        "ParentFolderName"     : function (e) { return e.ParentEntity_Folder?.GetName (); }, 
     };
 
 
 
-    IsPublic          ()      { return this.Encrypted == false;                              }
-    IsEncrypted       ()      { return this.Encrypted == true;                               }
-    GetOwner          ()      { return this.Owner;                                           }
-    GetPrivacy        ()      { return this.Privacy != null ? this.Privacy 
-                               : this.IsEncrypted () ? "private" : "public";                 }
-    GetName           ()      { return this.Name;                                            }
-    GetARFSID         ()      { return this.ArFSID;                                          }
-    GetEntityType     ()      { return this.EntityType;                                      }
-    GetLastModified   ()      { return this.LastModified;                                    }
-    GetNewestMetaTXID ()      { return this.MetaTXID_Latest;                                 }
-    GetFirstMetaTXID  ()      { return this.MetaTXID_First;                                  }
-    GetStatus         ()      { return this.MetaTXStatus;                                    }
-    GetMetaStatusCode ()      { return this.MetaTXStatusCode;                                }
-    GetDataStatusCode ()      { return this.DataTXStatusCode;                                }
-    HasTransaction    (txid)  { return this.TX_All.HasTXID (txid);                           }
+    IsPublic          ()          { return this.Encrypted == false;                     }
+    IsEncrypted       ()          { return this.Encrypted == true;                      }
+    GetOwner          ()          { return this.Owner;                                  }
+    GetPrivacy        ()          { return this.Privacy != null ? this.Privacy          
+                                   : this.IsEncrypted () ? "private" : "public";        }
+    GetName           ()          { return this.Name;                                   }
+    GetArFSID         ()          { return this.ArFSID;                                 }
+    HasArFSID         (id = null) { return id == null ? this.GetArFSID () != null 
+                                                      : this.GetArFSID () == id;        }
+    GetEntityType     ()          { return this.EntityType;                             }
+    GetLastModified   ()          { return this.LastModified;                           }
+    GetNewestMetaTXID ()          { return this.MetaTXID_Latest;                        }
+    GetFirstMetaTXID  ()          { return this.MetaTXID_First;                         }
+    GetStatus         ()          { return this.MetaTXStatus;                           }
+    GetMetaStatusCode ()          { return this.MetaTXStatusCode;                       }
+    GetDataStatusCode ()          { return this.DataTXStatusCode;                       }
+    HasTransaction    (txid)      { return this.TX_All.HasTXID (txid);                  }
+    IsDrive           ()          { return Constants_ArFS.IsDrive  (this.EntityType);   }
+    IsFile            ()          { return Constants_ArFS.IsFile   (this.EntityType);   }
+    IsFolder          ()          { return Constants_ArFS.IsFolder (this.EntityType);   }
 
     toString          ()      { return ( (this.EntityType != null ? "ArFS-" + this.EntityType : "ArFS-entity (type missing)")
                                + " " + (this.ArFSID != null ? this.ArFSID : "(ArFS-ID missing)")                             
@@ -173,9 +188,21 @@ class ArFSEntity extends SARTObject
         this.__SetEntityType (args?.entity_type);        
     }
 
+    static GET_ENTITY (args = { entity_type: null, arfs_id: null} )
+    {
+        let entity = State.GetArFSEntity (args);
+
+        if (entity == null)
+        {
+            entity = new ArFSEntity (args);
+            State.AddArFSEntity     (entity);
+        }
+
+        return entity;
+    }
 
 
-    __AddTransaction (tx)
+    __AddTransaction (tx, is_entity_tx = true)
     {
         if (tx == null)
             return Sys.ERR_PROGRAM ("'tx' null.", "Entity.AddTransaction");
@@ -186,8 +213,10 @@ class ArFSEntity extends SARTObject
             return false;
         }
 
-        else if (this.TX_All.Add (tx) )
+        else if (this.TX_All.Add (tx) && is_entity_tx)
         {
+            this.TX_Entity.Add (tx);
+
             if (tx instanceof ArFSTX.ArFSMetaTX)
             { 
                 this.TX_Meta.Add (tx); 
@@ -290,15 +319,25 @@ class ArFSEntity extends SARTObject
             if (!this.HasTransaction (tx) )
                 this.__AddTransaction (tx);
 
+
             // Update metadata
             if (tx instanceof ArFSTX.ArFSMetaTX)
             {
                 await tx.FetchMetaOBJ ();                
                 tx.SetFieldsToEntity ();
             }
-
             else
                 this.OnProgramError ("Latest TX " + tx + " is not of class ArFSMetaTX - cannot extract data!", "ArFSEntity.__SetLatestTX");
+    
+
+            // Update/set containing entities
+            if (this.ParentFolderID != null && (this.ParentEntity_Folder == null || !this.ParentEntity_Folder.HasArFSID (this.ParentFolderID))  )
+                    this.ParentEntity_Folder = ArFSEntity.GET_ENTITY ( { entity_type: Constants_ArFS.ENTITYTYPE_FOLDER, arfs_id: this.ParentFolderID} )
+            
+            if (! this.IsDrive () && this.DriveID != null 
+                && (this.ParentEntity_Drive == null || !this.ParentEntity_Drive.HasArFSID (this.DriveID))  )
+                this.ParentEntity_Drive = ArFSEntity.GET_ENTITY ( { entity_type: Constants_ArFS.ENTITYTYPE_DRIVE, arfs_id: this.DriveID } )
+
         }
         else
             return this.OnError ("Attempted to set the latest TX to be " + new_txid + " when a newer " + existing_txid + " was already set.");
@@ -308,7 +347,7 @@ class ArFSEntity extends SARTObject
 
     async FetchMetaTransactions ()
     {
-        const arfs_id     = this.GetARFSID ();
+        const arfs_id     = this.GetArFSID ();
         const entity_type = this.GetEntityType ();
 
         if (!this.IsValid () || !Util.IsArFSID (arfs_id) || !Util.IsSet (entity_type) )
@@ -328,6 +367,7 @@ class ArFSEntity extends SARTObject
         }
 
         const txes_received = new TXGroup ();
+
         for (const e of query.GetEdges () )
         { 
             txes_received.Add (new ArFSTX.ArFSMetaTX (this).SetGQLEdge (e) );
@@ -402,7 +442,88 @@ class ArFSEntity extends SARTObject
         }
     }
 
+    async FetchTXStatuses ()
+    {
+        // Make sure we got all the indirect TXIDs (such as dataTxId)
+        await this.FetchMetaOBJs ();
 
+        // This needs to be called after meta obj fetch, can't be concurrent
+        await this.TX_All.FetchStatusOfAll ();
+
+        // Update the TX-info
+        this.GenerateTransactionInfo ();
+    }
+
+
+    async FetchRelatedEntities ()
+    {
+        await this.FetchMetaOBJs ();
+
+        if (this.ParentEntity_Drive != null)
+        {
+            await this.ParentEntity_Drive.Fetch ();
+            this.__AddTransaction (this.ParentEntity_Drive.TX_Latest, false);            
+        }
+        else
+            Sys.OnProgramError ("FetchRelatedEntities: ParentEntity_Drive not set!", this);
+
+        if (this.ParentEntity_Folder != null)
+        {
+            await this.ParentEntity_Folder.Fetch ();
+            this.__AddTransaction (this.ParentEntity_Folder.TX_Latest, false);            
+        }
+
+        if (this.ParentEntity_RootFolder != null)
+        {
+            await this.ParentEntity_RootFolder.Fetch ();
+            this.__AddTransaction (this.ParentEntity_RootFolder.TX_Latest, false);            
+        }
+
+    }
+
+    async Fetch ()
+    {
+        await this.FetchMetaTransactions ();
+        await this.FetchMetaOBJs ();
+    }
+
+
+    async FetchAll ()
+    {
+        await this.Fetch ();
+        await this.FetchRelatedEntities ();
+        await this.FetchTXStatuses ();        
+    }
+
+
+    /** Does not fetch anything. */
+    GenerateTransactionInfo ()
+    {
+        this.Transactions = {};
+
+        for (const tx of this.TX_All.AsArray () )
+        {
+            if (tx == null)
+                this.OnProgramError ("null transaction found.", this);
+
+            else
+            {
+                const txid = tx.GetTXID ();
+
+                if (this.Transactions[txid] != null)
+                    this.OnProgramError ("Duplicate TXID found: " + txid);
+                
+                else
+                {
+                    const status = tx.GetStatus ()?.GetStatusFull ();
+                    const date   = tx.GetDate ();
+                    this.Transactions[txid] = tx.GetTypeShort () + " "
+                        + (date != null ? date : Util.GetDummyDate () ) + " - " 
+                        + (status != null ? status : "PROGRAM ERROR: COULDN'T GET STATUS OBJECT" );
+                }
+            }
+        }
+    }
 
     async GenerateHistory ()
     {
@@ -504,7 +625,15 @@ class ArFSEntity extends SARTObject
                         if (changed.includes ("ParentFolderID") )
                             main_info = (main_info == "" ? "M" : ", m") + "oved to another folder";
 
-                        this.History[key].Description = main_info != "" ? main_info : "Metadata updated.";
+                        this.History[key].Description = (main_info != "" ? main_info : "Metadata updated") + ".";
+
+                        // Check for ardrive-web fucking up the file date upon move
+                        if (previous_fields != null && changed.includes ("FileDate_UTMS") && !changed.includes ("DataTXID")
+                        && Constants_ArFS.DidArDriveFuckUpTheFileDate (fields["FileDate_UTMS"], previous_fields["FileDate_UTMS"] )  )
+                        {
+                            this.History[key].Description += " Seems that this operation fucked up the precise FileDate_UTMS..";
+                            this.OnWarning ("Seems that the FileDate_UTMS (unixTime) got incorrectly rounded by an operation.");
+                        }
                     }
 
 

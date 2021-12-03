@@ -1,6 +1,7 @@
 const Sys       = require('./System.js');
 const Arweave   = require('./Arweave.js');
 const Constants = require ("./CONST_SART.js");
+const State     = require ("./ProgramState");
 
 
 class TXStatus 
@@ -12,8 +13,13 @@ class TXStatus
     MinedAtBlock  = null;
 
 
-    GetStatus        () { return this.Status };
+    GetStatus        () { return this.Status != null ? this.Status : "UNKNOWN"; };
+    GetStatusFull    () { return this.Status == null ? "STATUS NOT QUERIED"
+                                                     : this.Status + (this.IsConfirmed () ? 
+                                                     " (" + this.Confirmations + " con., block " + this.MinedAtBlock + ")" : ""); };
+    GetStatusCode    () { return this.StatusCode };
     GetConfirmations () { return this.Confirmations };
+
 
     async UpdateFromTXID (txid) 
     {

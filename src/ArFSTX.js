@@ -72,7 +72,8 @@ class ArFSMetaTX extends ArFSTX
     GetArFSName   () { return this.ArFSFields?.Name;        }
     GetArFSID     () { return this.ArFSFields?.ArFSID;      }
     GetEntityType () { return this.ArFSFields?.EntityType;  }
-    
+    GetTypeShort  () { return "META";                       }
+
 
     SetFieldsToEntity () 
     { 
@@ -173,6 +174,8 @@ class ArFSDataTX extends ArFSTX
     {
         super (parent_entity, txid);    
     }
+
+    GetTypeShort  () { return "DATA"; }
 }
 
 

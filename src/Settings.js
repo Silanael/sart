@@ -138,7 +138,7 @@ function ApplyConfig (config)
 
 
 
-
+function GetConfig          ()             { return State.GetConfig (); }
 function GetHostString      (path = null) { return State.Config.ArweaveProto + "://" 
                                                  + State.Config.ArweaveHost  + ":" 
                                                  + State.Config.ArweavePort
@@ -386,6 +386,7 @@ module.exports =
     LoadConfig,
     AppendConfig,
     GetOutputFormat,
-    GetMaxConcurrentConn
+    GetMaxConcurrentConn,
+    GetConfig,
 };
 

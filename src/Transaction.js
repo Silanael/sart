@@ -104,7 +104,10 @@ class Transaction extends SARTObject
     static async FROM_ARWEAVE_TX (arweave_tx) { return edge != null ? await new Transaction ().SetArweaveTX (arweave_tx) : null;      }
     
     
+    /** Overridable. Should be 4 characters. */
+    GetTypeShort () { return "TX  "; }
       
+
     GetTXID                  ()         { return this.TXID;                                                                           }
     GetOwner                 ()         { return this.Owner;                                                                          }
     GetBlockID               ()         { return this.BlockID;                                                                        }
@@ -132,7 +135,7 @@ class Transaction extends SARTObject
     IsFailed                 ()         { return this.Status?.IsFailed      ()                                                        }
     IsConfirmed              ()         { return this.Status?.IsConfirmed   ()                                                        }
     GetStatus                ()         { return this.State;                                                                          }
-    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); this.__OnTXFetched (); return this.State; }
+    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); return this.State; }
 
 
     toString () { return "TX " + this.GetTXID (); }
