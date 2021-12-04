@@ -70,7 +70,10 @@ async function HandleCommand (args)
         const status =
         {
             "Arweave-host"      : await Arweave.GetTargetHost (),             
-            "Memory"            : OS.freemem () + " bytes free"
+            "Memory"            : OS.freemem () + " bytes free",
+            "CacheEnabled"      : State.IsCacheEnabled (),
+            "CacheHits"         : State.GetCacheHits   (),
+            "CacheMisses"       : State.GetCacheMisses (),
         }
 
         if (conn_status.State == Arweave.CONNSTATES.OK)

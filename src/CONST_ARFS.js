@@ -17,7 +17,7 @@ class TXTag_EntityType extends TXTag
     {
         super (DEFS.TAG_ENTITYTYPE, value);
 
-        if (value != null && !DEFS.IsValidEntityType (value) )
+        if (value != null && !Array.isArray (value) && !DEFS.IsValidEntityType (value) )
             Sys.WARN ("Unknown entity type '" + value + "' encountered.", "TXTag_EntityType", { error_id: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN });
     }
     
@@ -51,10 +51,10 @@ class TXTag_ArFSID extends TXTag
 
 }
 
-class TXTag_DriveID        extends TXTag_ArFSID { constructor (drive_id)         { super (ENTITYTYPE_DRIVE,   drive_id);         } }
-class TXTag_FileID         extends TXTag_ArFSID { constructor (file_id)          { super (ENTITYTYPE_FILE,    file_id);          } }
-class TXTag_FolderID       extends TXTag_ArFSID { constructor (folder_id)        { super (ENTITYTYPE_FOLDER,  folder_id);        } }
-class TXTag_ParentFolderID extends TXTag        { constructor (parent_folder_id) { super (TAG_PARENTFOLDERID, parent_folder_id); } }
+class TXTag_DriveID        extends TXTag_ArFSID { constructor (drive_id)         { super (DEFS.ENTITYTYPE_DRIVE,   drive_id);    } }
+class TXTag_FileID         extends TXTag_ArFSID { constructor (file_id)          { super (DEFS.ENTITYTYPE_FILE,    file_id);     } }
+class TXTag_FolderID       extends TXTag_ArFSID { constructor (folder_id)        { super (DEFS.ENTITYTYPE_FOLDER,  folder_id);   } }
+class TXTag_ParentFolderID extends TXTag        { constructor (parent_folder_id) { super (DEFS.TAG_PARENTFOLDERID, parent_folder_id); } }
 
 
 
@@ -63,7 +63,7 @@ class ArFSDEf
 {
     ARFS_VERSION                = "0.11"
         
-    TAG_ARFS                    = "ArFS";
+    TAG_ARFS                    = "ArFS";DE
     TAG_FILEID                  = "File-Id";
     TAG_DRIVEID                 = "Drive-Id";
     TAG_FOLDERID                = "Folder-Id";
@@ -101,8 +101,8 @@ class ArFSDEf
 
     ENTITYSYMBOLS          = { [this.ENTITYTYPE_DRIVE] : 'D', [this.ENTITYTYPE_FOLDER] : 'd', [this.ENTITYTYPE_FILE] : '-'}
 
-    IsValidEntityType       (entity_type)   { return this.ARFS_ENTITY_TYPES.includes (entity_type?.toLowerCase () );  }
-    GetTagForEntityType                (entity_type)   { return this.ENTITYTYPE_IDTAG_MAP [entity_type]; }
+    IsValidEntityType       (entity_type)   { return entity_type != null && this.ARFS_ENTITY_TYPES.includes (entity_type.toLowerCase () );  }
+    GetTagForEntityType     (entity_type)   { return entity_type != null ? this.ENTITYTYPE_IDTAG_MAP [entity_type] : null; }
     GetEntitySymbol         (entity_type)   { const s = this.ENTITYSYMBOLS [entity_type]; return s != null ? s : '?'; }
     IsFile                  (entity_type)   { return entity_type == this.ENTITYTYPE_FILE;   }
     IsFolder                (entity_type)   { return entity_type == this.ENTITYTYPE_FOLDER; }
@@ -123,6 +123,27 @@ class ArFSDEf
     TXTag_ParentFolderID   = TXTag_ParentFolderID;
 
     DidArDriveFuckUpTheFileDate (new_utms, old_utms) { return !isNaN (new_utms) && !isNaN (old_utms) && new_utms == Math.floor (old_utms / 1000) * 1000; }
+
+    // Try to figure out which TX is newer based on the Unix-Time -tag.
+    // This is NOT reliable, as someone doing a snipe-attack could watch the mempool
+    // and post their own initial entity transaction with a lower Unix-Time value,
+    // but it's all we got to work with.
+    ChooseNewestTXFromSameBlock (tx1, tx2, seek_newest)
+    {        
+        const tx1_ut = tx1?.GetTagValue (this.TAG_UNIXTIME);
+        const tx2_ut = tx2?.GetTagValue (this.TAG_UNIXTIME);
+
+        if (tx1_ut == tx2_ut || seek_newest == null)
+            return { choice: null, drop: null, ut1: tx1_ut, ut2: tx2_ut }
+        
+        if ( (tx1_ut == null && tx2_ut != null) || tx1_ut < tx2_ut)
+            return seek_newest ? { choice: tx2, drop: tx1, ut1: tx1_ut, ut2: tx2_ut } : { choice: tx1, drop: tx2, ut1: tx1_ut, ut2: tx2_ut }
+
+        else 
+            return seek_newest ? { choice: tx1, drop: tx2, ut1: tx1_ut, ut2: tx2_ut } : { choice: tx2, drop: tx1, ut1: tx1_ut, ut2: tx2_ut }
+
+
+    }
 };
 
 const DEFS = Object.freeze (new ArFSDEf () );

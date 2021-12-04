@@ -17,7 +17,9 @@ const Settings         = require ("./Settings.js");
 const Arweave          = require ("./Arweave");
 const SARTObject       = require ("./SARTObject");
 const TXGroup          = require ("./TXGroup.js");
-const TXQuery          = require ("./GQL/GQL_TXQuery");
+const TXQuery          = require ("./GQL/TXQuery");
+const ContentQuery     = require ("./GQL/ArFSMultiEntityQuery");
+const EntityGroup      = require ("./ArFSEntityGroup");
 const TXTag            = require ("./TXTag");
 const TXTagGroup       = require ("./TXTagGroup");
 const Transaction      = require ("./Transaction");
@@ -81,10 +83,12 @@ class ArFSEntity extends SARTObject
     ParentEntity_Drive      = null;
     ParentEntity_Folder     = null;
     ParentEntity_RootFolder = null;
+    ContainedEntities       = null;
     Query                   = null;
 
 
     RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1 }, "AllTXStatus": {}, "Transactions": {}, 
+                         "ContainedEntities": {depth: 1}, "Contains" : {},
                         "Versions": {}, "Content": {}, "Orphans": {}, "Parentless": {}, "Warnings": {}, "Errors": {} };
     InfoFields = 
     [ 
@@ -128,7 +132,9 @@ class ArFSEntity extends SARTObject
         "?AllTXStatus", 
         "Operations", 
         "History", 
-        "?Versions", 
+        "?Versions",
+        "?Contains",
+        //"?ContainedEntities",
         "?Content", 
         "Warnings", 
         "Errors"
@@ -149,6 +155,7 @@ class ArFSEntity extends SARTObject
         "Operations"           : function (e) { return e.TX_Meta?.  GetAmount         (); }, 
         "DriveName"            : function (e) { return e.ParentEntity_Drive?.GetName  (); }, 
         "ParentFolderName"     : function (e) { return e.ParentEntity_Folder?.GetName (); }, 
+        "Transactions"         : function (e) { return e.GenerateTransactionInfo      (); },
     };
 
 
@@ -173,13 +180,17 @@ class ArFSEntity extends SARTObject
     IsDrive           ()          { return Constants_ArFS.IsDrive  (this.EntityType);   }
     IsFile            ()          { return Constants_ArFS.IsFile   (this.EntityType);   }
     IsFolder          ()          { return Constants_ArFS.IsFolder (this.EntityType);   }
+    GetDriveID        ()          { return this.DriveID;                                }
+    GetParentFolderID ()          { return this.ParentFolderID;                         }
 
-    toString          ()      { return ( (this.EntityType != null ? "ArFS-" + this.EntityType : "ArFS-entity (type missing)")
-                               + " " + (this.ArFSID != null ? this.ArFSID : "(ArFS-ID missing)")                             
-                               )  }
+    toString          ()      { return (this.ArFSID     != null ? this.ArFSID               : "[         ARFS-ID MISSING          ]" ) + " " +
+                                       (this.Name       != null ? this.Name                 : "[NAME NOT FETCHED]"                   ) + " [" +
+                                       (this.EntityType != null ? "ArFS-" + this.EntityType : "entity?"                              ) + "]"                               
+                              }
 
 
 
+    
 
     constructor (args = { entity_type: null, arfs_id: null} ) 
     {
@@ -286,9 +297,20 @@ class ArFSEntity extends SARTObject
         if (tx == null)
             return false;
 
-        const new_txid = tx.GetTXID ();
+        const current_owner = this.GetOwner ();
 
-        if (this.TX_First == null || tx.IsOlderThan (this.TX_First) )
+        if (current_owner != null && current_owner != tx.GetOwner () )
+            return this.OnError ("Tried to set first TX with a different owner (" + tx.GetOwner () + " than set to this entity (" + this.GetOwner () + ")"
+                                 + " - POSSIBLE COLLISION ATTEMPT", this);
+
+        const new_txid   = tx.GetTXID ();
+        const same_block = tx.IsInSameBlockAs (this.TX_First);
+
+        // Abort if the resolution concluded to keep the existing.
+        if (same_block && !this.__ResolveSameBlock (this.TX_Latest, tx, false) )
+            return false;
+
+        if (this.TX_First == null || tx.IsOlderThan (this.TX_First) || same_block )
         {
             Sys.VERBOSE ("First transaction for " + this + " set to TXID: " + new_txid + " (was " + this.TX_First?.GetTXID ()  + ")");
             this.TX_First = tx;
@@ -296,7 +318,7 @@ class ArFSEntity extends SARTObject
             this.__SetOwner (tx.GetOwner () );
             
             if (!this.HasTransaction (tx) )
-                this.__AddTransaction (tx);
+                this.__AddTransaction (tx, true);
         }
         else
             return this.OnError ("Attempted to set the first TX to be " + new_txid + " when an older " + this.TX_First.GetTXID () + " was already set.");
@@ -308,16 +330,26 @@ class ArFSEntity extends SARTObject
         if (tx == null)
             return false;
 
+        else if (tx.GetOwner () != this.GetOwner () )
+            return this.OnError ("Tried to add TX with a different owner (" + tx.GetOwner () + " than set to this entity (" + this.GetOwner () + ")"
+                                 + " - POSSIBLE COLLISION ATTEMPT");
+        
+
         const new_txid      = tx             .GetTXID ();
         const existing_txid = this.TX_Latest?.GetTXID ();
+        const same_block    = tx             .IsInSameBlockAs (this.TX_Latest);
 
-        if (this.TX_Latest == null || tx.IsNewerThan (this.TX_Latest) )
-        {
+        // Abort if the resolution concluded to keep the existing.
+        if (same_block && !this.__ResolveSameBlock (this.TX_Latest, tx, true) )
+            return false;
+
+        if (this.TX_Latest == null || tx.IsNewerThan (this.TX_Latest) || same_block)
+        {            
             Sys.VERBOSE ("Latest transaction for " + this + " set to TXID: " + new_txid + " (was " + existing_txid + ")");
             this.TX_Latest = tx;
 
             if (!this.HasTransaction (tx) )
-                this.__AddTransaction (tx);
+                this.__AddTransaction (tx, true);
 
 
             // Update metadata
@@ -338,11 +370,95 @@ class ArFSEntity extends SARTObject
                 && (this.ParentEntity_Drive == null || !this.ParentEntity_Drive.HasArFSID (this.DriveID))  )
                 this.ParentEntity_Drive = ArFSEntity.GET_ENTITY ( { entity_type: Constants_ArFS.ENTITYTYPE_DRIVE, arfs_id: this.DriveID } )
 
-        }
+        }        
         else
             return this.OnError ("Attempted to set the latest TX to be " + new_txid + " when a newer " + existing_txid + " was already set.");
     }
 
+
+    // false = use old, true = use new.
+    __ResolveSameBlock (old_tx, new_tx, seek_newest)
+    {
+
+        const existing_txid = old_tx?.GetTXID ();
+        const new_txid      = new_tx?.GetTXID ();
+        const bh_existing   = old_tx?.GetBlockHeight ();
+        const bh_new        = new_tx?.GetBlockHeight ();
+
+        if (bh_existing != bh_new)
+        {
+            this.OnProgramError ("Came to __ResolveSameBlock but the TXes " + existing_txid + " and " + new_tx
+                                 + "were in blocks #" + bh_existing + " and #" + bh_new + " respectively. Now I'm confused. Returning false.");
+            return false;
+        }
+
+        if (old_tx?.GetOwner () != new_tx?.GetOwner () )
+        {
+            this.OnProgramError ("OWNER CLASH AT __ResolveSameBlock (seek_newest:" + seek_newest + ") ! Should not have gotten this far! "
+                                  + "Old TX owner:" + old_tx?.GetOwner () + " new TX-owner:" + new_tx?.GetOwner () + " "
+                                  + "THE DATA OF THIS ENTITY IS NOT RELIABLE AND MAY CONTAIN MALICIOUS DATA!", this);
+            return false;
+        }
+
+        const resolution = Constants_ArFS.ChooseNewestTXFromSameBlock (new_tx, old_tx, seek_newest);
+
+        if (resolution.choice != null)
+            this.OnWarning ("Multiple transactions as candidates for latest metadata (being in block #" + bh_new + ")"
+                            + " - Chose " + resolution.choice + " over " + resolution.drop + " based on announced Unix-Times "
+                            + "of the transaction. Note that this is NOT reliable as the Unix-Time -tag can be fabricated "
+                            + "and used in race conditions. However, the owner of these transactions seems to be the same, "
+                            + "so there should be no risk involved. Proceed with caution still. "
+                            + "You can try to resolve the situation by moving or renaming the file.", this);
+
+        else
+        {
+            this.OnError ("Multiple transactions as candicates for latest metadata (being in block #" + bh_new + ")"
+                            + " - Could not figure which is never (existing " + existing_txid + " or new " + new_txid + "), "
+                            + "sticking with the existing one. Both should have the same owner, so doesn't really matter. "
+                            + "You can try to resolve the situation by moving or renaming the file.", this);
+            return false;
+        }
+    
+        if (resolution.choice == old_tx)
+        {
+            this.OnWarning ("Sticking to the existing TX_Latest: " + existing_txid + ", dropping " + new_txid, this);
+            return false;
+        }
+        else if (resolution.choice == new_tx)
+        {
+            this.OnWarning ("Using the new TX: " + new_txid + ", dropping " + existing_txid, this);
+            return true;
+        }
+        else            
+        {
+            Sys.ERR_FATAL ("PANIC: Something went horribly wrong while trying to decide ArFS-metadata order! Shutting down the system.");
+            Sys.EXIT (-1);
+        }
+
+    }
+
+
+    async Fetch ()
+    {
+        await this.FetchMetaTransactions ();
+        await this.FetchMetaOBJs ();
+    }
+
+
+    async FetchAll ()
+    {
+        await this.Fetch ();
+        await this.FetchRelatedEntities ();
+        await this.FetchTXStatuses (); 
+        //await this.FetchContentEntities (true);
+        
+        await this.GenerateHistory ();
+        //this.GenerateContentInfo ();
+        
+    }
+
+
+    // ***
 
 
     async FetchMetaTransactions ()
@@ -392,7 +508,9 @@ class ArFSEntity extends SARTObject
         this.TX_Meta = txes_received.GetTransactionsByOwner (this.Owner);
         this.TX_Meta.Sort (Constants.GQL_SORT_OLDEST_FIRST);
         this.TX_All.AddAll (this.TX_Meta);
+        this.TX_Entity.AddAll (this.TX_All);
         
+      
 
         if (this.TX_All == null || this.TX_All.GetAmount () <= 0 || this.TX_Meta == null || this.TX_Meta.GetAmount <= 0)
             return this.OnProgramError ("Failed to setup transaction arrays for " + this);
@@ -400,7 +518,8 @@ class ArFSEntity extends SARTObject
 
 
         // Get the newest TX
-        await this.__SetLatestTX (this.TX_All.GetNewestEntry (this.Owner) );                  
+        await this.__SetLatestTX (this.TX_All.GetNewestEntry (this.Owner) );         
+        
     }
 
 
@@ -450,8 +569,7 @@ class ArFSEntity extends SARTObject
         // This needs to be called after meta obj fetch, can't be concurrent
         await this.TX_All.FetchStatusOfAll ();
 
-        // Update the TX-info
-        this.GenerateTransactionInfo ();
+
     }
 
 
@@ -465,7 +583,7 @@ class ArFSEntity extends SARTObject
             this.__AddTransaction (this.ParentEntity_Drive.TX_Latest, false);            
         }
         else
-            Sys.OnProgramError ("FetchRelatedEntities: ParentEntity_Drive not set!", this);
+            this.OnProgramError ("FetchRelatedEntities: ParentEntity_Drive not set!", this);
 
         if (this.ParentEntity_Folder != null)
         {
@@ -481,27 +599,125 @@ class ArFSEntity extends SARTObject
 
     }
 
-    async Fetch ()
+
+    async FetchContentEntities (fetch_content_metaobjs = false)
     {
-        await this.FetchMetaTransactions ();
-        await this.FetchMetaOBJs ();
+        let arfs_id     = this.GetArFSID     ();
+        let owner       = this.GetOwner      ();
+        let entity_type = this.GetEntityType ();
+        let drive_id    = this.GetDriveID    ();
+        
+
+        if (owner == null || entity_type == null || drive_id == null || arfs_id == null)
+        {
+            this.OnProgramError ("Important variables were null on FetchContent - calling Fetch () now.", this);
+            await this.Fetch ();
+
+            if ( (owner = this.GetOwner () ) == null)
+                return this.OnProgramError ("Unable to get Owner.", this);
+        
+            if ( (entity_type = this.GetEntityType () ) == null)
+                return this.OnProgramError ("Unable to get Entity-Type.", this);
+
+            if ( (drive_id = this.GetDriveID () ) == null)
+                return this.OnProgramError ("Unable to get DriveID.", this);
+
+            if ( (arfs_id = this.GetArFSID () ) == null)
+                return this.OnProgramError ("Unable to get ArFS-ID of this entity.", this);                                
+        }
+
+        const query = new ContentQuery (Arweave);
+        
+        switch (this.EntityType)
+        {
+            case Constants_ArFS.ENTITYTYPE_FOLDER:                
+                await query.Execute (owner, Constants_ArFS.ENTITYTYPES_INFOLDER, drive_id, arfs_id);
+                break;
+
+            case Constants_ArFS.ENTITYTYPE_DRIVE:
+                await query.Execute (owner, Constants_ArFS.ENTITYTYPES_INFOLDER, drive_id, null);
+                break;
+
+            case Constants_ArFS.ENTITYTYPE_FILE:
+                Sys.DEBUG ("FetchContent: Files don't contain other files. Unless they're archives.", this);
+                return false;                         
+
+            default:
+                this.OnWarning ("Don't know how to fetch content for Entity-Type '" + this.EntityType + "'.");
+        }
+
+        // Process entries.
+        if (query.GetEdgesAmount () > 0)
+        {
+            const txgroup = await TXGroup.FROM_GQLQUERY (query);
+
+            if (txgroup == null)
+                return this.OnProgramError ("TXGroup.FROM_GQLQUERY returned no group!", this);
+
+            // Just to make sure.            
+            const filtered = txgroup.GetTransactionsByOwner (owner);
+            filtered?.Sort (Constants.GQL_SORT_NEWEST_FIRST);
+
+            if (filtered == null)
+                return this.OnProgramError ("Something went wrong while filtering transactions.", this);
+
+            else
+            {
+                if (this.ContainedEntities == null)
+                    this.ContainedEntities = new EntityGroup;
+                    
+                const contained_entities = this.ContainedEntities;
+                const id_of_this = this.GetArFSID ();
+
+                for (const tx of filtered.AsArray () )
+                {
+                    const entity_type = tx.GetTagValue (Constants_ArFS.TAG_ENTITYTYPE);
+                    const arfs_id     = tx.GetTagValue (Constants_ArFS.GetTagForEntityType (entity_type) );
+                    const existing    = contained_entities.GetEntity ( {entity_type: entity_type, arfs_id: arfs_id} );
+
+                    if (arfs_id == id_of_this)
+                        continue;
+
+                    if (entity_type == null)
+                        this.OnError ("Encountered TX lacking Entity-Type - may not be an ArFS-TX: " + tx.GetTXID (), this);
+
+                    else if (entity_type == Constants_ArFS.ENTITYTYPE_DRIVE )
+                        this.OnProgramError ("Somehow got a drive (" + arfs_id + ") when querying for entity content? This should not happen.", this);
+
+                    else if (existing == null)
+                    {
+                        Sys.WARN (entity_type);
+                        
+                        const new_entity = ArFSEntity.GET_ENTITY ( {entity_type: entity_type, arfs_id: arfs_id} );
+
+                        if (fetch_content_metaobjs)
+                            await new_entity.FetchMetaOBJs ();
+
+                        contained_entities.AddEntity (new_entity);
+
+                        Sys.VERBOSE ("Added entity " + new_entity + " into " + this + ".");
+                    }
+                    else
+                        Sys.VERBOSE ("Entity " + existing + " already added into " + this + ", skipping metadata for now.");
+                                            
+                }
+
+
+            }
+            
+                
+
+        }        
     }
-
-
-    async FetchAll ()
-    {
-        await this.Fetch ();
-        await this.FetchRelatedEntities ();
-        await this.FetchTXStatuses ();        
-    }
-
+  
 
     /** Does not fetch anything. */
-    GenerateTransactionInfo ()
+    GenerateTransactionInfo (tx_group = this.TX_Entity)
     {
-        this.Transactions = {};
+        const transactions = {}
+        
 
-        for (const tx of this.TX_All.AsArray () )
+        for (const tx of tx_group?.AsArray () )
         {
             if (tx == null)
                 this.OnProgramError ("null transaction found.", this);
@@ -510,20 +726,48 @@ class ArFSEntity extends SARTObject
             {
                 const txid = tx.GetTXID ();
 
-                if (this.Transactions[txid] != null)
+                if (transactions[txid] != null)
                     this.OnProgramError ("Duplicate TXID found: " + txid);
                 
                 else
                 {
                     const status = tx.GetStatus ()?.GetStatusFull ();
                     const date   = tx.GetDate ();
-                    this.Transactions[txid] = tx.GetTypeShort () + " "
+
+                    transactions[txid] = tx.GetTypeShort () + " "
                         + (date != null ? date : Util.GetDummyDate () ) + " - " 
                         + (status != null ? status : "PROGRAM ERROR: COULDN'T GET STATUS OBJECT" );
                 }
             }
         }
+
+        return transactions;
     }
+
+    /** Does not fetch anything. */
+    GenerateContentInfo ()
+    {
+        this.Content = [];
+
+        if (this.ContainedEntities == null)
+        {
+            Sys.DEBUG ("GenerateContentInfo: No content fetched.", this);
+            return false;
+        }
+
+        for (const entity of this.ContainedEntities.AsArray () )
+        {
+            if (entity == null)
+                this.OnProgramError ("null entity found.", this);
+
+            else
+            {
+                const arfs_id = entity.GetArFSID ();
+                this.Content.push (entity);                
+            }
+        }
+    }
+    
 
     async GenerateHistory ()
     {
@@ -536,7 +780,7 @@ class ArFSEntity extends SARTObject
         if (amount > 0)
         {
             let index = 0;
-            let key, txid, fields, owner, changed;
+            let key, txid, fields, owner, changed, standing_owner;
 
             await this.FetchMetaOBJs ();
             this.TX_Meta.Sort (Constants.GQL_SORT_OLDEST_FIRST);
@@ -552,7 +796,7 @@ class ArFSEntity extends SARTObject
                     owner = m.GetOwner ();
                     changed = [];
 
-                    this.History[key] = { Date: m.GetDate (), Description: null, Event: null};
+                    this.History[key] = { Date: m.GetDate (), Actions: null, Event: null};
                     this.History[key].TXID = txid;                        
                     
                     
@@ -579,6 +823,8 @@ class ArFSEntity extends SARTObject
                     // First entry
                     if (previous_entry == null)
                     {
+                        standing_owner = owner;
+
                         if (this.TX_First == null)
                         {
                             Sys.ERR_PROGRAM ("First transaction of entity was not properly set for " + this + " - setting in CreateHistory ()");
@@ -596,7 +842,7 @@ class ArFSEntity extends SARTObject
                         let entity_type = this.GetEntityType ();
 
                         if (!Util.IsSet (entity_type) )
-                            this.History[key].Description = "Entity created with missing tag " + Constants_ArFS.TAG_ENTITYTYPE + ", or a program error occurred.";
+                            this.History[key].Actions = "Entity created with missing tag " + Constants_ArFS.TAG_ENTITYTYPE + ", or a program error occurred.";
 
                         else                    
                             entity_type = entity_type.charAt (0).toUpperCase () + entity_type.slice (1);
@@ -606,7 +852,7 @@ class ArFSEntity extends SARTObject
                         if (fields.Name != null)
                             alt_info += " with name '" + fields.Name + "'";
 
-                        this.History[key].Description = entity_type + " created" + alt_info + ".";
+                        this.History[key].Actions = entity_type + " created" + alt_info + ".";
                     }
 
                     // Subsequent entries
@@ -620,29 +866,30 @@ class ArFSEntity extends SARTObject
                             main_info = "Renamed to '" + fields["Name"] + "'";
 
                         if (changed.includes ("DataTXID") )
-                            main_info = (main_info == "" ? "N" : ", n") + "ew data uploaded";
+                            main_info += (main_info == "" ? "N" : ", n") + "ew data uploaded";
 
                         if (changed.includes ("ParentFolderID") )
-                            main_info = (main_info == "" ? "M" : ", m") + "oved to another folder";
+                            main_info += (main_info == "" ? "M" : ", m") + "oved to another folder";
 
-                        this.History[key].Description = (main_info != "" ? main_info : "Metadata updated") + ".";
+                        this.History[key].Actions = (main_info != "" ? main_info : "Metadata updated") + ".";
 
                         // Check for ardrive-web fucking up the file date upon move
                         if (previous_fields != null && changed.includes ("FileDate_UTMS") && !changed.includes ("DataTXID")
                         && Constants_ArFS.DidArDriveFuckUpTheFileDate (fields["FileDate_UTMS"], previous_fields["FileDate_UTMS"] )  )
                         {
-                            this.History[key].Description += " Seems that this operation fucked up the precise FileDate_UTMS..";
+                            this.History[key].Actions += " Seems that this operation fucked up the precise FileDate_UTMS..";
                             this.OnWarning ("Seems that the FileDate_UTMS (unixTime) got incorrectly rounded by an operation.");
                         }
                     }
 
 
                     // Check owner
-                    if (previous_key == null || this.History[previous_key].Owner != owner)
+                    if (previous_key == null || owner != standing_owner)
                     {
                         this.History[key].Owner = owner;
+
                         if (previous_key != null)
-                            this.History[key].Description += Sys.ANSIRED (" The TX is owned by different address! THIS MAY BE A BUG!");
+                            this.History[key].Actions += Sys.ANSIRED (" The TX is owned by different address! THIS MAY BE A BUG!");
                     }
                   
 

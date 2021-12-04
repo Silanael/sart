@@ -1,6 +1,6 @@
 const Constants = require ("../CONST_SART");
 const Util      = require ("../Util");
-const TXQuery   = require ("./GQL_TXQuery");
+const TXQuery   = require ("./TXQuery");
 
 
 /** Returns a GQL-edge. */

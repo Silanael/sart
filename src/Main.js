@@ -433,7 +433,7 @@ function DisplayReadme ()
     }
 }
 
-const CONCURRENT = 5;
+const CONCURRENT = 10;
 class ConcTest
 {    
     Tasks_Running = [];
@@ -528,16 +528,18 @@ class ConcTask
 
 async function Testing (argv)
 { 
-    /*
+    
     const arfs_entity = require ("./ArFSEntity");
     const entity = arfs_entity.GET_ENTITY ( {entity_type: argv.PopLC (), arfs_id: argv.Pop() } )
 
     await entity.FetchAll ();    
     entity.Output ();
-    */
 
+    
+    
+/*
     const Manager = new ConcTest ();
-    for (let C = 0; C < 1000; C++)
+    for (let C = 0; C < 10000; C++)
     {
         Manager.AddTask ();
     }
@@ -545,7 +547,7 @@ async function Testing (argv)
     
     await Manager.Run ();
     Sys.INFO ("Stopped waiting.");
-
+*/
 }
 
 

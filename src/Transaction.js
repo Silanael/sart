@@ -86,7 +86,7 @@ class Transaction extends SARTObject
         "TagsTotalSizeB": function (t) { return t?.Tags?.GetTotalBytes (); }  
     };
     
-    RecursiveFields = ["Tags", "State", "Warnings", "Errors"]
+    RecursiveFields = {"Tags":{}, "State":{}, "Warnings":{}, "Errors":{} }
 
 
     /** Overridable. This implementation does nothing. */
@@ -129,7 +129,7 @@ class Transaction extends SARTObject
     GetTagValue              (tag)      { return this.Tags?.GetValue (tag);                                                           }        
     GetTags                  ()         { return this.Tags;                                                                           }        
     IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                                }        
-    IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                                }        
+    IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                                }            
     IsMined                  ()         { return this.Status?.IsMined       ()                                                        }
     IsPending                ()         { return this.Status?.IsPending     ()                                                        }
     IsFailed                 ()         { return this.Status?.IsFailed      ()                                                        }
@@ -137,6 +137,16 @@ class Transaction extends SARTObject
     GetStatus                ()         { return this.State;                                                                          }
     async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); return this.State; }
 
+    IsInSameBlockAs (tx)
+    { 
+        const blk_this = this.GetBlockHeight ();
+        const blk_tx   = tx?.GetBlockHeight ();
+
+        if (blk_this == null || blk_tx == null)
+            return false;
+        else
+            return blk_this == blk_tx;
+    }
 
     toString () { return "TX " + this.GetTXID (); }
 

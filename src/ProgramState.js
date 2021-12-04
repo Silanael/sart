@@ -27,6 +27,9 @@ class ProgramState
 
     GetConfig       () { return this.Config != null ? this.Config : this.SetConfigToDefault ().conf; }
     IsConsoleActive () { return this.ConsoleActive;                                                  }
+    IsCacheEnabled  () { return this.Cache != null;                                                  }
+    GetCacheHits    () { return this.CacheHits   ;                                                   }
+    GetCacheMisses  () { return this.CacheMisses ;                                                   }
 
     
     SetConfigToDefault ()

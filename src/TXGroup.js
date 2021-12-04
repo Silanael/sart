@@ -233,7 +233,7 @@ class TXGroup extends SARTObject
         return ret;
     }
 
-
+    
     GetTransactionsByOwner (owner) 
     {
         const ret = new TXGroup (this.SortOrder);

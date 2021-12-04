@@ -14,6 +14,7 @@ const Settings    = require ('../Settings.js');
 const Sys         = require ('../System.js');
 const Util        = require ('../Util.js');
 const ArFSDefs    = require ('../CONST_ARFS.js');
+const SARTObject  = require("../SARTObject.js");
 
 
 
@@ -31,7 +32,7 @@ const ArFSDefs    = require ('../CONST_ARFS.js');
 // I've been holding back with them a bit,
 // enjoying the oldschool C-type programming
 // while it lasted.
-class Query
+class Query extends SARTObject
 {    
     Arweave       = null;
     Edges         = null;
@@ -41,6 +42,8 @@ class Query
     // How does one make these things protected?
     constructor (arweave)
     {
+        super ();
+
         if (arweave == null)
             return Sys.ERR_ABORT ("Query constructor: Missing parameter 'Arweave'.", "GQL");
 
@@ -61,7 +64,7 @@ class Query
         const arweave = await this.Arweave.Connect ();
         if (arweave != null)
         {
-            this.Results  = await RunGQLQuery (this.Arweave, this.Query)
+            this.Results  = await Query.POST_GQL_QUERY (this.Arweave, this.Query)
                      
             this.Edges         = this.Results?.data?.data?.transactions?.edges;
             this.EntriesAmount = this.Edges != null ? this.Edges.length : 0;

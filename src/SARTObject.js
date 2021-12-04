@@ -37,8 +37,9 @@ class SARTObject
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
     IsValid            ()                                      { return this.Valid == true;                                                  }
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
+    toString           ()                                      { return this.GetInfo ();                                                     }
 
-
+    
     GetFieldValue (field)
     {
         const custom = this.CustomFieldFuncs[field];
