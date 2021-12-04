@@ -23,22 +23,16 @@ class ArFSTX extends Transaction
     Encrypted  = null;
 
 
-    constructor (parent_entity, txid = null)
+    constructor (entity_obj, txid = null)
     {
         super (txid);
-
-        if (parent_entity == null)
-        {
-            this.SetInvalid ();
-            Sys.ERR_PROGRAM ("Parent entity not given for TXID:" + txid + " !", "ArFSMTX");
-        }
-        else
-            this.EntityObj = parent_entity;
+        this.SetEntityObj (entity_obj)        
     }
 
 
-    IsEncrypted   () { return this.Encrypted;  }
-    GetArFSFields () { return this.ArFSFields; }
+    IsEncrypted   ()       { return this.Encrypted;  }
+    GetArFSFields ()       { return this.ArFSFields; }
+    SetEntityObj  (entity) { this.EntityObj = entity; } 
 
 
     __OnTXFetched ()
@@ -77,7 +71,10 @@ class ArFSMetaTX extends ArFSTX
 
     SetFieldsToEntity () 
     { 
-        Util.CopyKeysToObj (this.ArFSFields, this.EntityObj);
+        if (this.EntityObj != null)
+            Util.CopyKeysToObj (this.ArFSFields, this.EntityObj);
+        else
+            Sys.ERR_PROGRAM ("SetFieldsToEntity: EntityObj not set!", this);
     }
     
 
@@ -122,7 +119,7 @@ class ArFSMetaTX extends ArFSTX
         if (this.TX_Data == null && dtxid != null)
         {
             this.TX_Data = new ArFSDataTX (this.EntityObj, dtxid);
-            this.EntityObj?.__AddTransaction (this.TX_Data);            
+            this.EntityObj?.__AddTransaction (this.TX_Data, true);            
         }
     }
 
@@ -180,4 +177,4 @@ class ArFSDataTX extends ArFSTX
 
 
 
-module.exports = { ArFSMetaTX, ArFSDataTX };
+module.exports = { ArFSMetaTX, ArFSDataTX, ArFSTX };

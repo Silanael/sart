@@ -100,7 +100,7 @@ class Transaction extends SARTObject
     }
 
 
-    static async FROM_GQL_EDGE   (edge)       { return edge != null ? await new Transaction ().SetGQLEdge   (edge)       : null;      }
+    static       FROM_GQL_EDGE   (edge)       { return edge != null ?       new Transaction ().SetGQLEdge   (edge)       : null;      }
     static async FROM_ARWEAVE_TX (arweave_tx) { return edge != null ? await new Transaction ().SetArweaveTX (arweave_tx) : null;      }
     
     
@@ -236,12 +236,9 @@ class Transaction extends SARTObject
 
         const current_owner = this.GetOwner ();
 
-        if (current_owner != null && owner != current_owner)
-        {
-            const error = "Owner mismatch on setting from QGL-edge: Was " + current_owner + ", tried to set as " + owner;
-            Sys.ERR_PROGRAM (error, "Transaction");
-            this.OnError ("PROGRAM ERROR: " + error);            
-        }
+        if (current_owner != null && owner != current_owner)        
+            this.OnProgramError ("Owner mismatch on setting from QGL-edge: Was " + current_owner + ", tried to set as " + owner);
+                    
         else
             this.Owner = owner;
 
