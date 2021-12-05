@@ -17,10 +17,13 @@ const Sys        = require ("./System");
 
 class Task extends SARTObject
 {
+    Name      = null;
     Command   = null;
     Args      = null;
     StartTime = null;
     EndTime   = null;
+    Success   = null;
+    Fetches   = 0;
 
     constructor (param = { cmd:null, args:null } )
     {
@@ -29,6 +32,18 @@ class Task extends SARTObject
         this.Command = param.cmd;
         this.Args    = param.args;
     }
+
+    /** Gets the time the task took. Call after completion. */
+    GetDurationMs  () { return this.StartTime != null && this.EndTime != null ? this.EndTime - this.StartTime : null }
+    GetDurationSec () { return this.GetDurationMs () / 1000; }
+
+    /* Gets the duration if the task is completed, current runtime otherwise. */
+    GetRuntimeMs   () { return this.StartTime != null ? (this.EndTime != null ? this.EndTime : Util.GetUNIXTimeMS () ) - this.StartTime : null };
+    GetRuntimeSec  () { return this.GetRuntimeMs () / 1000; }
+
+    GetFetchesAmount   ()       { return this.Fetches != null ? this.Fetches : 0 }
+    IncrementFetchesBy (amount) { this.Fetches += amount;                        }
+    WasSuccessful      ()       { return this.Success;                           }
 
     async Execute ()
     {        
@@ -40,17 +55,20 @@ class Task extends SARTObject
             State.ActiveTask = this;
             this.StartTime = Util.GetUNIXTimeMS ();
             
-            await this.__DoExecute ();
+            this.Success = await this.__DoExecute ();
             
             this.EndTime = Util.GetUNIXTimeMS ();
-            this.__DoOutput ();            
-            Sys.VERBOSE ("Task finished in " + (this.EndTime - this.StartTime) + " ms.");
+            
+            this.__DoOutput ();
+
+            Sys.VERBOSE ("");        
+            Sys.VERBOSE ("Task finished in " + this.GetRuntimeMs () + " ms with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
         }
     }
 
     /* Overridable, this implementation does nothing. */
-    async __DoExecute () {}
-    async __DoOutput  () {}
+    async __DoExecute () { return true; }
+    async __DoOutput  () { }
 }
 
 

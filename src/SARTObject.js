@@ -15,11 +15,12 @@ class SARTObject
 {
 
     Valid            = true;
+    DataLoaded          = false;
 
     Errors           = null;
     Warnings         = null;
 
-    InfoFields       = ["Warnings", "Errors"];
+    InfoFields       = ["Valid", "Warnings", "Errors"];
     NoInfoFields     = ["NoInfoFields", "CustomFieldFuncs"];
     RecursiveFields  = {"Warnings": {}, "Errors": {} };
 
@@ -69,9 +70,10 @@ class SARTObject
                     
     }
 
-    Output ()
+    Output (args = {always: false} )
     {
-        Sys.OUT_OBJ (this.GetInfo (), { recursive: this.GetRecursiveFields () } );
+        if (this.DataLoaded || args?.always)
+            Sys.OUT_OBJ (this.GetInfo (), { recursive: this.GetRecursiveFields () } );
     }
 
 

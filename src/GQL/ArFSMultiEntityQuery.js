@@ -8,7 +8,7 @@
 // Query for ArFS-metadata transactions contained in drive and/or folder.
 //
 
-const Constants  = require ("../CONST_ARFS");
+const Constants  = require ("../CONST_SART");
 const Const_ArFS = require ("../CONST_ARFS");
 const State      = require ("../ProgramState");
 const TXQuery    = require ("./TXQuery");
@@ -30,6 +30,8 @@ class ArFSMultiEntityQuery extends TXQuery
 
     async Execute (owner, entity_types, drive_id, parent_folder_id = null)
     {       
+        this.Sort = Constants.GQL_SORT_NEWEST_FIRST;
+
         if (owner == null)
             return this.OnError ("'owner' null", this);
 

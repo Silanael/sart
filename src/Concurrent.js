@@ -99,7 +99,8 @@ class Manager
             all.push (this.__StartFetch (p instanceof Fetch ? p : new Fetch (p), active, queue) );
         }
 
-        pending = Manager.__GetPendingList (all);
+        pending = Manager.__GetPendingList (all);        
+        State.ActiveTask?.IncrementFetchesBy (pending.length);
                 
 
         while (pending.length > 0)

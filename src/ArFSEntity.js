@@ -73,6 +73,7 @@ class ArFSEntity extends SARTObject
     Encrypted               = null;
     Public                  = null;
     
+    
     // Internal
     TX_All                  = new TXGroup ();
     TX_Entity               = new TXGroup ();     
@@ -86,6 +87,8 @@ class ArFSEntity extends SARTObject
     ContainedEntities       = null;
     Query                   = null;
 
+    Fetched                 = false;
+    DataLoaded                 = false;
 
     RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1 }, "AllTXStatus": {}, "Transactions": {}, 
                          "ContainedEntities": {depth: 1}, "Contains" : {},
@@ -184,6 +187,7 @@ class ArFSEntity extends SARTObject
     IsFolder          ()          { return Constants_ArFS.IsFolder (this.EntityType);   }
     GetDriveID        ()          { return this.DriveID;                                }
     GetParentFolderID ()          { return this.ParentFolderID;                         }
+    IsFetchedOnCurrentTask ()     { return this.Fetched; /* TODO add task n. tracking.*/}
 
     toString          ()          { return (this.ArFSID     != null ? this.ArFSID               : "[         ARFS-ID MISSING          ]" ) + " " +
                                            (this.Name       != null ? this.Name                 : null                                   ) +" [" +
@@ -283,7 +287,9 @@ class ArFSEntity extends SARTObject
                     }                                       
 
                     this.TX_Meta.Add (tx); 
-                    Sys.VERBOSE ("MetaTX added: " + tx, this); 
+                    Sys.VERBOSE ("MetaTX added: " + tx, this);
+                    
+                    this.DataLoaded = true;
                 }
 
                 // Data-TXes can be on different owner.
@@ -422,15 +428,27 @@ class ArFSEntity extends SARTObject
 
     async Fetch ()
     {
-        await this.FetchMetaTransactions ();
-        await this.FetchLatestMetaObj    ();
+        if (await this.FetchMetaTransactions () )
+        {
+            await this.FetchLatestMetaObj ();
+            // TODO make involve the active task number
+            this.Fetched = true;
+            return true;
+        }   
+        else
+            return false;     
     }
 
 
     async FetchAll ()
     {
-        await this.Fetch ();
-        await Promise.all ([this.FetchRelatedEntities (), this.FetchTXStatuses (), this.FetchContentEntities ({fetch_content_metaobjs: true}) ]);
+        if (await this.Fetch () )
+        {
+            await Promise.all ([this.FetchRelatedEntities (), this.FetchTXStatuses (), this.FetchContentEntities ({fetch_content_metaobjs: true}) ]);
+            return true;
+        }
+        else
+            return false;
     }
 
 
@@ -495,7 +513,8 @@ class ArFSEntity extends SARTObject
       
         if (this.TX_All == null || this.TX_All.GetAmount () <= 0 || this.TX_Meta == null || this.TX_Meta.GetAmount <= 0)
             return this.OnProgramError ("Failed to setup transaction arrays for " + this);
-                    
+         
+        return true;
     }
 
 
@@ -510,6 +529,7 @@ class ArFSEntity extends SARTObject
         else
             this.OnProgramError ("FetchLatestMetaObj: TX_Latest null or not an ArFSMetaTX!", this);
     }
+
 
     async FetchMetaOBJs ()
     {
@@ -530,6 +550,7 @@ class ArFSEntity extends SARTObject
         }
     }
 
+
     async FetchTXStatuses ()
     {
         // Make sure we got all the indirect TXIDs (such as dataTxId)
@@ -543,28 +564,39 @@ class ArFSEntity extends SARTObject
 
     async FetchRelatedEntities ()
     {
-        await this.FetchMetaOBJs ();
-
-        if (this.ParentEntity_Drive != null)
+        const pool = [this.FetchLatestMetaObj () ];
+        
+        let pd = false, pf = false;
+        
+        if (this.ParentEntity_Drive != null && !this.ParentEntity_Drive.IsFetchedOnCurrentTask () )
         {
-            await this.ParentEntity_Drive.Fetch ();
-            this.__AddTransaction (this.ParentEntity_Drive.TX_Latest, false);            
-        }
+            pool.push (this.ParentEntity_Drive.Fetch () );            
+            pd = true;
+        }        
         else
             this.OnProgramError ("FetchRelatedEntities: ParentEntity_Drive not set!", this);
 
-        if (this.ParentEntity_Folder != null)
+        if (this.ParentEntity_Folder != null && !this.ParentEntity_Folder.IsFetchedOnCurrentTask () )
         {
-            await this.ParentEntity_Folder.Fetch ();
-            this.__AddTransaction (this.ParentEntity_Folder.TX_Latest, false);            
+            pool.push (this.ParentEntity_Folder.Fetch () );
+            pf = true;
         }
 
-        if (this.ParentEntity_RootFolder != null)
+        await Promise.all (pool);
+
+        // This is gotten from FetchMetaOBJs.
+        if (this.ParentEntity_RootFolder != null && !this.ParentEntity_RootFolder.IsFetchedOnCurrentTask () )
         {
             await this.ParentEntity_RootFolder.Fetch ();
-            this.__AddTransaction (this.ParentEntity_RootFolder.TX_Latest, false);            
+            this.__AddTransaction (this.ParentEntity_RootFolder.TX_Latest, false);
         }
 
+        // Add relevant transactions
+        if (pd && this.ParentEntity_Drive?.TX_Latest != null)
+            this.__AddTransaction (this.ParentEntity_Drive.TX_Latest, false);
+
+        if (pf && this.ParentEntity_Folder?.TX_Latest != null)
+            this.__AddTransaction (this.ParentEntity_Folder.TX_Latest, false);            
     }
 
 

@@ -1409,28 +1409,6 @@ class ArFSFile extends ArFSItem
 
 
 
-async function GetArFSEntity (arfs_id, entity_type)
-{
-    if (entity_type == null)
-    {
-        Sys.ERR_PROGRAM ("entity_type missing.", "GetArFSEntity");
-        return null;
-    }
-
-    if (Util.IsArFSID (arfs_id) )
-    {
-        Sys.VERBOSE ("Trying to fetch ArFS-entity of type '" + entity_type + "' with ID " + arfs_id + " ...");
-        
-        const query  = new ArFSEntityQuery (Arweave);
-        const entity = await query.Execute (arfs_id, entity_type);
-        
-        return entity;
-    }
-    else
-        Sys.ERR ("Not an ArFS-ID: " + arfs_id, "ArFS:GetArFSEntity");
-}
-
-
 
 async function UserGetArFSEntity (arfs_id, entity_type = null, guessing = false)
 {    
@@ -1977,7 +1955,7 @@ async function ListDriveFiles (drive_id)
 
 
 module.exports = { ARFS_VERSION, 
-                    ArFSEntity: ArFSEntity_Old, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetArFSEntity, GetIDTag,
+                    ArFSEntity: ArFSEntity_Old, ArFSFile, ArFSURL, ArFSDrive, ListDrives, ListDriveFiles, GetDriveEntity, GetIDTag,
                     ArFSEntityQuery,
-                    UserGetArFSEntity 
+                     
                  };

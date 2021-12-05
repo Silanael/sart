@@ -18,6 +18,7 @@ const Arweave      = require ('../Arweave.js');
 const ArFS         = require ('../ArFS.js');
 const GQL          = require ('../GQL/GQLQuery.js');
 const ArFS_DEF     = require ('../CONST_ARFS.js');
+const ArFSEntity   = require ("../ArFSEntity");
 const Analyze      = require ('../TXAnalyze.js');
 const Transaction  = require ("../Transaction.js");
 const Task         = require ("../Task");
@@ -125,7 +126,7 @@ class InfoTask_TX extends Task
     async __DoExecute ()
     {
         await this.Transaction.FetchAll ();
-        
+        return true;
     }
 
     __DoOutput ()
@@ -263,6 +264,29 @@ may never see the light of day...
 }
 
 
+class InfoTask_ArFSEntity extends Task
+{
+    Entity = null;
+
+    constructor (param = {entity_type: null, arfs_id: null} )
+    {
+        super ();
+                
+        this.Entity = ArFSEntity.GET_ENTITY (param)                
+    }
+
+    async __DoExecute ()
+    {
+        const success = await this.Entity.FetchAll ();
+        return success;
+    }
+
+    __DoOutput ()
+    {
+        this.Entity.Output ();
+    }
+}
+
 
 
 async function Handler_ArFS (args, arfs_id = null, entity_type = null)
@@ -284,20 +308,19 @@ async function Handler_ArFS (args, arfs_id = null, entity_type = null)
     }
     else if (entity_type == null)
         entity_type = args.PopLC ();
-    
-    const entity = await ArFS.UserGetArFSEntity (arfs_id, entity_type);
 
-    if (entity != null)
+        
+    const task = new InfoTask_ArFSEntity ({arfs_id: arfs_id, entity_type: entity_type} );
+    await task.Execute ();
+   
+
+    if (task.WasSuccessful () )
     {
-        await entity.UpdateDetailed (Arweave, true, false);
-           
-        entity.Output ();
         Sys.INFO ("");
-        Sys.INFO ("(Use STATUS to get " + entity.EntityType + " condition and VERIFY to verify success of uploads. --debug for metadata-JSON.)");
-        return true;       
+        Sys.INFO ("(Use STATUS to get " + task.Entity.GetEntityType () + " condition and VERIFY to verify success of uploads. --debug for metadata-JSON.)");
     }
 
-    //return await DisplayArFSEntity (args.Pop (), entity_type);    
+    return true;         
 }
 
 

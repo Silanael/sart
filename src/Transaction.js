@@ -136,7 +136,7 @@ class Transaction extends SARTObject
     IsFailed                 ()         { return this.Status?.IsFailed      ()                                                        }
     IsConfirmed              ()         { return this.Status?.IsConfirmed   ()                                                        }
     GetStatus                ()         { return this.State;                                                                          }
-    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); return this.State; }
+    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); this.HasData = true;return this.State; }
 
 
     IsInSameBlockAs (tx)
@@ -254,6 +254,7 @@ class Transaction extends SARTObject
 
             this.Validate ();
             this.__OnTXFetched ();
+            this.HasData = true;
         }
 
         return this;
@@ -287,6 +288,7 @@ class Transaction extends SARTObject
                                                  
             this.Validate ();
             this.__OnTXFetched ();
+            this.HasData = true;
         }
         else
             this.OnError ("Unsupported transaction format/version '" + arweave_tx.format + "'. Use --force to process anyway.", "Transaction.SetArweaveTXData",
