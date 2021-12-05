@@ -106,7 +106,7 @@ class Transaction extends SARTObject
     
     /** Overridable. Should be 4 characters. */
     GetTypeShort () { return "TX  "; }
-      
+    toString     () { return "TX " + this.GetTXID (); }  
 
     GetTXID                  ()         { return this.TXID;                                                                           }
     GetOwner                 ()         { return this.Owner;                                                                          }
@@ -137,6 +137,7 @@ class Transaction extends SARTObject
     GetStatus                ()         { return this.State;                                                                          }
     async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); return this.State; }
 
+
     IsInSameBlockAs (tx)
     { 
         const blk_this = this.GetBlockHeight ();
@@ -148,7 +149,7 @@ class Transaction extends SARTObject
             return blk_this == blk_tx;
     }
 
-    toString () { return "TX " + this.GetTXID (); }
+    
 
     
     WithTag (name, value)
@@ -163,25 +164,10 @@ class Transaction extends SARTObject
 
     async FetchAll ()
     {
-        if (Settings.IsConcurrentAllowed () )
-        {
-            Sys.DEBUG ("Running 3 concurrent tasks..");
-            const tasks = [
-                            this.FetchViaGet (), 
-                            this.FetchViaGQL (),
-                            this.UpdateAndGetStatus ()
-                          ];
-            await Promise.all (tasks);
-            Sys.DEBUG ("Tasks done.");
-        }
-        else
-        {
-            Sys.DEBUG ("Concurrent disabled, running 3 tasks in sequence..")
-            await this.FetchViaGet (), 
-            await this.FetchViaGQL (),
-            await this.UpdateAndGetStatus ()
-        }
-        
+        State.Concurrent.AddFetch (this.FetchViaGet        () );
+        State.Concurrent.AddFetch (this.FetchViaGQL        () );
+        State.Concurrent.AddFetch (this.UpdateAndGetStatus () );
+        await State.Concurrent.Execute ();      
     }
 
     

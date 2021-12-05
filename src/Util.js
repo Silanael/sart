@@ -93,7 +93,7 @@ function IsFlagWithArg   (arg, flags)            { return flags[arg]?.A; }
 function IsSet           (value)                 { return value != null && value != "" && value.length > 0; }
 function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
-function GetUNIXTime     ()                      { return new Date ().getTime (); }
+function GetUNIXTimeMS   ()                      { return new Date ().getTime (); }
 function GetVersion      ()                      { return Package.version; }
 function GetVersionStr   ()                      { return "v" + Package.version + " [" + Package.versiondate + "]"; }
 function GetDummyDate    ()                      { return "????-??-?? ??:??:??"; }
@@ -489,6 +489,6 @@ function RequireParam (param, name, src)
 
 module.exports = { Args, 
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
-                   GetDate, GetUNIXTime, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
+                   GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr };

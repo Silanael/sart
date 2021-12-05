@@ -24,6 +24,7 @@ class ProgramState
     CacheHits        = 0;
     CacheMisses      = 0;
     
+    ActiveTask       = null;
 
     GetConfig       () { return this.Config != null ? this.Config : this.SetConfigToDefault ().conf; }
     IsConsoleActive () { return this.ConsoleActive;                                                  }

@@ -20,6 +20,7 @@ const GQL          = require ('../GQL/GQLQuery.js');
 const ArFS_DEF     = require ('../CONST_ARFS.js');
 const Analyze      = require ('../TXAnalyze.js');
 const Transaction  = require ("../Transaction.js");
+const Task         = require ("../Task");
 
 
 
@@ -111,6 +112,28 @@ async function HandleCommand (args)
 
 
 
+class InfoTask_TX extends Task
+{
+    Transaction = null;
+
+    constructor (tx)
+    {
+        super ();
+        this.Transaction = tx;
+    }
+
+    async __DoExecute ()
+    {
+        await this.Transaction.FetchAll ();
+        
+    }
+
+    __DoOutput ()
+    {
+        this.Transaction.Output ();
+    }
+}
+
 
 async function Handler_TX (args, tx = null)
 {
@@ -135,15 +158,8 @@ async function Handler_TX (args, tx = null)
     
         
     // Get status of the transaction
-    await tx.FetchAll ();
-
+    await new InfoTask_TX (tx).Execute ();
     
-
-
-    // Further analysis
-    //info.Description = Analyze.GetTXEntryDescription (GQL.Entry.FromTX (tx, info.Address) );
-
-    tx.Output ();
     
 
     return true;

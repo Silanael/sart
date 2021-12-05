@@ -1828,7 +1828,7 @@ async function ListDriveFiles (drive_id)
     {
         "Type"       : "ArDrive",
         "Date"       : Util.GetDate (),
-        "UNIXTime"   : Util.GetUNIXTime (),
+        "UNIXTime"   : Util.GetUNIXTimeMS (),
 
         "Files"      : [],
         "Folders"    : [],

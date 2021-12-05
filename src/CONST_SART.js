@@ -97,7 +97,8 @@ const CONNSTATES =
 
 const CONFIG_DEFAULT =
 {
-    Type                   : "SART config",
+    Type                   : "SARTConfig",
+    Description            : "SART configuration/settings",
     ConfigVersion          : CONFIG_VERSION,
     AppVersion             : Package.version,
     AppVersionCode         : Package.versioncode,
@@ -119,7 +120,7 @@ const CONFIG_DEFAULT =
     ErrorWaitDelay_ms      : 5000,
     ErrorWaitVariationP    : 1.0,
     ErrorRetries           : 3,
-    MaxConcurrentConnections : 5,
+    MaxConcurrentFetches   : 5,
       
     OutputFields           : null,
     OutputFormat           : OUTPUTFORMATS.TXT,

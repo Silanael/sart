@@ -143,32 +143,32 @@ function GetHostString      (path = null) { return State.Config.ArweaveProto + "
                                                  + State.Config.ArweaveHost  + ":" 
                                                  + State.Config.ArweavePort
                                                  + ( path != null ? path : "");                                            }
-function GetGQLHostString    ()            { return GetHostString () + "/graphql";                                          }
-function IsQuiet             ()            { return State.Config.LogLevel <= LogLevels.QUIET;                               }
-function IsMSGOutputAllowed  ()            { return State.Config.LogLevel >  LogLevels.QUIET;                               }
-function IsNoMsg             ()            { return State.Config.LogLevel <= LogLevels.NOMSG   || State.Config.MsgOut <= 0; }
-function IsMsg               ()            { return State.Config.LogLevel >= LogLevels.MSG     && State.Config.MsgOut  > 0; }
-function IsVerbose           ()            { return State.Config.LogLevel >= LogLevels.VERBOSE && State.Config.MsgOut  > 0; }
-function IsDebug             ()            { return State.Config.LogLevel >= LogLevels.DEBUG   && State.Config.MsgOut  > 0; }
-function IsMsgSTDOUT         ()            { return (State.Config.MsgOut & OutputDests.STDOUT) != 0;                        }
-function IsMsgSTDERR         ()            { return (State.Config.MsgOut & OutputDests.STDERR) != 0;                        }
-function IsErrSTDOUT         ()            { return (State.Config.ErrOut & OutputDests.STDOUT) != 0;                        }
-function IsErrSTDERR         ()            { return (State.Config.ErrOut & OutputDests.STDERR) != 0;                        }
-function IsForceful          ()            { return State.Config.Force;                                                     }
-function IsConcurrentAllowed ()            { return true; } // TODO
-function IsHTMLOut           ()            { return State.Config.OutputFormat == OutputFormats.HTML;                        }
-function IsCSVOut            ()            { return State.Config.OutputFormat == OutputFormats.CSV;                         }
-function IsTXTOut            ()            { return State.Config.OutputFormat == OutputFormats.TXT;                         }
-function IsANSIAllowed       ()            { return State.Config.ANSIAllowed  == true;                                      }
-function IsJSONOut           ()            { return State.Config.OutputFormat == OutputFormats.JSON;                        }
-function SetForce            ()            { State.Config.Force = true;                                                     }
-function SetPort             (port)        { State.Config.ArweavePort  = port;  State.Config.ManualDest = true;             }
-function SetProto            (proto)       { State.Config.ArweaveProto = proto; State.Config.ManualDest = true;             }
-function SetDisplayAll       ()            { State.Config.DisplayAll   = true;                                              }
-function SetRecursive        ()            { State.Config.Recursive    = true;                                              }
-function CanAlterConf        (field)       { return ! Constants.CONFIG_LOCKED_ITEMS.includes (field);                       }
-function GetOutputFormat     ()            { return State.Config.OutputFormat;                                              }
-function GetMaxConcurrentConn ()           { return State.Config.MaxConcurrentConnections;                                  }
+function GetGQLHostString          ()            { return GetHostString () + "/graphql";                                          }
+function IsQuiet                   ()            { return State.Config.LogLevel <= LogLevels.QUIET;                               }
+function IsMSGOutputAllowed        ()            { return State.Config.LogLevel >  LogLevels.QUIET;                               }
+function IsNoMsg                   ()            { return State.Config.LogLevel <= LogLevels.NOMSG   || State.Config.MsgOut <= 0; }
+function IsMsg                     ()            { return State.Config.LogLevel >= LogLevels.MSG     && State.Config.MsgOut  > 0; }
+function IsVerbose                 ()            { return State.Config.LogLevel >= LogLevels.VERBOSE && State.Config.MsgOut  > 0; }
+function IsDebug                   ()            { return State.Config.LogLevel >= LogLevels.DEBUG   && State.Config.MsgOut  > 0; }
+function IsMsgSTDOUT               ()            { return (State.Config.MsgOut & OutputDests.STDOUT) != 0;                        }
+function IsMsgSTDERR               ()            { return (State.Config.MsgOut & OutputDests.STDERR) != 0;                        }
+function IsErrSTDOUT               ()            { return (State.Config.ErrOut & OutputDests.STDOUT) != 0;                        }
+function IsErrSTDERR               ()            { return (State.Config.ErrOut & OutputDests.STDERR) != 0;                        }
+function IsForceful                ()            { return State.Config.Force;                                                     }
+function IsConcurrentAllowed       ()            { return true; } // TODO
+function IsHTMLOut                 ()            { return State.Config.OutputFormat == OutputFormats.HTML;                        }
+function IsCSVOut                  ()            { return State.Config.OutputFormat == OutputFormats.CSV;                         }
+function IsTXTOut                  ()            { return State.Config.OutputFormat == OutputFormats.TXT;                         }
+function IsANSIAllowed             ()            { return State.Config.ANSIAllowed  == true;                                      }
+function IsJSONOut                 ()            { return State.Config.OutputFormat == OutputFormats.JSON;                        }
+function SetForce                  ()            { State.Config.Force = true;                                                     }
+function SetPort                   (port)        { State.Config.ArweavePort  = port;  State.Config.ManualDest = true;             }
+function SetProto                  (proto)       { State.Config.ArweaveProto = proto; State.Config.ManualDest = true;             }
+function SetDisplayAll             ()            { State.Config.DisplayAll   = true;                                              }
+function SetRecursive              ()            { State.Config.Recursive    = true;                                              }
+function CanAlterConf              (field)       { return ! Constants.CONFIG_LOCKED_ITEMS.includes (field);                       }
+function GetOutputFormat           ()            { return State.Config.OutputFormat;                                              }
+function GetMaxConcurrentFetches   ()            { return State.Config.MaxConcurrentFetches;                                      }
 
 
 function SetConfigKey (key, value)
@@ -386,7 +386,7 @@ module.exports =
     LoadConfig,
     AppendConfig,
     GetOutputFormat,
-    GetMaxConcurrentConn,
+    GetMaxConcurrentFetches,
     GetConfig,
 };
 

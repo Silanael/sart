@@ -818,7 +818,7 @@ class ArFSEntity extends SARTObject
                             Sys.ERR_PROGRAM ("First transaction of entity was not properly set when calling CreateHistory.", this);
                             
                         else if (this.TX_First != m)                    
-                            Sys.ERR_PROGRAM ("The meta-TXID set as first differs from what CreateHistory found.", this);
+                            Sys.ERR ("The meta-TXID set as first differs from what CreateHistory found.", this);
                                                     
                         this.History[key].Event = "created";
 
