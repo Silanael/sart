@@ -85,10 +85,12 @@ class ArFSEntity extends SARTObject
     ParentEntity_Folder     = null;
     ParentEntity_RootFolder = null;
     ContainedEntities       = null;
+    ContainedFiles          = null;
+    ContainedFolders        = null;
     Query                   = null;
 
     Fetched                 = false;
-    DataLoaded                 = false;
+    DataLoaded              = false;
 
     RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1 }, "AllTXStatus": {}, "Transactions": {}, 
                          "ContainedEntities": {depth: 1}, "Contains" : {},
@@ -137,6 +139,8 @@ class ArFSEntity extends SARTObject
         "?History", 
         "?Versions",
         "?Contains",
+        "FilesAmount",
+        "FoldersAmount",
         //"?ContainedEntities",
         "?Content", 
         "Warnings", 
@@ -161,6 +165,8 @@ class ArFSEntity extends SARTObject
         "Transactions"         : function (e) { return e.GenerateTransactionInfo      (); },
         "History"              : function (e) { return e.GenerateHistory              (); },
         "Content"              : function (e) { return e.GenerateContentInfo          (); },
+        "FilesAmount"          : function (e) { return e.ContainedEntities != null ? e.ContainedEntities.GetFilesAmount   () : null },
+        "FoldersAmount"        : function (e) { return e.ContainedEntities != null ? e.ContainedEntities.GetFoldersAmount () : null },
     };
 
 
@@ -568,13 +574,16 @@ class ArFSEntity extends SARTObject
         
         let pd = false, pf = false;
         
-        if (this.ParentEntity_Drive != null && !this.ParentEntity_Drive.IsFetchedOnCurrentTask () )
+        if (this.ParentEntity_Drive == null)
+            this.OnProgramError ("FetchRelatedEntities: ParentEntity_Drive not set!", this);
+
+        else if (! this.ParentEntity_Drive.IsFetchedOnCurrentTask () )
         {
             pool.push (this.ParentEntity_Drive.Fetch () );            
             pd = true;
         }        
-        else
-            this.OnProgramError ("FetchRelatedEntities: ParentEntity_Drive not set!", this);
+        
+            
 
         if (this.ParentEntity_Folder != null && !this.ParentEntity_Folder.IsFetchedOnCurrentTask () )
         {
@@ -666,7 +675,7 @@ class ArFSEntity extends SARTObject
             {
                 if (this.ContainedEntities == null)
                     this.ContainedEntities = new EntityGroup ();
-                    
+                
                 const async_pool = [];
 
                 const contained_entities = this.ContainedEntities;
@@ -706,7 +715,7 @@ class ArFSEntity extends SARTObject
                 // Wait for all metaobjs to be fetched.
                 if (async_pool.length > 0)
                     await Promise.all (async_pool);
-
+                
             }
             
                 

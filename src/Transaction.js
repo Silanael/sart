@@ -122,7 +122,7 @@ class Transaction extends SARTObject
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
     HasTransfer              ()         { return this.Quantity_AR      != null && this.Quantity_AR     > 0;                           }
-    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
+    DataLoaded                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
     HasRecipient             ()         { return this.Recipient != null && this.Recipient != "";                                      }
     GetRecipient             ()         { return this.HasRecipient   () ? this.Recipient : null;                                      }
     HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                      }    
@@ -136,7 +136,7 @@ class Transaction extends SARTObject
     IsFailed                 ()         { return this.Status?.IsFailed      ()                                                        }
     IsConfirmed              ()         { return this.Status?.IsConfirmed   ()                                                        }
     GetStatus                ()         { return this.State;                                                                          }
-    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); this.HasData = true;return this.State; }
+    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); this.DataLoaded = true;return this.State; }
 
 
     IsInSameBlockAs (tx)
@@ -165,7 +165,7 @@ class Transaction extends SARTObject
 
     async FetchAll ()
     {
-        await State.Concurrent.Fetch (this.FetchViaGet (), this.FetchViaGQL (), this.UpdateAndGetStatus () );                
+        await Promise.all ([ this.FetchViaGet (), this.FetchViaGQL (), this.UpdateAndGetStatus () ]);        
     }
 
     
@@ -254,7 +254,7 @@ class Transaction extends SARTObject
 
             this.Validate ();
             this.__OnTXFetched ();
-            this.HasData = true;
+            this.DataLoaded = true;
         }
 
         return this;
@@ -288,7 +288,7 @@ class Transaction extends SARTObject
                                                  
             this.Validate ();
             this.__OnTXFetched ();
-            this.HasData = true;
+            this.DataLoaded = true;
         }
         else
             this.OnError ("Unsupported transaction format/version '" + arweave_tx.format + "'. Use --force to process anyway.", "Transaction.SetArweaveTXData",
@@ -330,7 +330,7 @@ class Transaction extends SARTObject
         }
 
         else
-            return this.OnError ("Failed to fetch " + txid + " via GET!", "Transaction.FetchViaGet");
+            return this.OnError ("Failed to fetch " + txid + " via GET. It might be inside a bundle.", "Transaction.FetchViaGet");
             
         
     }

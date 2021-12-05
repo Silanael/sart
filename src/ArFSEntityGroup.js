@@ -18,12 +18,20 @@ class ArFSEntityGroup
     ByArFSID     = {};
     ByEntityType = {};
 
+    Files        = [];
+    Folders      = [];
 
     AsArray  () { return this.Entities; }
     toString () { const amount = Object.keys (this.ByArFSID)?.length; return "ArFSEntityGroup with " 
                   + (len == 0 ? "no entities" : len == 1 ? "one entity." : len + " entities") + "." }
                   
+    GetAmount        () { return this.Entities.length; }
+    GetFilesAmount   () { return this.Files.length;    }
+    GetFoldersAmount () { return this.Folders.length;  }
+    FilesAsArray     () { return this.Files;           }
+    FoldersAsArray   () { return this.Folders;         }
 
+    
     AddEntity (entity)
     {
         const __tag = "Cache.AddArFSEntity";
@@ -66,6 +74,10 @@ class ArFSEntityGroup
 
                 if (entity_list != null)
                     entity_list[arfs_id] = entity;
+
+                if      (entity.IsFile   () ) this.Files  .push (entity);
+                else if (entity.IsFolder () ) this.Folders.push (entity);
+
 
                 return true;
             }
