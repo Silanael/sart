@@ -18,6 +18,7 @@ const TXTagGroup   = require ("./TXTagGroup");
 const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("./SARTObject.js");
 const ByTXQuery    = require ("./GQL/GQL_ByTXQuery");
+const Concurrent   = require ("./Concurrent");
 
 
 
@@ -164,10 +165,7 @@ class Transaction extends SARTObject
 
     async FetchAll ()
     {
-        State.Concurrent.AddFetch (this.FetchViaGet        () );
-        State.Concurrent.AddFetch (this.FetchViaGQL        () );
-        State.Concurrent.AddFetch (this.UpdateAndGetStatus () );
-        await State.Concurrent.Execute ();      
+        await State.Concurrent.Fetch (this.FetchViaGet (), this.FetchViaGQL (), this.UpdateAndGetStatus () );                
     }
 
     
@@ -176,7 +174,7 @@ class Transaction extends SARTObject
         const txid = this.GetTXID ();
 
         if (this.IsValid () && txid != null)
-        {
+        {       
             const data = opts?.as_string ? await Arweave.GetTxStrData (txid) 
                                          : await Arweave.GetTxData    (txid);
 

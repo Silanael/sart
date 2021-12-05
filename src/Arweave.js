@@ -15,6 +15,7 @@ const Constants   = require ("./CONST_SART.js");
 const State       = require ("./ProgramState.js");
 const Sys         = require ('./System.js');
 const Settings    = require ('./Settings.js');
+const Concurrent  = require ("./Concurrent");
 
 
 
@@ -295,7 +296,12 @@ async function GetTx (txid)
     
     if (arweave != null)
     {
-        try               { let tx = await arweave.transactions.get (txid); return tx; }
+        try               
+        { 
+            const fetch = new Concurrent.Fetch (arweave.transactions.get (txid), "Arweave.GetTX (" + txid + ")" );
+            await fetch.Execute ();
+            return fetch.GetReturnValue ();              
+        }
         catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTx (" + txid + ")"); tx = null;  }
     }
 
@@ -309,7 +315,9 @@ async function GetTXStatus (txid)
 
     try
     {
-        return await arweave.transactions.getStatus (txid);
+        const  fetch = new Concurrent.Fetch (arweave.transactions.getStatus (txid), "Arweave.GetTXStatus (" + txid + ")" );
+        await  fetch.Execute ();
+        return fetch.GetReturnValue ();    
     }
     catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTXStatus (" + txid + ")", GetHostStr (arweave) ) }
 
@@ -341,8 +349,9 @@ async function GetTxData (txid)
     
     try               
     { 
-         const data = await arweave.transactions.getData (txid, {decode: true} );
-         return data;
+        const fetch = new Concurrent.Fetch (arweave.transactions.getData (txid, {decode: true}), "Arweave.GetTXData (" + txid + ")" );
+        await fetch.Execute ();
+        return fetch.GetReturnValue ();         
     }
     catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetTxData (" + txid + ")"); }
     return null;
@@ -357,8 +366,9 @@ async function GetTxStrData (txid)
     
     try
     { 
-        const data = await arweave.transactions.getData (txid, {decode: true, string: true} );
-        return data; 
+        const fetch = new Concurrent.Fetch (arweave.transactions.getData (txid, {decode: true, string: true} ), "Arweave.GetTXData (" + txid + ")" );
+        await fetch.Execute ();
+        return fetch.GetReturnValue ();                         
     }
     catch (exception) {  Sys.ON_EXCEPTION (exception, "Arweave.GetTxStrData (" + txid + ")"); }
  

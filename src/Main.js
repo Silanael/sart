@@ -463,19 +463,24 @@ class TestTask extends Task
 async function Testing (argv)
 { 
     
-    /*
+    
     const arfs_entity = require ("./ArFSEntity");
     const entity = arfs_entity.GET_ENTITY ( {entity_type: argv.PopLC (), arfs_id: argv.Pop() } )
 
-    await entity.FetchAll ();    
+    const st = Util.GetUNIXTimeMS ();
+    await entity.FetchAll ();
+    const tt = Util.GetUNIXTimeMS () - st;
+
     entity.Output ();
-    */
+    Sys.INFO ("Time taken: " + (tt / 1000) + " sec.");
     
+    /*
     const task = new TestTask ();
     
     Sys.INFO ("Starting task");
     await task.Execute ();
     Sys.INFO ("TASK DONE");
+    */
 
 }
 

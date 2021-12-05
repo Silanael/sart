@@ -423,16 +423,14 @@ class ArFSEntity extends SARTObject
     async Fetch ()
     {
         await this.FetchMetaTransactions ();
-        await this.FetchLatestMetaObj ();
+        await this.FetchLatestMetaObj    ();
     }
 
 
     async FetchAll ()
     {
         await this.Fetch ();
-        await this.FetchRelatedEntities ();
-        await this.FetchTXStatuses (); 
-        await this.FetchContentEntities ({fetch_content_metaobjs: true});        
+        await Promise.all ([this.FetchRelatedEntities (), this.FetchTXStatuses (), this.FetchContentEntities ({fetch_content_metaobjs: true}) ]);
     }
 
 
@@ -507,6 +505,7 @@ class ArFSEntity extends SARTObject
         {
             await this.TX_Latest.FetchMetaOBJ ();            
             this.TX_Latest.SetFieldsToEntity  ();
+            Sys.VERBOSE ("Latest metadata updated." + this);
         }
         else
             this.OnProgramError ("FetchLatestMetaObj: TX_Latest null or not an ArFSMetaTX!", this);
@@ -517,36 +516,17 @@ class ArFSEntity extends SARTObject
         const amount = this.TX_Meta?.GetAmount ();
         
         if (amount > 0)
-        {
-            if (amount <= Settings.GetMaxConcurrentConn () )
+        {           
+            const pool = [];
+            for (const m of this.TX_Meta.AsArray () )
             {
-                Sys.VERBOSE ("Doing a concurrent-fetch of MetaOBJs (JSONs) for " + this + "...");
-                
-                const pool = [];
-                for (const m of this.TX_Meta.AsArray () )
-                {
-                    if (m.FetchMetaOBJ != null)
-                        pool.push (m.FetchMetaOBJ () );
-                    else
-                        this.OnProgramError ("Transaction encountered that lacks FetchMetaOBJ - TXID:" + m.GetTXID () , this);
-                }
+                if (m.FetchMetaOBJ != null)
+                    pool.push (m.FetchMetaOBJ () );
+                else
+                    this.OnProgramError ("Transaction encountered that lacks FetchMetaOBJ - TXID:" + m.GetTXID () , this);
+            }
 
-                for (const c of pool)
-                {
-                    await c;
-                }
-            }
-            else
-            {
-                Sys.VERBOSE ("Doing a sequential fetch of MetaOBJs (JSONs) for " + this + "...");
-                for (const m of this.TX_Meta.AsArray () )
-                {
-                    if (m.FetchMetaOBJ != null)
-                        await m.FetchMetaOBJ ();
-                    else
-                        this.OnProgramError ("Transaction encountered that lacks FetchMetaOBJ - TXID:" + m.GetTXID () , this);
-                }
-            }
+            await Promise.all (pool);                                 
         }
     }
 
@@ -557,7 +537,6 @@ class ArFSEntity extends SARTObject
 
         // This needs to be called after meta obj fetch, can't be concurrent
         await this.TX_All.FetchStatusOfAll ();
-
 
     }
 
@@ -656,6 +635,8 @@ class ArFSEntity extends SARTObject
                 if (this.ContainedEntities == null)
                     this.ContainedEntities = new EntityGroup ();
                     
+                const async_pool = [];
+
                 const contained_entities = this.ContainedEntities;
                 const id_of_this = this.GetArFSID ();
 
@@ -679,7 +660,7 @@ class ArFSEntity extends SARTObject
                         const new_entity = ArFSEntity.GET_ENTITY ( {entity_type: entity_type, arfs_id: arfs_id, meta_tx: tx} );                        
 
                         if (args.fetch_content_metaobjs)
-                            await new_entity.FetchLatestMetaObj ();
+                            async_pool.push (new_entity.FetchLatestMetaObj () );
 
                         contained_entities.AddEntity (new_entity);
 
@@ -690,6 +671,9 @@ class ArFSEntity extends SARTObject
                                             
                 }
 
+                // Wait for all metaobjs to be fetched.
+                if (async_pool.length > 0)
+                    await Promise.all (async_pool);
 
             }
             
