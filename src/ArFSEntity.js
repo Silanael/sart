@@ -19,11 +19,13 @@ const SARTObject       = require ("./SARTObject");
 const TXGroup          = require ("./TXGroup.js");
 const TXQuery          = require ("./GQL/TXQuery");
 const ContentQuery     = require ("./GQL/ArFSMultiEntityQuery");
+const LatestMetaQuery  = require ("./GQL/ArFSNewestMetaQuery");
 const EntityGroup      = require ("./ArFSEntityGroup");
 const TXTag            = require ("./TXTag");
 const TXTagGroup       = require ("./TXTagGroup");
 const Transaction      = require ("./Transaction");
 const ArFSTX           = require ("./ArFSTX");
+
 
 
 
@@ -93,7 +95,7 @@ class ArFSEntity extends SARTObject
     DataLoaded              = false;
 
     RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1 }, "AllTXStatus": {}, "Transactions": {}, 
-                         "ContainedEntities": {depth: 1}, "Contains" : {},
+                        "ContainedEntities": {depth: 1}, "Contains" : {},
                         "Versions": {}, "Content": {}, "Orphans": {}, "Parentless": {}, "Warnings": {}, "Errors": {} };
     InfoFields = 
     [ 
@@ -173,13 +175,14 @@ class ArFSEntity extends SARTObject
 
     IsPublic          ()          { return this.Encrypted == false;                     }
     IsEncrypted       ()          { return this.Encrypted == true;                      }
+    IsOwnerSet        ()          { return Util.IsSet (this.Owner);                     }
     GetOwner          ()          { return this.Owner;                                  }
     GetPrivacy        ()          { return this.Privacy != null ? this.Privacy          
                                    : this.IsEncrypted () ? "private" : "public";        }
     GetName           ()          { return this.Name;                                   }
     GetArFSID         ()          { return this.ArFSID;                                 }
     HasArFSID         (id = null) { return id == null ? this.GetArFSID () != null 
-                                                      : this.GetArFSID () == id;        }
+                                                      : this.GetArFSID () == id;        }    
     GetEntityType     ()          { return this.EntityType;                             }
     GetLastModified   ()          { return this.LastModified;                           }
     GetNewestMetaTXID ()          { return this.MetaTXID_Latest;                        }
@@ -227,6 +230,18 @@ class ArFSEntity extends SARTObject
         }
 
         return entity;
+    }
+
+
+    CheckValid ()
+    {        
+        if (!this.IsValid () || !Util.IsArFSID (this.GetArFSID () ) || !Util.IsSet (this.GetEntityType () ) )
+        {
+            this.OnProgramError ("Object not in a valid state: " + this, "ArFSEntity.CheckValid");
+            return false;
+        }
+        else
+            return true;
     }
 
 
@@ -460,22 +475,76 @@ class ArFSEntity extends SARTObject
 
     // ***
 
+    async FetchNewestMetaTransaction ()
+    {
+        const owner = this.GetOwner ();
+
+        if (! this.CheckValid () )
+            return this.OnProgramError ("Cannot preform FetchNwestMetaTransaction when the entity is not in a valid state (ID and/or entity-type missing etc.)");
+
+        // Play it extra safe. We wouldn't want to be like wGBT6ofLX-zUOobMo6_iwpF-2THfx5VpE_rzNtvApY8 , now would we?
+        if (!this.IsOwnerSet () && Util.IsSet (owner) )
+            return this.OnProgramError ("Cannot safely perform FetchNewestMetaTransaction when owner is not set.", this);
+        
+        else
+        {
+            const query = new LatestMetaQuery (Arweave);
+            query.Execute (owner, this.GetEntityType () );
+
+            const edges_amount = query.GetEdgesAmount ();
+
+            if (edges_amount <= 0)
+                return this.OnError ("Failed to retrieve the newest meta-transaction!", this);
+
+            // Failsafe
+            else if (edges_amount > 1)
+            {
+                this.OnError ("Received " + edges_amount + " when wanting only one. Attempting to filter to match the entity.", this);
+                const txgroup = ArFSTX.MetaTXGroupFromQuery (query, this);
+                const filtered = txgroup.GetTransactionsMatching ( {owner: owner, tag: Constants_ArFS.GetTagForEntityType (this.GetEntityType ()),
+                                                                   tagvalue: this.GetArFSID () } );
+                if (filtered.GetAmount () <= 0)
+                    return this.OnError ("The transactions received don't contain anything valid. Something strange is going on with GQL/gateway (" 
+                                          + State.GetHost () + ").", this);
+
+                else
+                {
+                    const newest = filtered.GetNewestEntry ();
+                    
+                    if (newest.IsValid () || Settings.IncludeInvalidTX () )
+                        this.__AddTransaction (newest);
+
+                    return false;
+                }
+            }
+
+            // One transaction as expected.
+            else
+            {
+                const tx = ArFSTX.ArFSMetaTX.FROM_GQL_EDGE (query.GetEdge (0), this);
+                
+                if (tx.IsValid () || Settings.IncludeInvalidTX () )
+                        this.__AddTransaction (tx);
+            }
+
+        }
+    }
+
+
 
     async FetchMetaTransactions ()
     {
+        if (! this.CheckValid () )
+            return false;
+
         const arfs_id     = this.GetArFSID ();
         const entity_type = this.GetEntityType ();
 
-        if (!this.IsValid () || !Util.IsArFSID (arfs_id) || !Util.IsSet (entity_type) )
-        {
-            this.OnProgramError ("Object not in a valid state: " + this, "ArFSEntity.FetchMetaTransactions");
-            return false;
-        }
-
+ 
         const query = new MetaTXQuery (Arweave);        
         await query.Execute (arfs_id, entity_type);        
         
-        if (query.GetEdgesAmount () <= 0)
+        if (! query.HasEdges () )
         {
             this.OnError ("Failed to fetch metadata-transactions for ArFS-ID:" + arfs_id + ", Entity-Type:" + entity_type);
             this.SetInvalid ();
@@ -483,17 +552,15 @@ class ArFSEntity extends SARTObject
         }
 
         // Create transactions for the query data.
-        const txes_received = new TXGroup ();
-        let metatx;
-        for (const e of query.GetEdges () )
-        { 
-            metatx = new ArFSTX.ArFSMetaTX (this);
-            metatx.SetGQLEdge (e);
-            txes_received.Add (metatx);
-        }
+        let txes_received = ArFSTX.MetaTXGroupFromQuery (query);
+        
+        // Filter out invalid
+        const txes_valid = Settings.IncludeInvalidTX () ? txes_received : txes_received.GetValidTransactions ();
+        txes_received = null; // For safety, rather crash than accidentally use this.
+
 
         // Set owner to the owner of the oldest TX.        
-        this.__SetOwner (txes_received.GetOldestEntry ()?.GetOwner () );
+        this.__SetOwner (txes_valid.GetOldestEntry ()?.GetOwner () );
         
 
         // Verify that Owner is set.
@@ -504,14 +571,14 @@ class ArFSEntity extends SARTObject
         }
             
         // Filter transactions matching the owner.
-        const txes_valid = txes_received.GetTransactionsByOwner (this.Owner);
+        const txes_by_owner = txes_valid.GetTransactionsByOwner (this.GetOwner () );
 
-        if (txes_valid == null || txes_valid.GetAmount () <= 0)
+        if (txes_by_owner == null || txes_by_owner.GetAmount () <= 0)
             return this.OnProgramError ("FetchMetaTransactions: Filtering transactions with Owner " + this.Owner + " resulted in no entries!", this);
 
 
         // Add all transactions with the right owner
-        for (const vtx of txes_valid.AsArray () )
+        for (const vtx of txes_by_owner.AsArray () )
         {
             this.__AddTransaction (vtx, true);
         }
@@ -522,6 +589,7 @@ class ArFSEntity extends SARTObject
          
         return true;
     }
+
 
 
     async FetchLatestMetaObj ()
@@ -609,6 +677,9 @@ class ArFSEntity extends SARTObject
     }
 
 
+
+
+
     async FetchContentEntities (args = {fetch_content_metaobjs: false} )
     {
         let arfs_id     = this.GetArFSID     ();
@@ -637,7 +708,7 @@ class ArFSEntity extends SARTObject
 
         const query = new ContentQuery (Arweave);
         
-        switch (this.EntityType)
+        switch (this.GetEntityType () )
         {
             case Constants_ArFS.ENTITYTYPE_FOLDER:                
                 await query.Execute (owner, Constants_ArFS.ENTITYTYPES_INFOLDER, drive_id, arfs_id);
@@ -672,14 +743,9 @@ class ArFSEntity extends SARTObject
                 return this.OnProgramError ("Something went wrong while filtering transactions.", this);
 
             else
-            {
-                if (this.ContainedEntities == null)
-                    this.ContainedEntities = new EntityGroup ();
-                
-                const async_pool = [];
-
-                const contained_entities = this.ContainedEntities;
-                const id_of_this = this.GetArFSID ();
+            {                
+                let   contained_entities = new EntityGroup ();
+                const id_of_this         = this.GetArFSID ();
 
                 for (const tx of filtered.AsArray () )
                 {
@@ -699,27 +765,52 @@ class ArFSEntity extends SARTObject
                     else if (existing == null)
                     {                                                
                         const new_entity = ArFSEntity.GET_ENTITY ( {entity_type: entity_type, arfs_id: arfs_id, meta_tx: tx} );                        
-
-                        if (args.fetch_content_metaobjs)
-                            async_pool.push (new_entity.FetchLatestMetaObj () );
-
-                        contained_entities.AddEntity (new_entity);
-
-                        Sys.VERBOSE ("Added entity " + new_entity + " into " + this + ".");
+                        contained_entities.AddEntity (new_entity);                        
                     }
                     else
-                        Sys.VERBOSE ("Entity " + existing + " already added into " + this + ", skipping metadata for now.");
-                                            
+                        new_entity.__AddTransaction (tx, true);                                            
                 }
 
-                // Wait for all metaobjs to be fetched.
-                if (async_pool.length > 0)
-                    await Promise.all (async_pool);
-                
-            }
-            
+                if (contained_entities.GetAmount () <= 0)
+                {
+                    Sys.VERBOSE ("No entities found to be contained by " + this + ".");
+                    return;
+                }
+
+                // Entities found, do final processing.
+                else
+                {
+                    // Make sure that the entities received are still in the folder
+                    if (this.IsFolder () )
+                    {
+                        await this.FetchNewestMetadataTXForAll ();                                                
+                    }
+                    
+                    if (args.fetch_content_metaobjs)
+                        async_pool.push (new_entity.FetchLatestMetaObj () );
+
+                    if (async_pool.length > 0)
+                        await Promise.all (async_pool);
+
+                    if (this.ContainedEntities == null)
+                        this.ContainedEntities = new EntityGroup ();
+
+                    this.ContainedEntities.AddAll (contained_entities);
+                }
                 
 
+                
+
+                
+
+                // Wait for all metaobjs to be fetched.
+                
+             
+                
+
+                    
+            }
+            
         }        
     }
   

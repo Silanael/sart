@@ -137,6 +137,7 @@ const CONFIG_DEFAULT =
     QueryMinBlockHeight    : null,
     QueryMaxBlockHeight    : null,
 
+    IncludeInvalidTX       : false,
     Force                  : false,
       
     MaxArFSMetadataSize    : 1073741824, // 1MB ought to be enough for anybody?

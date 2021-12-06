@@ -263,8 +263,7 @@ class Transaction extends SARTObject
 
     async SetArweaveTX (arweave_tx)
     {        
-        this.ArweaveTX = arweave_tx;
-
+        this.ArweaveTX = arweave_tx;        
         const config = State.GetConfig ();
 
         if (config.MaxTXFormat == null || arweave_tx.format <= config.MaxTXFormat || Settings.IsForceful () )

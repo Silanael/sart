@@ -15,7 +15,7 @@ class SARTObject
 {
 
     Valid            = true;
-    DataLoaded          = false;
+    DataLoaded       = false;
 
     Errors           = null;
     Warnings         = null;

@@ -23,7 +23,6 @@ class TXGroup extends SARTObject
         "TransactionInfo"      : function (e) { return e?.GenerateInfo ();             },        
     };
 
-    toString () { return "TXGroup"; }
 
     constructor (sort) 
     {
@@ -52,13 +51,16 @@ class TXGroup extends SARTObject
     }
 
 
-    GetAmount              ()           { const k = Object.keys (this.ByTXID); return k != null ? k.length : 0;                               }
-    GetByTXID              (txid)       { return this.ByTXID[txid];                                                                           }
-    HasTXID                (txid)       { return this.GetByTXID (txid) != null;                                                               }
-    GetByIndex             (index)      { return index >= 0 && index < this.List.length ? this.List[index] : null;                            }
-    AsArray                ()           { return this.List;                                                                                   }
+    GetAmount              ()           { const k = Object.keys (this.ByTXID); return k != null ? k.length : 0;     }
+    GetSort                ()           { return this.SortOrder;                                                    }
+    GetByTXID              (txid)       { return this.ByTXID[txid];                                                 }
+    HasTXID                (txid)       { return this.GetByTXID (txid) != null;                                     }
+    GetByIndex             (index)      { return index >= 0 && index < this.List.length ? this.List[index] : null;  }
+    AsArray                ()           { return this.List;                                                         }
+    toString               ()           { return "TXGroup";                                                         }    
     
-    
+
+
     SetSortOrder (sort) 
     { 
         if (sort == null)
@@ -191,6 +193,25 @@ class TXGroup extends SARTObject
         return true;
     }
 
+
+    /* Get a group of transactions with the condition of IsValid () == true. */
+    GetValidTransactions ()
+    {
+        const group = new TXGroup (this.GetSort () );
+        const list  = this.AsArray ();
+
+        if (list != null && list.length > 0)
+        {
+            for (const tx of list)
+            {
+                if (tx.IsValid () )
+                    group.Add (tx);
+                else
+                    Sys.WARN ("Pruned invalid transaction " + tx);
+            }
+        }
+        return list;            
+    }
 
 
     /** Set value to null to get entries that contain the tag (with any value). */

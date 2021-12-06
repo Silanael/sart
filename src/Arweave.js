@@ -170,8 +170,9 @@ async function Post (host_str, data_obj)
     {        
         try
         {
-            const ret = await arweave.api.post (host_str, data_obj );
-            return ret;
+            const  fetch = new Concurrent.Fetch (arweave.api.post (host_str, data_obj), "Arweave.Post");
+            await  fetch.Execute ();
+            return fetch.GetReturnValue ();            
         }
         catch (exception) 
         {

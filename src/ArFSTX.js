@@ -11,6 +11,7 @@ const Sys         = require ("./System");
 const Const_ArFS  = require ("./CONST_ARFS");
 const State       = require ("./ProgramState");
 const Transaction = require ("./Transaction");
+const TXGroup     = require ("./TXGroup");
 const Settings    = require ("./Settings");
 const Util        = require ("./Util");
 
@@ -43,6 +44,11 @@ class ArFSTX extends Transaction
         Util.AssignIfNotNull (this.ArFSFields, "Cipher"   , this.GetTagValue (Const_ArFS.TAG_CIPHER)         );
         Util.AssignIfNotNull (this.ArFSFields, "CipherIV" , this.GetTagValue (Const_ArFS.TAG_CIPHER_IV)      );
         this.Encrypted = this.ArFSFields.Cipher != null || this.ArFSFields.CipherIV != null || this.EntityObj?.IsEncrypted ();
+
+        if (! Util.IsSet (this.ArFSFields.EntityType) && ! this.OnError ("TX-tag '" + Const_ArFS.TAG_ENTITYTYPE 
+                                                           + "' missing - may indicate that this isn't an ArFS-transaction.", this) )
+            this.SetInvalid ();
+
     }
 
 }
@@ -60,6 +66,9 @@ class ArFSMetaTX extends ArFSTX
     {
         super (parent_entity, txid);
     }
+
+    static FROM_GQL_EDGE (edge, parent_entity = null) { return new ArFSMetaTX (parent_entity).SetGQLEdge (edge); }
+
 
     GetDataTXID   () { return this.ArFSFields.DataTXID != null ? this.ArFSFields.DataTXID : this.TX_Data?.GetTXID (); }
     GetDataTX     () { return this.TX_Data;                 }
@@ -88,12 +97,17 @@ class ArFSMetaTX extends ArFSTX
         Util.AssignIfNotNull (this.ArFSFields, "FolderID"       , this.GetTagValue (Const_ArFS.TAG_FOLDERID)       );
         Util.AssignIfNotNull (this.ArFSFields, "ParentFolderID" , this.GetTagValue (Const_ArFS.TAG_PARENTFOLDERID) );        
         Util.AssignIfNotNull (this.ArFSFields, "DrivePrivacy"   , this.GetTagValue (Const_ArFS.TAG_DRIVEPRIVACY)   );
-        Util.AssignIfNotNull (this.ArFSFields, "DriveAuthMode"  , this.GetTagValue (Const_ArFS.TAG_DRIVEAUTHMODE)  );
+        Util.AssignIfNotNull (this.ArFSFields, "DriveAuthMode"  , this.GetTagValue (Const_ArFS.TAG_DRIVEAUTHMODE)  );        
 
         Util.AssignIfNotNull (this.ArFSFields, "ArFSID"         , this.GetTagValue (Const_ArFS.GetTagForEntityType (this.EntityType) )  );
 
         this.ArFSFields.Encrypted =  this.ArFSFields.DrivePrivacy == "private" || this.ArFSFields.Cipher != null;
-        this.ArFSFields.Public    = !this.ArFSFields.Encrypted;        
+        this.ArFSFields.Public    = !this.ArFSFields.Encrypted;
+
+        if (!Util.IsSet (this.ArFSFields.EntityType) && ! this.OnError ("TX-tag '" + Const_ArFS.TAG_ENTITYTYPE 
+                                                           + "' missing - may indicate that this isn't an ArFS-transaction.", this) )
+            this.SetInvalid ();
+
     }
 
 
@@ -176,5 +190,20 @@ class ArFSDataTX extends ArFSTX
 }
 
 
+function MetaTXGroupFromQuery (query, parent_entity = null)
+{
+    const txgroup = new TXGroup (query.GetSort () );
+    
+    if (query != null && query.HasEdges () )
+    {
+        for (const e of query.GetEdges () )
+        { 
+            txgroup.Add (new ArFSMetaTX (parent_entity).SetGQLEdge (e) )                
+        }        
+    }
+    return txgroup;
+}
 
-module.exports = { ArFSMetaTX, ArFSDataTX, ArFSTX };
+
+
+module.exports = { ArFSMetaTX, ArFSDataTX, ArFSTX, MetaTXGroupFromQuery };

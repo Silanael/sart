@@ -31,7 +31,7 @@ class ProgramState
     IsCacheEnabled  () { return this.Cache != null;                                                  }
     GetCacheHits    () { return this.CacheHits   ;                                                   }
     GetCacheMisses  () { return this.CacheMisses ;                                                   }
-
+    GetHost         () { return this.CurrentHost;                                                    }
     
     SetConfigToDefault ()
     {

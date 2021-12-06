@@ -28,21 +28,19 @@ class ArFSMultiEntityQuery extends TXQuery
     }
    
 
-    async Execute (owner, entity_types, drive_id, parent_folder_id = null)
+    async Execute (owner, entity_types, drive_id, parent_folder_id = null, sort = Constants.GQL_SORT_NEWEST_FIRST)
     {       
-        this.Sort = Constants.GQL_SORT_NEWEST_FIRST;
+        this.SetSort (sort);
 
         if (owner == null)
-            return this.OnError ("'owner' null", this);
+            return this.OnProgramError ("'owner' null", this);
 
         if (entity_types == null)
-            return this.OnError ("'entity_types' null. Should be an array.", this);
+            return this.OnProgramError ("'entity_types' null. Should be an array.", this);
 
         if (drive_id == null)
-            return this.OnError ("'drive_id' null. Should be an array.", this);            
-        
-        
-        this.Sort = Constants.GQL_SORT_OLDEST_FIRST;
+            return this.OnProgramError ("'drive_id' null.", this);            
+                        
         
         const tags            = new TXTagGroup ();        
         tags.Add              ( new Const_ArFS.TXTag_EntityType     (entity_types)      );
@@ -56,7 +54,7 @@ class ArFSMultiEntityQuery extends TXQuery
         await super.Execute
         (            
             {                                                           
-                sort:  this.Sort,
+                sort:  this.GetSort (),
                 owner: owner,
                 tags:  tags,                
             }

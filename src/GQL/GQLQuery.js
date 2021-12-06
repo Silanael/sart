@@ -83,8 +83,10 @@ class Query extends SARTObject
     GetEdge          (index)      { return this.Edges != null ? this.Edges[index] : null;  }
     GetEdges         ()           { return this.Edges;                                     }
     GetSort          ()           { return this.Sort;                                      }
-    
+    HasEdges         ()           { return this.Edges != null && this.Edges.length > 0;    }
+    HasResults       ()           { return this.HasEdges ();                               }
 
+    
 
     /** Returns raw results. */
     static async POST_GQL_QUERY (Arweave, query_str)
