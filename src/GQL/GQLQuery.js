@@ -53,6 +53,8 @@ class Query extends SARTObject
         this.EntriesAmount = 0;
     }
 
+    toString () { return "Query"; }
+
 
     async ExecuteOnce (query)
     {
@@ -86,7 +88,7 @@ class Query extends SARTObject
     HasEdges         ()           { return this.Edges != null && this.Edges.length > 0;    }
     HasResults       ()           { return this.HasEdges ();                               }
 
-    
+
 
     /** Returns raw results. */
     static async POST_GQL_QUERY (Arweave, query_str)

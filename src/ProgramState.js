@@ -25,6 +25,7 @@ class ProgramState
     CacheMisses      = 0;
     
     ActiveTask       = null;
+    ActiveConcurrentFetches = [];
 
     GetConfig       () { return this.Config != null ? this.Config : this.SetConfigToDefault ().conf; }
     IsConsoleActive () { return this.ConsoleActive;                                                  }

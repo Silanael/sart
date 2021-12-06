@@ -465,7 +465,7 @@ class ArFSEntity extends SARTObject
     {
         if (await this.Fetch () )
         {
-            await Promise.all ([this.FetchRelatedEntities (), this.FetchTXStatuses (), this.FetchContentEntities ({fetch_content_metaobjs: true}) ]);
+            await Promise.all ([this.FetchRelatedEntities (), this.FetchTXStatuses (), this.FetchContentEntities ({fetch_content_metaobjs: true}) ]);            
             return true;
         }
         else
@@ -477,10 +477,12 @@ class ArFSEntity extends SARTObject
 
     async FetchNewestMetaTransaction ()
     {
+        Sys.VERBOSE ("Starting to fetch newest meta-transaction for " + this + " ...");
         const owner = this.GetOwner ();
 
         if (! this.CheckValid () )
             return this.OnProgramError ("Cannot preform FetchNwestMetaTransaction when the entity is not in a valid state (ID and/or entity-type missing etc.)");
+
 
         // Play it extra safe. We wouldn't want to be like wGBT6ofLX-zUOobMo6_iwpF-2THfx5VpE_rzNtvApY8 , now would we?
         if (!this.IsOwnerSet () && Util.IsSet (owner) )
@@ -489,7 +491,7 @@ class ArFSEntity extends SARTObject
         else
         {
             const query = new LatestMetaQuery (Arweave);
-            query.Execute (owner, this.GetEntityType () );
+            await query.Execute (owner, this.GetArFSID (), this.GetEntityType () );
 
             const edges_amount = query.GetEdgesAmount ();
 
@@ -524,7 +526,7 @@ class ArFSEntity extends SARTObject
                 const tx = ArFSTX.ArFSMetaTX.FROM_GQL_EDGE (query.GetEdge (0), this);
                 
                 if (tx.IsValid () || Settings.IncludeInvalidTX () )
-                        this.__AddTransaction (tx);
+                    this.__AddTransaction (tx);
             }
 
         }
@@ -534,6 +536,8 @@ class ArFSEntity extends SARTObject
 
     async FetchMetaTransactions ()
     {
+        Sys.VERBOSE ("Starting to fetch all meta-transaction for " + this + " ...");
+
         if (! this.CheckValid () )
             return false;
 
@@ -594,11 +598,13 @@ class ArFSEntity extends SARTObject
 
     async FetchLatestMetaObj ()
     {
+        Sys.VERBOSE ("Starting to fetch the latest metadata-OBJ (JSON) for " + this + " ...");
+
         if (this.TX_Latest instanceof ArFSTX.ArFSMetaTX)
         {
             await this.TX_Latest.FetchMetaOBJ ();            
             this.TX_Latest.SetFieldsToEntity  ();
-            Sys.VERBOSE ("Latest metadata updated." + this);
+            Sys.VERBOSE ("Latest metadata updated for " + this);
         }
         else
             this.OnProgramError ("FetchLatestMetaObj: TX_Latest null or not an ArFSMetaTX!", this);
@@ -607,6 +613,8 @@ class ArFSEntity extends SARTObject
 
     async FetchMetaOBJs ()
     {
+        Sys.VERBOSE ("Starting to fetch all metadata-OBJs (JSONs) for " + this + " ...");
+
         const amount = this.TX_Meta?.GetAmount ();
         
         if (amount > 0)
@@ -627,6 +635,8 @@ class ArFSEntity extends SARTObject
 
     async FetchTXStatuses ()
     {
+        Sys.VERBOSE ("Starting to fetch transaction-statuses for  " + this + " ...");
+
         // Make sure we got all the indirect TXIDs (such as dataTxId)
         await this.FetchMetaOBJs ();
 
@@ -638,6 +648,8 @@ class ArFSEntity extends SARTObject
 
     async FetchRelatedEntities ()
     {
+        Sys.VERBOSE ("Starting to fetch related entities for " + this + " ...");
+
         const pool = [this.FetchLatestMetaObj () ];
         
         let pd = false, pf = false;
@@ -682,6 +694,8 @@ class ArFSEntity extends SARTObject
 
     async FetchContentEntities (args = {fetch_content_metaobjs: false} )
     {
+        Sys.VERBOSE ("Starting to fetch content (entities) for " + this + " ...");
+
         let arfs_id     = this.GetArFSID     ();
         let owner       = this.GetOwner      ();
         let entity_type = this.GetEntityType ();
@@ -768,9 +782,19 @@ class ArFSEntity extends SARTObject
                         contained_entities.AddEntity (new_entity);                        
                     }
                     else
-                        new_entity.__AddTransaction (tx, true);                                            
+                        existing.__AddTransaction (tx, true);                                            
                 }
 
+                // Make sure that the entities received are still in the folder
+                if (this.IsFolder () && contained_entities.GetAmount () > 0)
+                {
+                    Sys.VERBOSE ("Fetching newest metadata-transactions...", this);                        
+                    await contained_entities.FetchNewestMetadataTXForAll ();
+
+                    contained_entities = contained_entities.GetMatchingByFieldVal ("ParentFolderID", this.GetArFSID () );
+                }                
+
+                // No entities in this folder / drive
                 if (contained_entities.GetAmount () <= 0)
                 {
                     Sys.VERBOSE ("No entities found to be contained by " + this + ".");
@@ -778,39 +802,14 @@ class ArFSEntity extends SARTObject
                 }
 
                 // Entities found, do final processing.
-                else
-                {
-                    // Make sure that the entities received are still in the folder
-                    if (this.IsFolder () )
-                    {
-                        await this.FetchNewestMetadataTXForAll ();                                                
-                    }
-                    
-                    if (args.fetch_content_metaobjs)
-                        async_pool.push (new_entity.FetchLatestMetaObj () );
+                //if (args.fetch_content_metaobjs)
+                await contained_entities.FetchNewestMetaOBJForAll ();
 
-                    if (async_pool.length > 0)
-                        await Promise.all (async_pool);
-
-                    if (this.ContainedEntities == null)
-                        this.ContainedEntities = new EntityGroup ();
-
-                    this.ContainedEntities.AddAll (contained_entities);
-                }
-                
-
-                
-
-                
-
-                // Wait for all metaobjs to be fetched.
-                
-             
-                
-
-                    
+                // Set the primary variable, overwriting anything that was there before.
+                this.ContainedEntities = contained_entities;                                    
             }
             
+            Sys.VERBOSE ("Content-fetch done for " + this + " ...");
         }        
     }
   

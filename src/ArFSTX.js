@@ -45,7 +45,7 @@ class ArFSTX extends Transaction
         Util.AssignIfNotNull (this.ArFSFields, "CipherIV" , this.GetTagValue (Const_ArFS.TAG_CIPHER_IV)      );
         this.Encrypted = this.ArFSFields.Cipher != null || this.ArFSFields.CipherIV != null || this.EntityObj?.IsEncrypted ();
 
-        if (! Util.IsSet (this.ArFSFields.EntityType) && ! this.OnError ("TX-tag '" + Const_ArFS.TAG_ENTITYTYPE 
+        if (! Util.IsSet (this.ArFSFields.ArFS) && ! this.OnError ("TX-tag '" + Const_ArFS.TAG_ARFS 
                                                            + "' missing - may indicate that this isn't an ArFS-transaction.", this) )
             this.SetInvalid ();
 
@@ -88,7 +88,7 @@ class ArFSMetaTX extends ArFSTX
     
 
     __OnTXFetched () // Override
-    {
+    {        
         super.__OnTXFetched ();
 
         Util.AssignIfNotNull (this.ArFSFields, "EntityType"     , this.GetTagValue (Const_ArFS.TAG_ENTITYTYPE)     );
@@ -103,11 +103,12 @@ class ArFSMetaTX extends ArFSTX
 
         this.ArFSFields.Encrypted =  this.ArFSFields.DrivePrivacy == "private" || this.ArFSFields.Cipher != null;
         this.ArFSFields.Public    = !this.ArFSFields.Encrypted;
-
+                
         if (!Util.IsSet (this.ArFSFields.EntityType) && ! this.OnError ("TX-tag '" + Const_ArFS.TAG_ENTITYTYPE 
                                                            + "' missing - may indicate that this isn't an ArFS-transaction.", this) )
             this.SetInvalid ();
-
+      
+            
     }
 
 
@@ -193,7 +194,7 @@ class ArFSDataTX extends ArFSTX
 function MetaTXGroupFromQuery (query, parent_entity = null)
 {
     const txgroup = new TXGroup (query.GetSort () );
-    
+        
     if (query != null && query.HasEdges () )
     {
         for (const e of query.GetEdges () )

@@ -102,7 +102,7 @@ class ArFSEntityGroup extends SARTObject
 
     }
 
-    
+
     GetEntity (args = { entity_type: null, arfs_id: null } )
     {
         let entity;
@@ -122,16 +122,26 @@ class ArFSEntityGroup extends SARTObject
     }
 
 
-    async FetchNewestMetadataTXForAll ()
-    {
-        await this.ExecOnAllEntitiesAndAwait ("FetchNewestMetaTransaction");
+    async FetchNewestMetadataTXForAll () { await this.ExecOnAllEntitiesAndAwait ("FetchNewestMetaTransaction"); }
+    
+    async FetchNewestMetaOBJForAll ()
+    { 
+        const pool = [];
+        for (const e of this.AsArray () )
+        {
+            if (e != null)
+                pool.push (e.FetchLatestMetaObj () );
+        }
+        if (pool.length > 0)
+            await Promise.all (pool);        
     }
 
 
     async ExecOnAllEntitiesAndAwait (func_name, params = null)
     {
         const pool = [];
-        for (e of this.AsArray () )
+
+        for (const e of this.AsArray () )
         {
             if (e != null)
                 pool.push (e[func_name] (params) );
@@ -140,8 +150,27 @@ class ArFSEntityGroup extends SARTObject
         if (pool.length > 0)
         {
             Sys.DEBUG ("ArFSEntityGroup: Awaiting for " + pool.length + " executions of function '" + func_name + "' (params: " + params + ")...");
+
             await Promise.all (pool);            
+
+            Sys.DEBUG ("ArFSEntityGroup: Awaiting for " + pool.length + " executions of function '" + func_name + "' (params: " + params + ") done.");            
         }
+    }
+
+    GetMatchingByFieldVal (field, val)
+    {
+        const group = new ArFSEntityGroup ();
+
+        for (const e of this.AsArray () )
+        {
+            if (e[field] == val)
+                group.AddEntity (e);
+            else
+                Sys.VERBOSE ("Dropped " + e + " as it was not matching the criteria of field:" + field + " value:" + val 
+                              + " - had " + (e[field] != null ? e[field] : "no value") + ".");
+        }
+
+        return group;
     }
 }
 

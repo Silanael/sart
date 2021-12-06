@@ -58,7 +58,7 @@ function ANSI (code, msg = null)
 function ErrorHandler (error)
 {        
     msg = "???";    
-
+    
     if (error != null)
     {
         DEBUG (error);
@@ -348,9 +348,9 @@ function WARN (str, src, args = {error_id: null} )
 
 // Error message output. Abort on false - return true if error is suppressed.
 function ERR (str, src, args = {error_id: null})
-{
+{    
     if (!Settings.IsQuiet () )
-    {
+    {        
         const msg = src != null ? src + ": " + str : str;
         if (Settings.IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
         if (Settings.IsErrSTDERR () ) console.error (ANSIERROR (msg) );        

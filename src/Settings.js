@@ -169,7 +169,7 @@ function SetRecursive              ()            { State.Config.Recursive    = t
 function CanAlterConf              (field)       { return ! Constants.CONFIG_LOCKED_ITEMS.includes (field);                       }
 function GetOutputFormat           ()            { return State.Config.OutputFormat;                                              }
 function GetMaxConcurrentFetches   ()            { return State.Config.MaxConcurrentFetches;                                      }
-function IncludeInvalidTX          ()            { return State.Config.IncludeInvalidTX;                                          }
+function IncludeInvalidTX          ()            { return State.Config.IncludeInvalidTX != null ? State.Config.IncludeInvalidTX : false };
 
 
 function SetConfigKey (key, value)

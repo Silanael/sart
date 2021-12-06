@@ -210,7 +210,7 @@ class TXGroup extends SARTObject
                     Sys.WARN ("Pruned invalid transaction " + tx);
             }
         }
-        return list;            
+        return group;            
     }
 
 

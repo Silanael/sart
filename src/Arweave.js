@@ -15,7 +15,7 @@ const Constants   = require ("./CONST_SART.js");
 const State       = require ("./ProgramState.js");
 const Sys         = require ('./System.js');
 const Settings    = require ('./Settings.js');
-const Concurrent  = require ("./Concurrent");
+const Fetch       = require ("./Concurrent");
 
 
 
@@ -23,7 +23,6 @@ const Concurrent  = require ("./Concurrent");
 
 
 // Constants
-
 const _TAG             = "Arweave";
 
 
@@ -170,7 +169,7 @@ async function Post (host_str, data_obj)
     {        
         try
         {
-            const  fetch = new Concurrent.Fetch (arweave.api.post (host_str, data_obj), "Arweave.Post");
+            const  fetch = new Fetch (arweave.api.post (host_str, data_obj), "Arweave.Post");
             await  fetch.Execute ();
             return fetch.GetReturnValue ();            
         }
@@ -299,7 +298,7 @@ async function GetTx (txid)
     {
         try               
         { 
-            const fetch = new Concurrent.Fetch (arweave.transactions.get (txid), "Arweave.GetTX (" + txid + ")" );
+            const fetch = new Fetch (arweave.transactions.get (txid), "Arweave.GetTX (" + txid + ")" );
             await fetch.Execute ();
             return fetch.GetReturnValue ();              
         }
@@ -316,7 +315,7 @@ async function GetTXStatus (txid)
 
     try
     {
-        const  fetch = new Concurrent.Fetch (arweave.transactions.getStatus (txid), "Arweave.GetTXStatus (" + txid + ")" );
+        const  fetch = new Fetch (arweave.transactions.getStatus (txid), "Arweave.GetTXStatus (" + txid + ")" );
         await  fetch.Execute ();
         return fetch.GetReturnValue ();    
     }
@@ -350,7 +349,7 @@ async function GetTxData (txid)
     
     try               
     { 
-        const fetch = new Concurrent.Fetch (arweave.transactions.getData (txid, {decode: true}), "Arweave.GetTXData (" + txid + ")" );
+        const fetch = new Fetch (arweave.transactions.getData (txid, {decode: true}), "Arweave.GetTXData (" + txid + ")" );
         await fetch.Execute ();
         return fetch.GetReturnValue ();         
     }
@@ -367,7 +366,7 @@ async function GetTxStrData (txid)
     
     try
     { 
-        const fetch = new Concurrent.Fetch (arweave.transactions.getData (txid, {decode: true, string: true} ), "Arweave.GetTXData (" + txid + ")" );
+        const fetch = new Fetch (arweave.transactions.getData (txid, {decode: true, string: true} ), "Arweave.GetTXData (" + txid + ")" );
         await fetch.Execute ();
         return fetch.GetReturnValue ();                         
     }

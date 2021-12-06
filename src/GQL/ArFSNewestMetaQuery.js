@@ -31,7 +31,7 @@ class ArFSNewestMetaQuery extends TXQuery
     async Execute (owner, arfs_id, entity_type)
     {       
         this.SetSort (Constants.GQL_SORT_NEWEST_FIRST);
-        
+    
         if (owner == null)
             return this.OnProgramError ("'owner' null", this);
 
