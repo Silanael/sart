@@ -7,8 +7,9 @@
 // A generic object with the basic functionality
 //
 
-const Sys  = require ("./System.js");
-const Util = require ("./Util.js");
+const Sys      = require ("./System.js");
+const Util     = require ("./Util.js");
+const Settings = require ("./Settings");
 
 
 class SARTObject
@@ -20,9 +21,11 @@ class SARTObject
     Errors           = null;
     Warnings         = null;
 
-    InfoFields       = ["Valid", "Warnings", "Errors"];
-    NoInfoFields     = ["NoInfoFields", "CustomFieldFuncs"];
-    RecursiveFields  = {"Warnings": {}, "Errors": {} };
+    OutputFields      = [];
+    OutputFieldGroups = [];
+    InfoFields        = ["Valid", "Warnings", "Errors"];
+    NoInfoFields      = ["NoInfoFields", "CustomFieldFuncs"];
+    RecursiveFields   = {"Warnings": {}, "Errors": {} };
 
     CustomFieldFuncs = {};
 
@@ -41,14 +44,28 @@ class SARTObject
     toString           ()                                      { return this.GetInfo ();                                                     }
 
     
-    GetFieldValue (field)
+    GetField (field, case_sensitive = false)
     {
-        const custom = this.CustomFieldFuncs[field];
-        return custom == null ? this[field] : custom (this);        
+        if (case_sensitive)
+            return this.OutputFields?.[field];
+
+        else
+        {
+            for (const f of this.OutputFields)
+            {
+                if (f.MatchesFieldName (field, case_sensitive) )
+                    return this.OutputFields[f.GetFieldName () ];
+            }
+        }
     }
 
+    GetFieldValue (field, case_sensitive = false)
+    {
+        return this.GetField (field, case_sensitive)?.GetFieldValue ();
+    }
     
-    __SetField (field, value)
+    
+    __SetObjectField (field, value)
     {
         if (field == null)                   
             return this.OnProgramError ("Failed to set field, 'field' provided was null.", "SARTObject.__SetValue");
@@ -70,12 +87,40 @@ class SARTObject
                     
     }
 
-    Output (args = {always: false} )
-    {
-        if (this.DataLoaded || args?.always)
-            Sys.OUT_OBJ (this.GetInfo (), { recursive: this.GetRecursiveFields () } );
-    }
 
+    /** Excepts a string-array of field-names. */
+    GetInfo (fields = [])
+    {        
+        const info = {};
+        const case_sensitive = Settings.AreFieldsCaseSensitive ();
+
+        // Parameter omitted, include all defined fields.
+        if (fields.length <= 0)
+        {
+            Sys.VERBOSE ("No fields provided - displaying all of them.");
+            
+            for (const field of this.OutputFields)
+            {
+                if (field != null)
+                    info[field.GetFieldName () ] = field.GetFieldValue (this);
+            }
+        }
+
+        // Include only the given set of fields.
+        else for (const f of fields)
+        {      
+            const field = this.GetField (f, case_sensitive);
+
+            if (field != null)
+                info[field.GetFieldName () ] = field.GetFieldValue (this);
+
+            else
+                Sys.ERR ("Unrecognized field: '" + f + "'.");
+        }
+
+        return info;
+    }
+   
 
     __OnError (field, errfunc, error, src, opts)
     {
@@ -89,29 +134,11 @@ class SARTObject
     }
 
 
-    GetInfo ()
+    Output (...fields)
     {
-        const info = {};
-        
-        for (const f of this.InfoFields)
-        {      
-            // The field name starting with a '?' is an indication that it should
-            // only be displayed if its value is not null.
-            // Non-questionmarked ones will always be displayed.
-            if (f != null && f[0] == "?")
-            {
-                const field = f.slice (1);
-                const val = this.GetFieldValue (field);
-                if (val != null)
-                    info[field] = val;
-            }
-            else
-                info[f] = this.GetFieldValue (f);
-                                    
-        }
-        return info;
+        Sys.OUT_OBJ (this.GetInfo (fields), { recursive: this.GetRecursiveFields () } );         
     }
-    
+
 }
 
 

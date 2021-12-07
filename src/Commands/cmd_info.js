@@ -244,9 +244,11 @@ may never see the light of day...
     {
         Name:         "Silanael ARweave Tool",
         Acronym:      "SART",
-        Version:      Package.version,
+        Version:      Package.version,      
+        VersionName:  Package.versionname,  
+        VersionSeries:Package.versionseries,        
         VersionDate:  Package.versiondate,
-        VersionName:  Package.codename,
+        VersionCode:  Package.versioncode,      
         Author:       "Silanael",
         SizeUnits:    "Binary (1K = 1024 bytes)",
         SizeSource:   "ArFS metadata-JSON",

@@ -170,6 +170,7 @@ function CanAlterConf              (field)       { return ! Constants.CONFIG_LOC
 function GetOutputFormat           ()            { return State.Config.OutputFormat;                                              }
 function GetMaxConcurrentFetches   ()            { return State.Config.MaxConcurrentFetches;                                      }
 function IncludeInvalidTX          ()            { return State.Config.IncludeInvalidTX != null ? State.Config.IncludeInvalidTX : false };
+function AreFieldsCaseSensitive    ()            { return State.Config.OutputFieldsCaseSensitive;                              }
 
 
 function SetConfigKey (key, value)
@@ -389,5 +390,6 @@ module.exports =
     GetOutputFormat,
     GetMaxConcurrentFetches,
     GetConfig,
+    AreFieldsCaseSensitive
 };
 

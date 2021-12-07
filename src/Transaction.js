@@ -19,8 +19,35 @@ const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("./SARTObject.js");
 const ByTXQuery    = require ("./GQL/GQL_ByTXQuery");
 const Concurrent   = require ("./Concurrent");
+const OutputField  = require ("./OutputField");
 
 
+const OUTPUT_FIELDS = 
+[
+    new OutputField ("Type"),
+    new OutputField ("Network"),
+    new OutputField ("TXID"),
+    new OutputField ("Owner"),         
+    new OutputField ("Target").WithFunction (function (t) { return t?.HasRecipient () ? t.GetRecipient () : "NONE"} ),
+    new OutputField ("Fee_AR"),           
+    new OutputField ("Fee_Winston"),        
+    new OutputField ("Quantity_AR"),      
+    new OutputField ("Quantity_Winston"), 
+    new OutputField ("DataSize_Bytes"),
+    new OutputField ("TagsTotalSizeB").WithFunction (function (t) { return t?.Tags?.GetTotalBytes (); } ),
+    new OutputField ("DataRoot"),         
+    new OutputField ("DataLocation"),             
+    new OutputField ("BlockID"),
+    new OutputField ("BlockDate"),
+    new OutputField ("BlockHeight"),        
+    new OutputField ("BlockUNIXTime"),        
+    new OutputField ("TXAnchor"),     
+    new OutputField ("Tags").WithFunction (function (t) { return t?.Tags?.GetList (); } ).WithRecursive (),                
+    new OutputField ("State").WithRecursive (),
+    new OutputField ("FetchedFrom").WithFunction (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
+    new OutputField ("Warnings").WithRecursive (),
+    new OutputField ("Errors").WithRecursive (),                  
+];
 
 
 class Transaction extends SARTObject
@@ -51,45 +78,13 @@ class Transaction extends SARTObject
     Errors              = null;
     DataFetched         = false;
     
-    InfoFields = 
-    [
-        "Type",
-        "Network",
-        "TXID",             
-        "Owner",            
-        "Target",
-        "Fee_AR",           
-        "Fee_Winston",        
-        "Quantity_AR",      
-        "Quantity_Winston", 
-        "DataSize_Bytes",   
-        "TagsTotalSizeB",
-        "DataRoot",         
-        "DataLocation",             
-        "BlockID",
-        "BlockDate",
-        "BlockHeight",        
-        "BlockUNIXTime",        
-        "TXAnchor",     
-        "Tags",                
-        "State",
-        "FetchedVia",
-        "Warnings",
-        "Errors",        
-    ];      
-      
-    // Use the by name -object under normal circumstances, do a listing if there are multiple tags with the same name.
-    CustomFieldFuncs = 
-    { 
-        "Tags":           function (t) { return t?.Tags?.HasDuplicates () ? t.Tags.GetList () : t?.Tags?.GetNameValueObj () },
-        "Target":         function (t) { return t?.HasRecipient        () ? t.GetRecipient () : "NONE" },
-        "FetchedVia":     function (t) { return t?.GQL_Edge != null ? t?.ArweaveTX != null ?"GQL + GET" : "GQL" : t?.ArweaveTX != null ? "GET" : null},
-        "TagsTotalSizeB": function (t) { return t?.Tags?.GetTotalBytes (); }  
-    };
+    OutputFields = OUTPUT_FIELDS;
     
-    RecursiveFields = {"Tags":{}, "State":{}, "Warnings":{}, "Errors":{} }
 
-
+  
+    //"Tags":           function (t) { return t?.Tags?.HasDuplicates () ? t.Tags.GetList () : t?.Tags?.GetNameValueObj () },
+      
+    
     /** Overridable. This implementation does nothing. */
     __OnTXFetched () {}
 
@@ -150,8 +145,16 @@ class Transaction extends SARTObject
             return blk_this == blk_tx;
     }
 
-    
 
+    GenerateFetchInfo ()
+    {
+        return { "GQL"   : this.GQL_Edge  != null,
+                 "GET"   : this.ArweaveTX != null,
+                 "Status": this.State?.IsFetched ()
+               };
+    }
+
+ 
     
     WithTag (name, value)
     {
@@ -240,17 +243,17 @@ class Transaction extends SARTObject
             this.SetTXID  (edge.node?.id);
             this.SetOwner (edge.node?.owner?.address)
             
-            this.__SetField ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
-            this.__SetField ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
-            this.__SetField ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
-            this.__SetField ("BlockDate"          , this.GetDate ()                                                                  );     
-            this.__SetField ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
+            this.__SetObjectField ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
+            this.__SetObjectField ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
+            this.__SetObjectField ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
+            this.__SetObjectField ("BlockDate"          , this.GetDate ()                                                                  );     
+            this.__SetObjectField ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
             
-            this.__SetField ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
-            this.__SetField ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
-            this.__SetField ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
-            this.__SetField ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
-            this.__SetField ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
+            this.__SetObjectField ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
+            this.__SetObjectField ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
+            this.__SetObjectField ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
+            this.__SetObjectField ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
+            this.__SetObjectField ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
 
             this.Validate ();
             this.__OnTXFetched ();
@@ -271,18 +274,18 @@ class Transaction extends SARTObject
             this.SetTXID      (arweave_tx.id);
             this.SetOwner     (await Arweave.OwnerToAddress (arweave_tx.owner) );   
             
-            this.__SetField ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
-            this.__SetField ("Fee_Winston"      , Number (arweave_tx.reward)                          );
-            this.__SetField ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
-            this.__SetField ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
-            this.__SetField ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
-            this.__SetField ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
-            this.__SetField ("DataRoot"         , arweave_tx.data_root                                );            
-            this.__SetField ("TXAnchor"         , arweave_tx.last_tx                                  );            
-            this.__SetField ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
+            this.__SetObjectField ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
+            this.__SetObjectField ("Fee_Winston"      , Number (arweave_tx.reward)                          );
+            this.__SetObjectField ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
+            this.__SetObjectField ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
+            this.__SetObjectField ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
+            this.__SetObjectField ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
+            this.__SetObjectField ("DataRoot"         , arweave_tx.data_root                                );            
+            this.__SetObjectField ("TXAnchor"         , arweave_tx.last_tx                                  );            
+            this.__SetObjectField ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
             
 
-            this.__SetField ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
+            this.__SetObjectField ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
                                                  : Util.IsSet (arweave_tx.data_root) ? "DataRoot" : "NO DATA" );
                                                  
             this.Validate ();

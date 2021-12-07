@@ -89,13 +89,14 @@ class ArFSEntity extends SARTObject
     ContainedEntities       = null;
     ContainedFiles          = null;
     ContainedFolders        = null;
+    OrphanedEntities        = null;
     Query                   = null;
 
     Fetched                 = false;
     DataLoaded              = false;
 
     RecursiveFields  = {"MetaTransactions": {}, "DataTransactions": {}, "History": { depth: 1 }, "AllTXStatus": {}, "Transactions": {}, 
-                        "ContainedEntities": {depth: 1}, "Contains" : {},
+                        "ContainedEntities": {depth: 1}, "Contains" : {}, "Orphaned": {},
                         "Versions": {}, "Content": {}, "Orphans": {}, "Parentless": {}, "Warnings": {}, "Errors": {} };
     InfoFields = 
     [ 
@@ -141,8 +142,10 @@ class ArFSEntity extends SARTObject
         "?History", 
         "?Versions",
         "?Contains",
-        "FilesAmount",
-        "FoldersAmount",
+        "?FilesAmount",
+        "?FoldersAmount",
+        "?OrphanedAmount",
+        "?Orphaned",
         //"?ContainedEntities",
         "?Content", 
         "Warnings", 
@@ -167,8 +170,10 @@ class ArFSEntity extends SARTObject
         "Transactions"         : function (e) { return e.GenerateTransactionInfo      (); },
         "History"              : function (e) { return e.GenerateHistory              (); },
         "Content"              : function (e) { return e.GenerateContentInfo          (); },
+        "Orphaned"             : function (e) { return e.OrphanedEntities;                },
         "FilesAmount"          : function (e) { return e.ContainedEntities != null ? e.ContainedEntities.GetFilesAmount   () : null },
         "FoldersAmount"        : function (e) { return e.ContainedEntities != null ? e.ContainedEntities.GetFoldersAmount () : null },
+        "OrphanedAmount"       : function (e) { return e.OrphanedEntities  != null ? e.OrphanedEntities.length : null;              },
     };
 
 
@@ -182,7 +187,8 @@ class ArFSEntity extends SARTObject
     GetName           ()          { return this.Name;                                   }
     GetArFSID         ()          { return this.ArFSID;                                 }
     HasArFSID         (id = null) { return id == null ? this.GetArFSID () != null 
-                                                      : this.GetArFSID () == id;        }    
+                                                      : this.GetArFSID () == id;        }
+    HasParentFolder   ()          { return Util.IsSet (this.ParentFolderID);            }
     GetEntityType     ()          { return this.EntityType;                             }
     GetLastModified   ()          { return this.LastModified;                           }
     GetNewestMetaTXID ()          { return this.MetaTXID_Latest;                        }
@@ -785,15 +791,34 @@ class ArFSEntity extends SARTObject
                         existing.__AddTransaction (tx, true);                                            
                 }
 
-                // Make sure that the entities received are still in the folder
-                if (this.IsFolder () && contained_entities.GetAmount () > 0)
+                if (contained_entities.GetAmount () > 0)
                 {
-                    Sys.VERBOSE ("Fetching newest metadata-transactions...", this);                        
-                    await contained_entities.FetchNewestMetadataTXForAll ();
+                    // Make sure that the entities received are still in the folder
+                    if (this.IsFolder () )
+                    {
+                        Sys.VERBOSE ("Fetching newest metadata-transactions...", this);                        
+                        await contained_entities.FetchNewestMetadataTXForAll ();
 
-                    contained_entities = contained_entities.GetMatchingByFieldVal ("ParentFolderID", this.GetArFSID () );
+                        contained_entities = contained_entities.GetMatchingByFieldVal ("ParentFolderID", this.GetArFSID () );
+                    }
+                    // Seek for orphans if this is a drive query                
+                    else if (this.IsDrive () )
+                    {
+                        for (const e of contained_entities.AsArray () )
+                        {
+                            if (!e.HasParentFolder () )
+                                e.OnError ("Parent folder not fetched/set, cannot determine if this is orphaned or not.", this)
+
+                            else if (contained_entities.GetFolderByID (e.GetParentFolderID () ) == null)
+                            {
+                                contained_entities.MarkAsOrphaned (e);
+                                this.OrphanedEntities = Util.AppendToArray (this.OrphanedEntities, e);
+                                Sys.WARN ("Orphaned ArFS-entity found: " + e, this.GetArFSID () );
+                            }
+                        }
+                    }
                 }                
-
+                
                 // No entities in this folder / drive
                 if (contained_entities.GetAmount () <= 0)
                 {

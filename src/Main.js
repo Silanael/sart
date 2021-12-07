@@ -149,6 +149,8 @@ const Flags =
     "--min-block"       : { "F": Settings.SetMinBlockHeight,  "A":true  },
     "--max-block"       : { "F": Settings.SetMaxBlockHeight,  "A":true  },
     "--format"          : { "F": Settings.SetFormat,          "A":true  }, 
+    "--csv"             : { "F": function () { Settings.SetFormat ("csv");  } },
+    "--json"            : { "F": function () { Settings.SetFormat ("json"); } },
     "-f"                : { "F": Settings.SetFormat,          "A":true  }, 
 }
 

@@ -11,6 +11,8 @@
 
 const Sys        = require ("./System");
 const SARTObject = require ("./SARTObject");
+const Util       = require ("./Util");
+
 
 
 class ArFSEntityGroup extends SARTObject
@@ -21,17 +23,24 @@ class ArFSEntityGroup extends SARTObject
 
     Files        = [];
     Folders      = [];
+    FilesByID    = {};
+    FoldersByID  = {};
+
+    OrphanedEntities = null;
 
 
     AsArray  () { return this.Entities; }
     toString () { const amount = Object.keys (this.ByArFSID)?.length; return "ArFSEntityGroup with " 
                   + (len == 0 ? "no entities" : len == 1 ? "one entity." : len + " entities") + "." }
                   
-    GetAmount        () { return this.Entities.length; }
-    GetFilesAmount   () { return this.Files.length;    }
-    GetFoldersAmount () { return this.Folders.length;  }
-    FilesAsArray     () { return this.Files;           }
-    FoldersAsArray   () { return this.Folders;         }
+    GetAmount        ()        { return this.Entities.length;      }
+    GetFilesAmount   ()        { return this.Files.length;         }
+    GetFoldersAmount ()        { return this.Folders.length;       }
+    FilesAsArray     ()        { return this.Files;                }
+    FoldersAsArray   ()        { return this.Folders;              }
+    GetFileByID      (arfs_id) { return this.FilesByID  [arfs_id]; }
+    GetFolderByID    (arfs_id) { return this.FoldersByID[arfs_id]; }
+    MarkAsOrphaned   (entity)  { this.OrphanedEntities = Util.AppendToArray (this.OrphanedEntities, entity); }
 
 
     AddEntity (entity)
@@ -77,8 +86,8 @@ class ArFSEntityGroup extends SARTObject
                 if (entity_list != null)
                     entity_list[arfs_id] = entity;
 
-                if      (entity.IsFile   () ) this.Files  .push (entity);
-                else if (entity.IsFolder () ) this.Folders.push (entity);
+                if      (entity.IsFile   () ) { this.Files  .push (entity); this.FilesByID  [arfs_id] = entity  }
+                else if (entity.IsFolder () ) { this.Folders.push (entity); this.FoldersByID[arfs_id] = entity; }
 
 
                 return true;
@@ -136,6 +145,22 @@ class ArFSEntityGroup extends SARTObject
             await Promise.all (pool);        
     }
 
+    GetMatchingByFieldVal (field, val)
+    {
+        const group = new ArFSEntityGroup ();
+
+        for (const e of this.AsArray () )
+        {
+            if (e[field] == val)
+                group.AddEntity (e);
+            else
+                Sys.VERBOSE ("Dropped " + e + " as it was not matching the criteria of field:" + field + " value:" + val 
+                              + " - had " + (e[field] != null ? e[field] : "no value") + ".");
+        }
+
+        return group;
+    }
+
 
     async ExecOnAllEntitiesAndAwait (func_name, params = null)
     {
@@ -155,23 +180,8 @@ class ArFSEntityGroup extends SARTObject
 
             Sys.DEBUG ("ArFSEntityGroup: Awaiting for " + pool.length + " executions of function '" + func_name + "' (params: " + params + ") done.");            
         }
-    }
+    }    
 
-    GetMatchingByFieldVal (field, val)
-    {
-        const group = new ArFSEntityGroup ();
-
-        for (const e of this.AsArray () )
-        {
-            if (e[field] == val)
-                group.AddEntity (e);
-            else
-                Sys.VERBOSE ("Dropped " + e + " as it was not matching the criteria of field:" + field + " value:" + val 
-                              + " - had " + (e[field] != null ? e[field] : "no value") + ".");
-        }
-
-        return group;
-    }
 }
 
  module.exports = ArFSEntityGroup;

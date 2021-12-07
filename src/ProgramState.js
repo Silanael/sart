@@ -33,7 +33,8 @@ class ProgramState
     GetCacheHits    () { return this.CacheHits   ;                                                   }
     GetCacheMisses  () { return this.CacheMisses ;                                                   }
     GetHost         () { return this.CurrentHost;                                                    }
-    
+    GetActiveTask   () { return this.ActiveTask;                                                     }
+
     SetConfigToDefault ()
     {
         this.Config = {};

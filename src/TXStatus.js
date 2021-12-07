@@ -13,11 +13,12 @@ class TXStatus
     MinedAtBlock  = null;
 
 
+    IsFetched        () { return this.Status != null; }
     GetStatus        () { return this.Status != null ? this.Status : "UNKNOWN"; };
     GetStatusFull    () { return this.Status == null ? "STATUS NOT QUERIED"
                                                      : this.Status + (this.IsConfirmed () ? 
                                                      " (" + this.Confirmations + " con., block " + this.MinedAtBlock + ")" : ""); };
-    GetStatusCode    () { return this.StatusCode };
+    GetStatusCode    () { return this.StatusCode    };
     GetConfirmations () { return this.Confirmations };
 
 

@@ -2,7 +2,10 @@
 (C) Silanael 2021
 
 
+## CHANGELOG
 
+### 0.8.6 ALPHA - Dying Light / Hachiroku
+- New Commands: `--csv`, `--json` (shorthands for --format <fmt>)
 
 ## VERSION 0.8.5 ALPHA
 This is a pre-release version that is **NOT INTENDED FOR PRODUCTION!**

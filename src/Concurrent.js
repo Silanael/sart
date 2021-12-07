@@ -157,6 +157,7 @@ class Fetch extends SARTObject
         this.Slot     = null;
         this.Instance = null;
  
+        State?.GetActiveTask ()?.IncrementFetchesBy (1);
     }
     
 }

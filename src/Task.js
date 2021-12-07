@@ -62,7 +62,7 @@ class Task extends SARTObject
             this.__DoOutput ();
 
             Sys.VERBOSE ("");        
-            Sys.VERBOSE ("Task finished in " + this.GetRuntimeMs () + " ms with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
+            Sys.VERBOSE ("Task finished in " + this.GetRuntimeSec () + " sec with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
         }
     }
 
