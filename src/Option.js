@@ -2,7 +2,7 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// Command.js - 2021-12-07_01
+// Option.js - 2021-12-07_01
 //
 // Command-line option definition.
 //
@@ -14,5 +14,5 @@ class CMDOption
     Description = null;
     HasArgument = false;
 
-    
+
 }

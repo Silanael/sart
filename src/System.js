@@ -8,9 +8,14 @@
 //
 
 // Local imports
-const Constants = require ("./CONST_SART.js");
-const Settings  = require ("./Settings.js");
-const State     = require ("./ProgramState.js");
+const Constants     = require ("./CONST_SART.js");
+const LogLevels     = Constants.LOGLEVELS;
+const OutputDests   = Constants.OUTPUTDESTS;
+const OutputFormats = Constants.OUTPUTFORMATS;
+const SETTINGS      = Constants.SETTINGS;
+const State         = require ("./ProgramState.js");
+
+
 
 
 
@@ -32,21 +37,31 @@ const ANSI_BLINK_OFF = "\033[25m";
 const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
 
+function GetSetting         (key)                    { return State.GetSetting (key); }
 
+function IsQuiet            ()                       { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
+function IsMsg              ()                       { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsVerbose          ()                       { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsDebug            ()                       { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsMsgSTDOUT        ()                       { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                      }
+function IsMsgSTDERR        ()                       { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                      }
+function IsErrSTDOUT        ()                       { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                      }
+function IsErrSTDERR        ()                       { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                      }
+function IsForceful         ()                       { return GetSetting (SETTINGS.Force);                                                                    }
+function IsANSIAllowed      ()                       { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                                     }
 
-
-function ERR_MISSING_ARG   (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
-function SET_RECURSIVE_OUT (obj)                    { PrintObj.SetRecursive (obj);     };
-function ANSIRED           (msg = null)             { return ANSI (ANSI_RED    , msg)  };
-function ANSIYELLOW        (msg = null)             { return ANSI (ANSI_YELLOW , msg)  };
-function ANSIERROR         (msg = null)             { return ANSI (ANSI_ERROR  , msg)  };
-function ANSIWARNING       (msg = null)             { return ANSI (ANSI_WARNING, msg)  };
-function ANSIPENDING       (msg = null)             { return ANSI (ANSI_PENDING, msg)  };
-function ANSICLEAR         (msg = null)             { return ANSI (ANSI_CLEAR  , msg)  };
+function ERR_MISSING_ARG    (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
+function SET_RECURSIVE_OUT  (obj)                    { PrintObj.SetRecursive (obj);     };
+function ANSIRED            (msg = null)             { return ANSI (ANSI_RED    , msg)  };
+function ANSIYELLOW         (msg = null)             { return ANSI (ANSI_YELLOW , msg)  };
+function ANSIERROR          (msg = null)             { return ANSI (ANSI_ERROR  , msg)  };
+function ANSIWARNING        (msg = null)             { return ANSI (ANSI_WARNING, msg)  };
+function ANSIPENDING        (msg = null)             { return ANSI (ANSI_PENDING, msg)  };
+function ANSICLEAR          (msg = null)             { return ANSI (ANSI_CLEAR  , msg)  };
 
 function ANSI (code, msg = null)
 { 
-    if (!Settings.IsANSIAllowed () )
+    if (!IsANSIAllowed () )
         return msg != null ? msg : "";
 
     else 
@@ -144,16 +159,9 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
     if (opts.recursive_fields == null)   opts.recursive_fields = [];
     if (opts.recursive == null)          opts.recursive        = {};
     if (opts.header == null)             opts.header = true;
-
-    const conf = Settings.GetConfig ();
-    if (conf == null)
-    {
-        console.error ("PROGRAM ERROR: Could not get config. Trying to display object still:");
-        console.log (obj);
-        return false;
-    }    
     
-    const out_fmt = opts.format != null ? opts.format : Settings.GetOutputFormat ();
+
+    const out_fmt = opts.format != null ? opts.format : GetSetting (SETTINGS.OutputFormat);
 
 
     switch (out_fmt) 
@@ -162,7 +170,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
        
             try
             { 
-                OUT_TXT (JSON.stringify (obj, null, conf?.JSONSpacing) ); 
+                OUT_TXT (JSON.stringify (obj, null, GetSetting (SETTINGS.JSONSpacing)) ); 
             }
             catch (exception) 
             { 
@@ -182,7 +190,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 let header = null;
                 for (const e of Object.entries (obj) )
                 {
-                    const var_str = !conf.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
+                    const var_str = !GetSetting (SETTINGS.VarNamesUppercase) ? e[0] : e[0]?.toUpperCase ();
 
                     if (! var_str.startsWith ("__") )
                         header = header != null ? header + "," + var_str : var_str;
@@ -201,7 +209,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 if (val == "[object Object]") // Too ugly to be listed like this.
                     val = "<OBJECT>";
 
-                val = val.replace (/,/g, conf.CSVReplacePeriodWith);
+                val = val.replace (/,/g, GetSetting (SETTINGS.CSVReplacePeriodWith) );
 
                 line = line != null ? line + "," + val : val;
             }
@@ -233,7 +241,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
             Object.entries (obj).forEach 
             (e => 
             {       
-                const var_str = !conf.VarNamesUppercase ? e[0] : e[0]?.toUpperCase ();
+                const var_str = !GetSetting (SETTINGS.VarNamesUppercase) ? e[0] : e[0]?.toUpperCase ();
 
                 const field = e[0];
                 const val   = e[1];
@@ -242,7 +250,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                 if (field.startsWith ("__") )
                 {
                     if (field == FIELD_ANSI)
-                        if (Settings.IsANSIAllowed () == true) 
+                        if (IsANSIAllowed () == true) 
                             OUT_TXT_RAW (val);                    
                 }
 
@@ -278,7 +286,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
                         val_str = "<OBJECT>";
 
                     let pos
-                    if (Settings.IsANSIAllowed () && (pos = val_str.search (WARNING_CHR_SEQ_REGEXP)) != -1)
+                    if (IsANSIAllowed () && (pos = val_str.search (WARNING_CHR_SEQ_REGEXP)) != -1)
                         val_str = ANSIERROR (val_str).replace (/!!!/g, ANSI_BLINK + "!!!" + ANSI_BLINK_OFF);
 
                     OUT_TXT (" ".repeat (opts.indent) + var_str?.padEnd (longest_len, " ") 
@@ -296,11 +304,11 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
 // Informative output, ie. for 'help'.
 function INFO (str, src)
 {       
-    if (Settings.IsMsg () )
+    if (IsMsg () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log  (msg);
-        if (Settings.IsMsgSTDERR () ) console.warn (msg);
+        if (IsMsgSTDOUT () ) console.log  (msg);
+        if (IsMsgSTDERR () ) console.warn (msg);
     }
 }
 
@@ -309,11 +317,11 @@ function INFO (str, src)
 // Detailed informative output - needs to be enabled.
 function VERBOSE (str, src)
 {        
-    if (Settings.IsVerbose () )
+    if (IsVerbose () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log  (msg);
-        if (Settings.IsMsgSTDERR () ) console.warn (msg);
+        if (IsMsgSTDOUT () ) console.log  (msg);
+        if (IsMsgSTDERR () ) console.warn (msg);
     }
 }
 
@@ -322,11 +330,11 @@ function VERBOSE (str, src)
 // Very extensive output - needs to be enabled.
 function DEBUG (str, src)
 {        
-    if (Settings.IsDebug () )
+    if (IsDebug () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsMsgSTDOUT () ) console.log   (msg);
-        if (Settings.IsMsgSTDERR () ) console.error (msg);        
+        if (IsMsgSTDOUT () ) console.log   (msg);
+        if (IsMsgSTDERR () ) console.error (msg);        
     }
 }
 
@@ -335,11 +343,11 @@ function DEBUG (str, src)
 // Warning. Return true if the warning is suppressed.
 function WARN (str, src, args = {error_id: null} )
 {
-    if (!Settings.IsQuiet () )
+    if (!IsQuiet () )
     {
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsErrSTDOUT () ) console.log   (ANSIWARNING (msg) );
-        if (Settings.IsErrSTDERR () ) console.error (ANSIWARNING (msg) );        
+        if (IsErrSTDOUT () ) console.log   (ANSIWARNING (msg) );
+        if (IsErrSTDERR () ) console.error (ANSIWARNING (msg) );        
     }
     return false;    
 }
@@ -349,11 +357,11 @@ function WARN (str, src, args = {error_id: null} )
 // Error message output. Abort on false - return true if error is suppressed.
 function ERR (str, src, args = {error_id: null})
 {    
-    if (!Settings.IsQuiet () )
+    if (!IsQuiet () )
     {        
         const msg = src != null ? src + ": " + str : str;
-        if (Settings.IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
-        if (Settings.IsErrSTDERR () ) console.error (ANSIERROR (msg) );        
+        if (IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
+        if (IsErrSTDERR () ) console.error (ANSIERROR (msg) );        
     }       
     return false;
 }
@@ -363,7 +371,7 @@ function ERR (str, src, args = {error_id: null})
 // An error that can be overridden with --force
 function ERR_OVERRIDABLE (str, src)
 {
-    if (!Settings.IsForceful () )
+    if (!IsForceful () )
         return ERR_ABORT (str, src);
 
     else
@@ -389,6 +397,8 @@ function ERR_PROGRAM (msg, src, opts = {once: false} )
         ERR ("PROGRAM ERROR: " + msg, src);
 }
 
+function ERR_PROGRAM_ONCE (msg, src) { return ERR_PROGRAM (msg, src, {once: true} ); }
+
 
 // Display the same error only once.
 // I'd like to use a hash for the lookup here, but there doesn't
@@ -396,7 +406,7 @@ function ERR_PROGRAM (msg, src, opts = {once: false} )
 const DISPLAYED_ERRORS = {};
 function ERR_ONCE (str, src, args = {error_id: null})
 {    
-    if (!Settings.IsQuiet () && DISPLAYED_ERRORS[str] == null )
+    if (!IsQuiet () && DISPLAYED_ERRORS[str] == null )
     {
         DISPLAYED_ERRORS [str] = true;
         return ERR (str, src, args);
@@ -499,6 +509,7 @@ module.exports =
     ERR_OVERRIDABLE,
     ERR_CONFLICT,
     ERR_PROGRAM,
+    ERR_PROGRAM_ONCE,
     ERR_MISSING_ARG,
     ERR_ONCE,
     ERR_FATAL,

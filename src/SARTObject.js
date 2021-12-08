@@ -9,12 +9,12 @@
 
 const Sys      = require ("./System.js");
 const Util     = require ("./Util.js");
-const Settings = require ("./Settings");
 
 
 class SARTObject
 {
-
+    Name             = null;
+    
     Valid            = true;
     DataLoaded       = false;
 
@@ -38,10 +38,12 @@ class SARTObject
     HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }
     SetInfoFields      (fields)                                { this.InfoFields = fields;                                                   }
     WithInfoField      (field)                                 { this.InfoFields = Util.AppendToArray (this.InfoFields, field); return this; }
+    GetID              ()                                      { return null; }
+    GetName            ()                                      { return this.Name; }
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
     IsValid            ()                                      { return this.Valid == true;                                                  }
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
-    toString           ()                                      { return this.GetInfo ();                                                     }
+    toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
     
     GetField (field, case_sensitive = false)
@@ -92,7 +94,7 @@ class SARTObject
     GetInfo (fields = [])
     {        
         const info = {};
-        const case_sensitive = Settings.AreFieldsCaseSensitive ();
+        const case_sensitive = false;
 
         // Parameter omitted, include all defined fields.
         if (fields.length <= 0)

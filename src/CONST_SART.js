@@ -16,7 +16,6 @@ const CONFIG_VERSION            = 2;
 const CONFIG_FILESIZE_MAX_BYTES = 83886080;
 const CONFIGFILE_ENCODING       = "utf-8";
 const CONFIG_RECURSIVE_FIELDS   = ["ArFSTXQueryTags"]
-const CONFIG_LOCKED_ITEMS       = ["Type", "ConfigVersion", "AppVersion", "AppVersionCode"];
 const CONFIG_TX_TAGS_TOTAL_SIZE = 2048;
 
 const TXSTATUS_OK               = 200;
@@ -94,67 +93,79 @@ const CONNSTATES =
 }
 
 
-
-
-const CONFIG_DEFAULT =
+class Setting
 {
-    Type                      : "SARTConfig",
-    Description               : "SART configuration/settings",
-    ConfigVersion             : CONFIG_VERSION,
-    AppVersion                : Package.version,
-    AppVersionCode            : Package.versioncode,
-   
-    LogLevel                  : IS_TTY ? LOGLEVELS.MSG : LOGLEVELS.NOMSG,
-    MsgOut                    : OUTPUTDESTS.STDOUT,
-    ErrOut                    : OUTPUTDESTS.STDERR,
-                 
-    ArweaveHost               : "arweave.net",
-    ArweavePort               : 443,
-    ArweaveProto              : "https",
-    ArweaveTimeout_ms         : 100000,   
-    ManualDest                : false,
-             
-    Recursive                 : false,
-    DisplayAll                : false,    
-    AllowWildcards            : true,
-    ConcurrentDelay_ms        : 200,
-    ErrorWaitDelay_ms         : 5000,
-    ErrorWaitVariationP       : 1.0,
-    ErrorRetries              : 3,
-    MaxConcurrentFetches      : 5,
-      
-    OutputFields              : null,
-    OutputFormat              : OUTPUTFORMATS.TXT,
-    OutputFieldsCaseSensitive : false,
-    SizeDigits                : 5,
-    VarNamesUppercase         : false,
-    ANSIAllowed               : true,
-    CSVReplacePeriodWith      : "#!#",
-    JSONSpacing               : 3,
+    Name         = null;
+    DefaultValue = null;
+    ReadOnly     = false;
+    Deprecated   = false; 
+    
+    constructor (name) { this.Name = name; }
 
-    VerifyDefaults            : "SUMMARY,NOT-VERIFIED",
-    VerifyDefaults_Numeric    : "SUMMARY,ALL",
-   
-    ArFSEntityTryOrder        : "drive,file,folder",
-    QueryMinBlockHeight       : null,
-    QueryMaxBlockHeight       : null,
-   
-    IncludeInvalidTX          : false,
-    Force                     : false,
-         
-    MaxArFSMetadataSize       : 1073741824, // 1MB ought to be enough for anybody?
-    MaxTXFormat               : 2,
-    MinArFSVersion            : 0.11,
-    MaxArFSVersion            : 0.11,
-    // Set to null to query solely based on tags like Entity-Type, Drive-Id etc.
-    ArFSTXQueryTags           : [ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ],
-    SafeConfirmationsMin      : 15,
-    TXTagsMaxTotalBytes       : CONFIG_TX_TAGS_TOTAL_SIZE,
-   
-    LessFiltersMode           : false,
-    ContainerMode             : false,
-  
-};
+    DV               (value) { this.DefaultValue = value; return this; }       
+    RO               ()      { this.ReadOnly     = true;  return this; }
+    DEPR             ()      { this.Deprecated   = true;  return this; }
+
+    GetName          ()      { return this.Name;                       }
+    GetKey           ()      { return this.Name;                       }
+    GetDefaultValue  ()      { return this.DefaultValue;               }
+    CanBeModified    ()      { return !this.ReadOnly;                  }
+}
+
+
+
+const SETTINGS =
+{
+    Type                    : new Setting ("Type")                     .DV ("SARTConfig").RO (),
+    Description             : new Setting ("Description")              .DV ("SART configuration/settings"),
+    ConfigVersion           : new Setting ("ConfigVersion")            .DV (CONFIG_VERSION).RO (),
+    AppVersion              : new Setting ("AppVersion")               .DV (Package.version).RO (),
+    AppVersionCode          : new Setting ("AppVersionCode")           .DV (Package.versioncode).RO (),
+    LogLevel                : new Setting ("LogLevel")                 .DV (LOGLEVELS.DEBUG), //.DV (Constants.IS_TTY ? LogLevels.MSG : LogLevels.NOMSG),
+    MsgOut                  : new Setting ("MsgOut")                   .DV (OUTPUTDESTS.STDOUT),
+    ErrOut                  : new Setting ("ErrOut")                   .DV (OUTPUTDESTS.STDERR),
+    ArweaveHost             : new Setting ("ArweaveHost")              .DV ("arweave.net"),
+    ArweavePort             : new Setting ("ArweavePort")              .DV (443),
+    ArweaveProto            : new Setting ("ArweaveProto")             .DV ("https"),
+    ArweaveTimeout_ms       : new Setting ("ArweaveTimeout_ms")        .DV (100000),
+    ManualDest              : new Setting ("ManualDest")               .DV (false),
+    Recursive               : new Setting ("Recursive")                .DV (false),
+    DisplayAll              : new Setting ("DisplayAll")               .DV (false),
+    AllowWildcards          : new Setting ("AllowWildcards")           .DV (true),
+    ConcurrentDelay_ms      : new Setting ("ConcurrentDelay_ms")       .DV (200),
+    ErrorWaitDelay_ms       : new Setting ("ErrorWaitDelay_ms")        .DV (5000),
+    ErrorWaitVariationP     : new Setting ("ErrorWaitVariationP")      .DV (1.0),
+    ErrorRetries            : new Setting ("ErrorRetries")             .DV (3),
+    MaxConcurrentFetches    : new Setting ("MaxConcurrentFetches")     .DV (5),
+    OutputFields            : new Setting ("OutputFields")             .DV (null),
+    OutputFormat            : new Setting ("OutputFormat")             .DV (OUTPUTFORMATS.TXT),
+    OutputFieldsCaseSens    : new Setting ("OutputFieldsCaseSens")     .DV (false),
+    SizeDigits              : new Setting ("SizeDigits")               .DV (5),
+    VarNamesUppercase       : new Setting ("VarNamesUppercase")        .DV (false),
+    ANSIAllowed             : new Setting ("ANSIAllowed")              .DV (true),
+    CSVReplacePeriodWith    : new Setting ("CSVReplacePeriodWith")     .DV ("#!#"),
+    JSONSpacing             : new Setting ("JSONSpacing")              .DV (3),
+    VerifyDefaults          : new Setting ("VerifyDefaults")           .DV ("SUMMARY,NOT-VERIFIED"),
+    VerifyDefaults_Numeric  : new Setting ("VerifyDefaults_Numeric")   .DV ("SUMMARY,ALL"),
+    ArFSEntityTryOrder      : new Setting ("ArFSEntityTryOrder")       .DV ("drive,file,folder"),
+    QueryMinBlockHeight     : new Setting ("QueryMinBlockHeight")      .DV (null),
+    QueryMaxBlockHeight     : new Setting ("QueryMaxBlockHeight")      .DV (null),
+    IncludeInvalidTX        : new Setting ("IncludeInvalidTX")         .DV (false),
+    Force                   : new Setting ("Force")                    .DV (false),
+    MaxArFSMetadataSize     : new Setting ("MaxArFSMetadataSize")      .DV (1073741824), // 1MB ought to be enough for anybody?
+    MaxTXFormat             : new Setting ("MaxTXFormat")              .DV (2),
+    MinArFSVersion          : new Setting ("MinArFSVersion")           .DV (0.11),
+    MaxArFSVersion          : new Setting ("MaxArFSVersion")           .DV (0.11),
+    ArFSTXQueryTags         : new Setting ("ArFSTXQueryTags")          .DV ([ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ]),
+    SafeConfirmationsMin    : new Setting ("SafeConfirmationsMin")     .DV (15),
+    TXTagsMaxTotalBytes     : new Setting ("TXTagsMaxTotalBytes")      .DV (CONFIG_TX_TAGS_TOTAL_SIZE),
+    LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
+    ContainerMode           : new Setting ("ContainerMode")            .DV (false),
+}
+Object.freeze (SETTINGS);
+
+
+
 
 
 
@@ -166,7 +177,6 @@ module.exports =
     CONFIG_FILESIZE_MAX_BYTES,
     CONFIGFILE_ENCODING,
     CONFIG_RECURSIVE_FIELDS,
-    CONFIG_LOCKED_ITEMS,
     IS_TTY,
 
     TXSTATUS_OK,
@@ -191,5 +201,6 @@ module.exports =
     OUTPUTFORMATS,
     CONNSTATES,   
     SYSTEM_ACCESS,
-    CONFIG_DEFAULT, 
+    SETTINGS,
+    Setting,
 };

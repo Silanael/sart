@@ -12,44 +12,43 @@ const Constants = require ("./CONST_SART.js");
 
 class ProgramState
 {    
-    Config           = this.SetConfigToDefault ().conf;
-    ConfigFilename   = null;
-
-    CurrentHost      = null;
-    ArweaveInstance  = null;
-    ConnectionState  = Constants.CONNSTATES.NOTCONN;
-    ConsoleActive    = false;
-
-    Cache            = null;
-    CacheHits        = 0;
-    CacheMisses      = 0;
+    GlobalConfig            = null;
+    ConfigFilename          = null;
+       
+    CurrentHost             = null;
+    ArweaveInstance         = null;
+    ConnectionState         = Constants.CONNSTATES.NOTCONN;
+    ConsoleActive           = false;
+       
+    Cache                   = null;
+    CacheHits               = 0;
+    CacheMisses             = 0;
     
-    ActiveTask       = null;
+    ActiveCommand           = null;
     ActiveConcurrentFetches = [];
 
-    GetConfig       () { return this.Config != null ? this.Config : this.SetConfigToDefault ().conf; }
-    IsConsoleActive () { return this.ConsoleActive;                                                  }
-    IsCacheEnabled  () { return this.Cache != null;                                                  }
-    GetCacheHits    () { return this.CacheHits   ;                                                   }
-    GetCacheMisses  () { return this.CacheMisses ;                                                   }
-    GetHost         () { return this.CurrentHost;                                                    }
-    GetActiveTask   () { return this.ActiveTask;                                                     }
+    GetConfig         () { return this.GlobalConfig;   }
+    IsConsoleActive   () { return this.ConsoleActive;  }
+    IsCacheEnabled    () { return this.Cache != null;  }
+    GetCacheHits      () { return this.CacheHits   ;   }
+    GetCacheMisses    () { return this.CacheMisses ;   }
+    GetHost           () { return this.CurrentHost;    }
+    GetActiveCommand  () { return this.ActiveTask;     }
 
-    SetConfigToDefault ()
+
+    /* This is only for System. */
+    GetSetting (key)
     {
-        this.Config = {};
-        
-        for (const e of Object.entries (Constants.CONFIG_DEFAULT) )
-        {
-            const key        = e[0];
-            const value      = e[1];
-            this.Config[key] = value;
-        }
+        if (this.ActiveCommand != null)
+            return this.ActiveCommand.GetConfig()?.GetSetting (key);
 
-        const error = Object.keys (this.Config)?.length < 20 ? "Failed to set default config!" : null;
-        
-        return { conf: this.Config, error: error }
+        else if (this.GlobalConfig != null)
+            return this.GlobalConfig.GetSetting (key);
+
+        else
+            return null;
     }
+
 
     GetArFSEntity (args = { entity_type: null, arfs_id: null} )
     {

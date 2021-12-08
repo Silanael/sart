@@ -10,6 +10,7 @@ const Package       = require ("../package.json");
 const Constants     = require ("./CONST_SART.js");
 const Sys           = require ("./System.js");
 const State         = require ("./ProgramState.js");
+const SARTObject    = require ("./SARTObject");
 const LogLevels     = Constants.LOGLEVELS;
 const OutputDests   = Constants.OUTPUTDESTS;
 const OutputFormats = Constants.OUTPUTFORMATS;
@@ -19,14 +20,67 @@ let FUP = 0;
 
 
 
-function SetConfigToDefault ()
-{
-    const ret = State.SetConfigToDefault ();
 
-    if (ret.error != null)
-        return Sys.ERR_FATAL ("Error while setting config to defaut: "+ err);
+
+
+class Config extends SARTObject
+{
+    Name            = "Default";
+    Values          = {};
+    KeyNamesPresent = {};
+
     
+    SetSetting (key, value)
+    {
+        if (key instanceof Constants.Setting)
+            key = key.GetKey ();
+
+        if (Constants.SETTINGS[key] == null)
+            return Sys.ERR ("Unrecognized setting key '" + key + "'.");
+
+        else
+        {            
+            this.KeyNamesPresent [key] = true;
+            this.Values          [key] = value;
+            return true;
+        }
+    }
+
+    GetSetting (key)
+    {    
+        const globalconf = State.GetConfig ();
+
+        if (key instanceof Constants.Setting)
+            key = key.GetKey ();
+
+        if (Constants.SETTINGS[key] == null)
+        {
+            Sys.ERR_PROGRAM ("Unrecognized setting '" + key + "!", "Settings", {once: true} );
+            return null;
+        }
+
+        else if (this.KeyNamesPresent[key] != null)            
+            return this.Values[key];
+        
+        else if (globalconf != null && this != globalconf)
+            return globalconf.GetSetting (key);
+
+        else
+            return null;
+    }
+
+    ResetToDefaults ()
+    {        
+        this.Values          = {}
+        this.KeyNamesPresent = {}
+
+        for (const s of Object.values (Constants.SETTINGS) )
+        {
+            this.SetSetting (s.GetName (), s.GetDefaultValue () );
+        }        
+    }
 }
+
 
 
 function LoadConfig (filename)
@@ -51,8 +105,8 @@ function LoadConfig (filename)
         {
             Sys.VERBOSE ("Config file '" + filename + "' is " + stat.size + " bytes.");
 
-            if (stat.size > Settings.MAX_CONFIGFILE_SIZE_BYTES &&
-                Sys.ERR_OVERRIDABLE ("Config file size exceeds the maximum of " + Util.GetSizeStr (Settings.MAX_CONFIGFILE_SIZE_BYTES, true) 
+            if (stat.size > Config.MAX_CONFIGFILE_SIZE_BYTES &&
+                Sys.ERR_OVERRIDABLE ("Config file size exceeds the maximum of " + Util.GetSizeStr (Config.MAX_CONFIGFILE_SIZE_BYTES, true) 
                                      + ". Use --force to load anyways.") == false)
                 return false;
 
@@ -60,7 +114,7 @@ function LoadConfig (filename)
         else if (Sys.ERR_OVERRIDABLE ("Could not stat '" + filename +"'. Use --force to try to load anyways.") == false)
             return false;
 
-        const data = FS.readFileSync (filename, Settings.CONFIGFILE_ENCODING);
+        const data = FS.readFileSync (filename, Config.CONFIGFILE_ENCODING);
 
         if (data != null)
         {
@@ -111,7 +165,7 @@ function ApplyConfig (config)
 {
     if (config != null)
     {
-        Settings.SetConfigToDefault ();
+        Config.SetConfigToDefault ();
         
         for (e of Object.entries (config) )
         {
@@ -134,43 +188,68 @@ function ApplyConfig (config)
 }
 
 
+/** The resolve order is Command -> GlobalConfig -> Defaults. */
+function GetSetting (key)
+{
+    if (key instanceof Key)
+        key = key.GetKey ();
+
+    if (State.ActiveCommand != null)
+        return State.ActiveCommand.GetConfig()?.GetSetting (key);
+
+    else if (State.GlobalConfig != null)
+        return State.GlobalConfig.GetSetting (key);
+
+    else
+    {
+        Sys.ERR_PROGRAM ("Global config not present when trying to get setting '" + key + "!", "Settings", {once: true} );
+
+        if (Constants.SETTINGS[key] != null)            
+        {
+            Sys.VERBOSE ("Using default setting for '" + key + "'.");
+            return Constants.SETTINGS[key].GetDefaultValue ();
+        }
+        else
+        {
+            Sys.ERR_PROGRAM ("Invalid setting '" + key + "'!", "Settings", {once: true} );
+            return null;
+        }
+    }
+
+}
 
 
 
 
-function GetConfig          ()             { return State.GetConfig (); }
-function GetHostString      (path = null) { return State.Config.ArweaveProto + "://" 
-                                                 + State.Config.ArweaveHost  + ":" 
-                                                 + State.Config.ArweavePort
-                                                 + ( path != null ? path : "");                                            }
-function GetGQLHostString          ()            { return GetHostString () + "/graphql";                                          }
-function IsQuiet                   ()            { return State.Config.LogLevel <= LogLevels.QUIET;                               }
-function IsMSGOutputAllowed        ()            { return State.Config.LogLevel >  LogLevels.QUIET;                               }
-function IsNoMsg                   ()            { return State.Config.LogLevel <= LogLevels.NOMSG   || State.Config.MsgOut <= 0; }
-function IsMsg                     ()            { return State.Config.LogLevel >= LogLevels.MSG     && State.Config.MsgOut  > 0; }
-function IsVerbose                 ()            { return State.Config.LogLevel >= LogLevels.VERBOSE && State.Config.MsgOut  > 0; }
-function IsDebug                   ()            { return State.Config.LogLevel >= LogLevels.DEBUG   && State.Config.MsgOut  > 0; }
-function IsMsgSTDOUT               ()            { return (State.Config.MsgOut & OutputDests.STDOUT) != 0;                        }
-function IsMsgSTDERR               ()            { return (State.Config.MsgOut & OutputDests.STDERR) != 0;                        }
-function IsErrSTDOUT               ()            { return (State.Config.ErrOut & OutputDests.STDOUT) != 0;                        }
-function IsErrSTDERR               ()            { return (State.Config.ErrOut & OutputDests.STDERR) != 0;                        }
-function IsForceful                ()            { return State.Config.Force;                                                     }
-function IsConcurrentAllowed       ()            { return true; } // TODO
-function IsHTMLOut                 ()            { return State.Config.OutputFormat == OutputFormats.HTML;                        }
-function IsCSVOut                  ()            { return State.Config.OutputFormat == OutputFormats.CSV;                         }
-function IsTXTOut                  ()            { return State.Config.OutputFormat == OutputFormats.TXT;                         }
-function IsANSIAllowed             ()            { return State.Config.ANSIAllowed  == true;                                      }
-function IsJSONOut                 ()            { return State.Config.OutputFormat == OutputFormats.JSON;                        }
-function SetForce                  ()            { State.Config.Force = true;                                                     }
-function SetPort                   (port)        { State.Config.ArweavePort  = port;  State.Config.ManualDest = true;             }
-function SetProto                  (proto)       { State.Config.ArweaveProto = proto; State.Config.ManualDest = true;             }
-function SetDisplayAll             ()            { State.Config.DisplayAll   = true;                                              }
-function SetRecursive              ()            { State.Config.Recursive    = true;                                              }
-function CanAlterConf              (field)       { return ! Constants.CONFIG_LOCKED_ITEMS.includes (field);                       }
-function GetOutputFormat           ()            { return State.Config.OutputFormat;                                              }
-function GetMaxConcurrentFetches   ()            { return State.Config.MaxConcurrentFetches;                                      }
-function IncludeInvalidTX          ()            { return State.Config.IncludeInvalidTX != null ? State.Config.IncludeInvalidTX : false };
-function AreFieldsCaseSensitive    ()            { return State.Config.OutputFieldsCaseSensitive;                              }
+function GetConfig                 ()            { return State.GetConfig (); }
+function GetHostString             (path = null) { return GetSetting (SETTINGS.ArweaveHost) + "://" 
+                                                        + GetSetting (SETTINGS.ArweaveHost)  + ":" 
+                                                        + GetSetting (SETTINGS.ArweavePort)
+                                                        + ( path != null ? path : "");                                                              }
+function GetGQLHostString          ()            { return GetHostString () + "/graphql";                                                            }
+function IsQuiet                   ()            { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
+function IsMSGOutputAllowed        ()            { return GetSetting (SETTINGS.LogLevel) >  LogLevels.QUIET;                                        }
+function IsNoMsg                   ()            { return GetSetting (SETTINGS.LogLevel) <= LogLevels.NOMSG   || GetSetting (SETTINGS.MsgOut) <= 0; }
+function IsMsg                     ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsVerbose                 ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsDebug                   ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsMsgSTDOUT               ()            { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                }
+function IsMsgSTDERR               ()            { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                }
+function IsErrSTDOUT               ()            { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                }
+function IsErrSTDERR               ()            { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
+function IsForceful                ()            { return GetSetting (SETTINGS.Force);                                                              }
+function IsConcurrentAllowed       ()            { return GetSetting (SETTINGS.MaxConcurrentFetches) >= 2;                                          } 
+function IsHTMLOut                 ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.HTML;                                 }
+function IsCSVOut                  ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.CSV;                                  }
+function IsTXTOut                  ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.TXT;                                  }
+function IsANSIAllowed             ()            { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                               }
+function IsJSONOut                 ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.JSON;                                 }
+function CanAlterConf              (key)         { return SETTINGS[key]?.CanBeModified ();                                                          }
+function GetOutputFormat           ()            { return GetSetting (SETTINGS.OutputFormat);                                                       }
+function GetMaxConcurrentFetches   ()            { return GetSetting (SETTINGS.MaxConcurrentFetches);                                               }
+function IncludeInvalidTX          ()            { return GetSetting (SETTINGS.IncludeInvalidTX) == true;                                           }
+function AreFieldsCaseSensitive    ()            { return GetSetting (SETTINGS.OutputFieldsCaseSens);                                               }
+
 
 
 function SetConfigKey (key, value)
@@ -337,17 +416,20 @@ function SetDebug () { State.Config.LogLevel = LogLevels.DEBUG; }
 
 
 
-SetConfigToDefault ();
+State.GlobalConfig = new Config ();
+State.GlobalConfig.ResetToDefaults ();
 
 
 
 // I can think of a better way of doing this. But CBA at the moment.
 module.exports =
 { 
+    Config,
     LogLevels,
     OutputFormats,
     OutputDests,
     FUP, 
+    GetSetting,
     GetHostString,
     GetGQLHostString,
     IsMSGOutputAllowed,
@@ -367,29 +449,23 @@ module.exports =
     IsANSIAllowed,
     SetConfigKey,
     SetHost,
-    SetPort,
-    SetProto,
     SetFormat,
     SetNoMsg,
     SetMsg,
     SetVerbose,
     SetQuiet,
     SetDebug,
-    SetForce,
     SetLessFiltersMode,
-    SetDisplayAll,
-    SetRecursive,
     SetMsgOut,
     SetErrOut,
     SetMinBlockHeight,
     SetMaxBlockHeight,
-    CanAlterConf,
-    SetConfigToDefault,
+    CanAlterConf,    
     LoadConfig,
     AppendConfig,
     GetOutputFormat,
     GetMaxConcurrentFetches,
     GetConfig,
-    AreFieldsCaseSensitive
+    AreFieldsCaseSensitive,    
 };
 

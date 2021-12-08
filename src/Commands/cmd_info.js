@@ -9,19 +9,14 @@
 
 // Imports
 const Package      = require ('../../package.json');
-const Constants    = require ("../CONST_SART.js");
 const State        = require ("../ProgramState.js");
 const Sys          = require ('../System.js');
 const Settings     = require ('../Settings.js');
 const Util         = require ('../Util.js');
 const Arweave      = require ('../Arweave.js');
-const ArFS         = require ('../ArFS.js');
-const GQL          = require ('../GQL/GQLQuery.js');
 const ArFS_DEF     = require ('../CONST_ARFS.js');
 const ArFSEntity   = require ("../ArFSEntity");
-const Analyze      = require ('../TXAnalyze.js');
 const Transaction  = require ("../Transaction.js");
-const Task         = require ("../Task");
 
 
 
@@ -113,13 +108,13 @@ async function HandleCommand (args)
 
 
 
-class InfoTask_TX extends Task
+class InfoTask_TX 
 {
     Transaction = null;
 
     constructor (tx)
     {
-        super ();
+        
         this.Transaction = tx;
     }
 
@@ -266,13 +261,13 @@ may never see the light of day...
 }
 
 
-class InfoTask_ArFSEntity extends Task
+class InfoTask_ArFSEntity 
 {
     Entity = null;
 
     constructor (param = {entity_type: null, arfs_id: null} )
     {
-        super ();
+        //super ();
                 
         this.Entity = ArFSEntity.GET_ENTITY (param)                
     }

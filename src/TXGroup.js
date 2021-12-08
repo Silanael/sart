@@ -1,25 +1,21 @@
 const Constants   = require ("./CONST_SART.js");
 const Sys         = require ('./System.js');
 const Transaction = require ("./Transaction.js");
-const SARTObject  = require ("./SARTObject");
+const SARTGroup   = require ("./SARTGroup");
 
 
 
-class TXGroup extends SARTObject
+class TXGroup extends SARTGroup
 {
 
     SortOrder = null;
     SortDone  = false;
-
-    List   = [];
-    ByTXID = {};
-
-
+    
     InfoFields       = ["Transactions", "TransactionInfo"];
     RecursiveFields  = this.InfoFields;
     CustomFieldFuncs = 
     {
-        "Transactions"         : function (e) { return e?.AsArray ();                  },
+        "Transactions"         : function (e) { return e?.AsArray      ();             },
         "TransactionInfo"      : function (e) { return e?.GenerateInfo ();             },        
     };
 
@@ -51,13 +47,9 @@ class TXGroup extends SARTObject
     }
 
 
-    GetAmount              ()           { const k = Object.keys (this.ByTXID); return k != null ? k.length : 0;     }
-    GetSort                ()           { return this.SortOrder;                                                    }
-    GetByTXID              (txid)       { return this.ByTXID[txid];                                                 }
-    HasTXID                (txid)       { return this.GetByTXID (txid) != null;                                     }
-    GetByIndex             (index)      { return index >= 0 && index < this.List.length ? this.List[index] : null;  }
-    AsArray                ()           { return this.List;                                                         }
-    toString               ()           { return "TXGroup";                                                         }    
+    GetByTXID  (txid)  { return this.GetByID (txid);  }
+    HasTXID    (txid)  { return this.HasID   (txid);  }
+    toString   ()      { return "TXGroup";            }    
     
 
 
@@ -156,42 +148,7 @@ class TXGroup extends SARTObject
     }
 
 
-    Add (stx, txid = null) 
-    {
-        if (stx == null)
-            Sys.ERR_PROGRAM("'stx' null!", "Transactions.Add");
 
-
-        else 
-        {
-            if (txid == null)
-                txid = stx.GetTXID ();
-
-            if (this.ByTXID[txid] != null) 
-            {
-                Sys.VERBOSE ("TXID " + txid + " already exists in the set, not replacing it", "STransactions.Add");
-                return this;
-            }
-
-            this.ByTXID[txid] = stx;
-            this.List.push (stx);
-        }
-
-        return this;
-    }
-    
-
-    AddAll (txgroup)
-    {
-        if (txgroup == null)
-            return false;
-
-        for (const t of txgroup.AsArray () )
-        {
-            this.Add (t);
-        }
-        return true;
-    }
 
 
     /* Get a group of transactions with the condition of IsValid () == true. */

@@ -15,9 +15,9 @@ const Package    = require ("../package.json");
 
 const Constants  = require ("./CONST_SART.js");
 const State      = require ("./ProgramState.js");
+const Commands   = require ("./Command");
 const Concurrent = require ("./Concurrent");
 const Cache      = require ("./Cache");
-const Task       = require ("./Task.js");
 const Sys        = require ('./System.js');
 const Settings   = require ('./Settings.js');
 const Arweave    = require ('./Arweave.js');
@@ -49,7 +49,7 @@ const FIRST_ARG         = 2;
 
 
 
-
+/*
 // Arg-Command mapping table
 const Commands =
 {    
@@ -106,7 +106,7 @@ const Commands =
     "test"        : Testing
 }
 
-
+*/
 
 // Arg-Command mapping table
 const Flags =
@@ -159,6 +159,10 @@ const Flags =
 async function Main (argv)
 {
 
+    const args = argv.slice (FIRST_ARG);
+    await new Commands.Command ().ExecuteCommand (args);
+
+    /*
     const argc           = argv.length;
     let   command_found  = false;
     
@@ -209,6 +213,7 @@ async function Main (argv)
 
     if (!command_found)
         await Console.HandleCommand ();
+    */
 
 }
 
@@ -438,27 +443,6 @@ function DisplayReadme ()
 }
 
 
-
-class TestTask extends Task
-{
-    async __DoExecute ()
-    {
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );
-        State.Concurrent.AddFetch (new Promise (r => setTimeout (r, Math.random () * 10000) ) );        
-        await State.Concurrent.Execute ();
-    }
-}
 
 
 
