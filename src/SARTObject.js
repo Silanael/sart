@@ -29,6 +29,14 @@ class SARTObject
 
     CustomFieldFuncs = {};
 
+    Main             = null;
+
+    constructor (main, name = null)
+    {
+        this.Main = main;
+        this.Name = name;
+    }
+
 
     OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN, warning, src, opts)            }  
     OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }  

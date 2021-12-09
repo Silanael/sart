@@ -1,0 +1,35 @@
+//
+// *****************************
+// *** Silanael ARweave Tool ***
+// *****************************
+//
+// CommandTemplate - 2021-12-09_01
+// Command 'NAMEHERE'
+//
+
+const CommandHandler = require ("../CommandHandler");
+const Util           = require ("../Util");
+const Sys            = require ("../System");
+
+
+
+class CommandNAMEHERE extends CommandHandler
+{
+    constructor ()
+    {
+        super ("COMMAND");
+        this.MinArgsAmount = 0;
+    }
+
+    OnExecute (args, main)
+    {
+        return true;        
+    }
+
+    OnOutput (args, main)
+    {
+    }
+}
+
+
+module.exports = CommandNAMEHERE;

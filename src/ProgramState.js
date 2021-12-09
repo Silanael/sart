@@ -12,6 +12,8 @@ const Constants = require ("./CONST_SART.js");
 
 class ProgramState
 {    
+    Main                    = null;
+
     GlobalConfig            = null;
     ConfigFilename          = null;
        
@@ -24,6 +26,7 @@ class ProgramState
     CacheHits               = 0;
     CacheMisses             = 0;
     
+    PreviousCommand         = null;
     ActiveCommand           = null;
     ActiveConcurrentFetches = [];
 

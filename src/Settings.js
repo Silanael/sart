@@ -190,9 +190,10 @@ function ApplyConfig (config)
 
 /** The resolve order is Command -> GlobalConfig -> Defaults. */
 function GetSetting (key)
-{
-    if (key instanceof Key)
+{    
+    if (key instanceof Constants.Setting)
         key = key.GetKey ();
+
 
     if (State.ActiveCommand != null)
         return State.ActiveCommand.GetConfig()?.GetSetting (key);
@@ -203,7 +204,6 @@ function GetSetting (key)
     else
     {
         Sys.ERR_PROGRAM ("Global config not present when trying to get setting '" + key + "!", "Settings", {once: true} );
-
         if (Constants.SETTINGS[key] != null)            
         {
             Sys.VERBOSE ("Using default setting for '" + key + "'.");
@@ -216,6 +216,7 @@ function GetSetting (key)
         }
     }
 
+    
 }
 
 

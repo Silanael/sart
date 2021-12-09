@@ -449,13 +449,13 @@ function ON_EXCEPTION (exception, src = "Something", subject = null)
 {    
     if (exception != null)
     {        
-        if (Settings.IsDebug () )
+        if (IsDebug () )
         {            
             DEBUG (src + " caused the following exception:")
             DEBUG (exception);
         }
         
-        if (Settings.IsVerbose () )
+        if (IsVerbose () )
             VERBOSE (src + " failed.");
 
         if (exception.code != null)

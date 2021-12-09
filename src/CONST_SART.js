@@ -32,6 +32,8 @@ const GQL_SORT_NEWEST_FIRST      = GQL_SORT_HEIGHT_DESCENDING;
 const GQL_SORT_DEFAULT           = GQL_SORT_HEIGHT_ASCENDING;
 const GQL_VALID_SORT             = [ GQL_SORT_HEIGHT_ASCENDING, GQL_SORT_HEIGHT_DESCENDING ];
 
+function FUNC_ALWAYS_TRUE        () { return true;  }
+function FUNC_ALWAYS_FALSE       () { return false; }
 
 
 const HTTP_STATUS_OK             = 200;
@@ -121,7 +123,7 @@ const SETTINGS =
     ConfigVersion           : new Setting ("ConfigVersion")            .DV (CONFIG_VERSION).RO (),
     AppVersion              : new Setting ("AppVersion")               .DV (Package.version).RO (),
     AppVersionCode          : new Setting ("AppVersionCode")           .DV (Package.versioncode).RO (),
-    LogLevel                : new Setting ("LogLevel")                 .DV (LOGLEVELS.DEBUG), //.DV (Constants.IS_TTY ? LogLevels.MSG : LogLevels.NOMSG),
+    LogLevel                : new Setting ("LogLevel")                 .DV (IS_TTY ? LOGLEVELS.MSG : LOGLEVELS.NOMSG),
     MsgOut                  : new Setting ("MsgOut")                   .DV (OUTPUTDESTS.STDOUT),
     ErrOut                  : new Setting ("ErrOut")                   .DV (OUTPUTDESTS.STDERR),
     ArweaveHost             : new Setting ("ArweaveHost")              .DV ("arweave.net"),
@@ -161,6 +163,8 @@ const SETTINGS =
     TXTagsMaxTotalBytes     : new Setting ("TXTagsMaxTotalBytes")      .DV (CONFIG_TX_TAGS_TOTAL_SIZE),
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
+    DefaultCommand          : new Setting ("DefaultCommand")           .DV ("console"),
+    DefaultCommandParam     : new Setting ("DefaultCommandParam")      .DV (null),
 }
 Object.freeze (SETTINGS);
 
@@ -195,7 +199,8 @@ module.exports =
     HTTP_STATUS_OK,
     ERROR_IDS,
     IS_GQL_SORT_VALID,
-    
+    FUNC_ALWAYS_TRUE,
+    FUNC_ALWAYS_FALSE,
     LOGLEVELS, 
     OUTPUTDESTS, 
     OUTPUTFORMATS,

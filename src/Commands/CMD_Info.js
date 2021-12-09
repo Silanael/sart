@@ -3,56 +3,73 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// cmd_info.js - 2021-10-30_01
-// Command 'info'
+// CMD_Info.js - 2021-10-30_01
+// Command 'INFO'
 //
 
 // Imports
-const Package      = require ('../../package.json');
-const State        = require ("../ProgramState.js");
-const Sys          = require ('../System.js');
-const Settings     = require ('../Settings.js');
-const Util         = require ('../Util.js');
-const Arweave      = require ('../Arweave.js');
-const ArFS_DEF     = require ('../CONST_ARFS.js');
-const ArFSEntity   = require ("../ArFSEntity");
-const Transaction  = require ("../Transaction.js");
+const Package        = require ('../../package.json');
+const State          = require ("../ProgramState.js");
+const Sys            = require ('../System.js');
+const Settings       = require ('../Settings.js');
+const Util           = require ('../Util.js');
+const Arweave        = require ('../Arweave.js');
+const ArFS_DEF       = require ('../CONST_ARFS.js');
+const ArFSEntity     = require ("../ArFSEntity");
+const Transaction    = require ("../Transaction.js");
+const CommandHandler = require ("../CommandHandler");
 
 
-
-const SUBCOMMANDS = 
+class CMD_Info extends CommandHandler
 {
-    "tx"     : Handler_TX,
-    "arfs"   : Handler_ArFS,
-    "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
-    "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
-    "folder" : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
-    "config" : function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
-    "sart"   : Handler_SART,
-    "author" : Handler_Author,
-};
 
+    MinArgsAmount = 1;
 
-function Help (args)
-{
-    Sys.INFO ("----------");
-    Sys.INFO ("INFO USAGE");
-    Sys.INFO ("----------");
-    Sys.INFO ("");
-    Sys.INFO ("Transaction info:")
-    Sys.INFO ("   info <txid> (tags)");
-    Sys.INFO ("");    
-    Sys.INFO ("ArFS-entity info:")
-    Sys.INFO ("   info (arfs) [drive/file/folder] <arfs-id>"); 
-    Sys.INFO ("");
-    Sys.INFO ("Get the current config:");
-    Sys.INFO ("   info config"); 
-    Sys.INFO ("");
-    Sys.INFO ("Program/author info:")
-    Sys.INFO ("   info [sart/author]");
-    Sys.INFO ("");
-    Sys.INFO ("Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS.");    
+    Subcommands = 
+    {
+        "tx"     : Handler_TX,
+        "arfs"   : Handler_ArFS,
+        "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
+        "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
+        "folder" : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
+        "config" : function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
+        "sart"   : Handler_SART,
+        "author" : Handler_Author,
+    };
+
+    Helplines =
+    [
+        "----------",
+        "INFO USAGE",
+        "----------",
+        "",
+        "Transaction info:",
+        "   info <txid> (tags)",
+        "",
+        "ArFS-entity info:",
+        "   info (arfs) [drive/file/folder] <arfs-id>",
+        "",
+        "Get the current config:",
+        "   info config",
+        "",
+        "Program/author info:",
+        "   info [sart/author]",
+        "",
+        "Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS."
+    ];
+
+    OnExecute (args, main)
+    {
+
+    }
+
+    OnOutput (args, main)
+    {
+        Sys.INFO ("Foo");
+    }
+
 }
+
 
 
 
@@ -324,4 +341,4 @@ async function Handler_ArFS (args, arfs_id = null, entity_type = null)
 
 
 
-module.exports = { HandleCommand, Help, SUBCOMMANDS }
+module.exports = CMD_Info;

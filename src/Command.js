@@ -4,272 +4,18 @@
 //
 // Command.js - 2021-12-07_01
 //
-// Base class for a command
+// The command-instance.
 //
 
-const Constants     = require ("./CONST_SART");
-const SETTINGS      = Constants.SETTINGS;
-const SARTObject    = require ("./SARTObject");
-const SARTDef       = require ("./SARTDefinition");
-const State         = require ("./ProgramState");
-const Util          = require ("./Util");
-const Sys           = require ("./System");
-const Settings      = require ("./Settings");
-const Args          = require ("./Arguments");
-const LOGLEVELS     = Constants.LOGLEVELS;
-const OUTPUTDESTS   = Constants.OUTPUTDESTS;
-const OUTPUTFORMATS = Constants.OUTPUTFORMATS;
-
-
-
-class CommandHandler extends SARTDef
-{    
-    MinArgsAmount = 0;
-    SubCommands   = {};
-    HelpLines     = [];
-    ExecFunc      = null;
-    OutFunc       = null;
-    
-
-    constructor (command_name)
-    {
-        super (command_name);
-    }   
-
-
-    WithMinArgsAmount     (amount)      { this.MinArgsAmount = amount;              return this; }
-    WithFunc              (exec, out)   { this.ExecFunc = exec; this.OutFunc = out; return this; }
-    WithHelpLines         (helplines)   { this.HelpLines     = helplines;           return this; }
-    WithSubCommands       (subcommands) { this.SubCommands   = subcommands;         return this; }
- 
-    GetMinArgsAmount      ()            { return this.MinArgsAmount; }
-    GetSubCommands        ()            { return this.SubCommands;   }
-
-
-    DisplayHelp ()
-    {
-        if (this.HelpLines.length <= 0)
-            Sys.ERR ("No help available for command '" + this.GetName () + "'.");
-
-        else for (const l of this.HelpLines)
-        {
-            Sys.INFO (l);         
-        }
-
-        Sys.INFO ("Valid subcommands: " + Util.KeysToStr (this.SubCommands) );
-    }
-
-    /* Overrsidable, this implementation does nothing. */
-    async OnExecute (command) { if (this.ExecFunc != null) return this.ExecFunc (command); else return Sys.ERR_PROGRAM ("Subclass not overriding Execute!", this); }
-    async OnOutput  (command) { if (this.OutFunc  != null) return this.OutFunc  (command); else return Sys.ERR_PROGRAM ("Subclass not overriding Output!",  this); }    
-}
-
-
-
-class Option extends SARTDef
-{
-    HasParameter = false;
-    SettingKey   = null;
-    SettingValue = null;
-    Function     = null;
-    Alias        = null;
-    Invokes      = [];
-    Deprecated   = false;
-    UnderWork    = false;
-
-    constructor (name)
-    {
-        super (name);        
-    }
-
-    HasName (name) { return super.HasName (name, false) || (this.Alias != null && Util.StrCmp (name, this.Alias, true) ); }
-
-    WithSetting (key, value = null)
-    {
-        this.SettingKey   = key;
-        this.SettingValue = value;
-
-        if (value == null)
-            this.HasParameter = true;
-
-        return this;
-    }
-
-    WithAlias      (name)             { this.Alias      = name;         return this; }
-    WithFunc       (func)             { this.Function   = func;         return this; }
-    WithInvoke     (...option_names)  { this.Invokes    = option_names; return this; }
-    WithDeprecated ()                 { this.Deprecated = true;         return this; }
-    WithUnderWork  ()                 { this.UnderWork  = true;         return this; }
- 
-
-    Invoke (config, param)
-    {
-
-        if (this.Deprecated)
-            return Sys.ERR ("Option deprecated and removed.", this);
-
-        else if (this.UnderWork)
-            return Sys.WARN ("This option is not yet ready. Stay tuned.", this);
-
-        else if (this.HasParameter && param == null)
-            return Sys.ERR ("Parameter missing.", this);
-
-
-        else if (this.Function != null)
-            this.Function (config, param);
-
-
-        else if (this.SettingKey != null)
-        {
-            if (config == null)
-                Sys.ERR_PROGRAM ("Invoke: 'config' null!", this);
-            
-            else if (this.HasParameter)            
-                config.SetSetting (this.SettingKey, param);
-
-            else 
-                config.SetSetting (this.SettingKey, this.SettingValue);                            
-        }
-
-        else
-            Sys.ERR_PROGRAM ("Was unable to set option '" + this + "' - no valid actions available.");
-
-
-        // Invoke all options listed, if any.
-        if (this.Invokes.length > 0)
-        {
-            for (const i of this.Invokes)
-            {
-                InvokeOptionIfExists (config, param);
-            }
-        }
-
-    }
-}
-
-
-const COMMANDS =  
-{
-    "help"        : null,
-    "help"        : null,
-    "/?"          : null,
-    "/h"          : null,
-    "version"     : null,
-    "-v"          : null,
-    "--version"   : null,
-    "info"        : null,
-    "-i"          : null,
-    "connect"     : null,
-    "list"        : null,
-    "-l"          : null,
-    "get"         : null,
-    "-g"          : null,
-    "status"      : null,
-    "-s"          : null,
-    "verify"      : null,
-    "pending"     : null,
-    "console"     : null,
-    "exit"        : null,
-    "quit"        : null,
-    "set"         : null,
-    "readme"      : null,
-    "test"        : new CommandHandler ("test").WithFunc (function () { return true}, function () { Sys.INFO ("Testing."); } ),
-    "date"        : function ()
-    { 
-        const unixtime = args.GetAmount () >= 1 ? Number (args.Pop() ) : null;
-        if (unixtime != null && isNaN (unixtime) )
-            return Sys.ERR ("Not a number. Give an unix-time in seconds since 1970-01-01 00:00:00.");
-        else
-            Sys.INFO (Util.GetDate (unixtime) + " local, " + Util.GetDate (unixtime, null, true) + " UTC." ); return true; 
-    },
-    "size"        : function (args)
-    {         
-        if (!args.RequireAmount (1, "Amount of bytes required.") )
-            return false;
-
-        const b = Number (args.Pop () );
-
-        if (isNaN (b) )
-            return Sys.ERR ("Not a number.");
-        else
-            Sys.INFO (Util.GetSizeStr (b, true, State.Config.SizeDigits) );
-
-        return true;
-    },    
-        
-};
-
-
-
-const OPTIONS =
-{    
-    "--no-msg"          : new Option ("--no-msg"          ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.NOMSG),  
-    "--msg"             : new Option ("--msg"             ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
-    "--informative"     : new Option ("--informative"     ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
-    "--verbose"         : new Option ("--verbose"         ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.VERBOSE).WithAlias ("-V"),
-    "--quiet"           : new Option ("--quiet"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.QUIET),  
-    "--debug"           : new Option ("--debug"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.DEBUG),  
-    "--msg-out"         : new Option ("--msg-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
-    "--err-out"         : new Option ("--err-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.ErrOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
-    "--stderr"          : new Option ("--stderr"          ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, OUTPUTDESTS.STDERR);  
-                                                                                           if (conf.GetSetting (SETTINGS.LogLevel) != LOGLEVELS.MSG) 
-                                                                                               conf.SetSetting (SETTINGS.LogLevel,    LOGLEVELS.MSG) } ),
-    "--msg-stderr"      : new Option ("--msg-stderr"      ).WithInvoke ("--stderr", "--msg"),
-    "--verbose-stderr"  : new Option ("--verbose-stderr"  ).WithInvoke ("--stderr", "--verbose"),
-    "--debug-stderr"    : new Option ("--debug-stderr"    ).WithInvoke ("--stderr", "--debug"),
-    "--no-ansi"         : new Option ("--no-ansi"         ).WithSetting (SETTINGS.ANSIAllowed, false),  
-    "-all"              : new Option ("-a"                ).WithSetting (SETTINGS.DisplayAll,  true ).WithAlias ("-a"),    
-    "--recursive"       : new Option ("-r"                ).WithSetting (SETTINGS.Recursive,   true ).WithAlias ("-r"),        
-    "--host"            : new Option ("--host"            ).WithSetting (SETTINGS.ArweaveHost),
-    "--port"            : new Option ("--port"            ).WithSetting (SETTINGS.ArweavePort), 
-    "--proto"           : new Option ("--proto"           ).WithSetting (SETTINGS.ArweaveProto),
-    "--timeout-ms"      : new Option ("--timeout-ms"      ).WithSetting (SETTINGS.ArweaveTimeout_ms),
-    "--concurrent-ms"   : new Option ("--concurrent-ms"   ).WithUnderWork (),
-    "--retries"         : new Option ("--retries"         ).WithUnderWork (),
-    "--retry-ms"        : new Option ("--retry-ms"        ).WithUnderWork (),
-    "--fast"            : new Option ("--fast"            ).WithUnderWork (),
-    "--force"           : new Option ("--force"           ).WithSetting   (SETTINGS.Force, true),
-    "--less-filters"    : new Option ("--less-filters"    ).WithUnderWork (),
-    "--config-file"     : new Option ("--config-file"     ).WithUnderWork (),
-    "--config"          : new Option ("--config"          ).WithUnderWork (),
-    "--min-block"       : new Option ("--min-block"       ).WithSetting (SETTINGS.QueryMinBlockHeight),
-    "--max-block"       : new Option ("--max-block"       ).WithSetting (SETTINGS.QueryMaxBlockHeight),
-    "--format"          : new Option ("--format"          ).WithSetting (SETTINGS.OutputFormat),
-    "--csv"             : new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
-    "--json"            : new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON)
-    
-}
-Object.freeze (OPTIONS);
-
-
-
-function InvokeOptionIfExists (config, opt_name, param)
-{
-    if (config == null)
-        return Sys.ERR_PROGRAM ("'config' null!", "InvokeOption");
-
-    for (const o of Object.values (OPTIONS) )
-    {
-        if (o != null && o.HasName (opt_name) )
-        {
-            Sys.VERBOSE ("Invoking argument '" + opt_name + "' with " + (param != null ? "parameter '" + param + "'." : "no parameter.") );
-            o.Invoke (config, param);
-            return o;
-        }
-    }
-}
-
-
-function GetCommandHandler (name)
-{    
-    for (const o of Object.values (COMMANDS) )
-    {
-        if (o != null && o.HasName (name) )
-            return o;        
-    }
-    return null;
-}
-
+const Constants      = require ("./CONST_SART");
+const SARTObject     = require ("./SARTObject");
+const State          = require ("./ProgramState");
+const Util           = require ("./Util");
+const Sys            = require ("./System");
+const Settings       = require ("./Settings");
+const Args           = require ("./Arguments");
+const Options        = require ("./Options");
+const COMMANDS       = require ("./COMMANDS");
 
 
 class Command extends SARTObject
@@ -277,10 +23,9 @@ class Command extends SARTObject
     Handler   = null;
     
     Command   = null;    
-    Arguments = null;
     ArgV      = null;
 
-    Config    = new Settings.Config;
+    Config    = new Settings.Config ();
 
     StartTime = null;
     EndTime   = null;
@@ -288,7 +33,9 @@ class Command extends SARTObject
 
     Success   = null;
     Failed    = null;
-    
+
+
+
 
     GetConfig          ()       { return this.Config; }
 
@@ -305,55 +52,104 @@ class Command extends SARTObject
     WasSuccessful      ()       { return this.Success;                           }
 
 
-    async ExecuteCommand (argv)
+    async Execute (argv, is_first_command = false)
     {
-        this.Arguments = argv;
+        this.ArgV    = argv;
+        this.Success = false;
+        this.Fetches = 0;
+        this.Config  = new Settings.Config ();
 
-        if (argv == null || argv.length <= 0)
-            return this.Failed = Sys.ERR_PROGRAM ("ExecuteCommand: 'argv' null!", this);
+        if (!is_first_command && (argv == null || argv.length <= 0) )
+            return this.Failed = Sys.ERR_PROGRAM ("Execute: 'argv' null!", this);
                     
-        this.Arguments = this.ParseOptions (argv);        
-        this.Command   = this.Arguments.PopLC ();
 
+
+
+        // Extract options and get the remaining arguments
+        let args = this.ParseOptions (argv);
+
+
+
+        this.Command  = args.PopLC ();
+        
+        // No command given
         if (this.Command == null)
-            return this.Failed = Sys.ERR ("ExecuteCommand: No command given.", this);
+        {
+            // Use the default-command if this is the first command (ie. not a comman from the console).
+            if (is_first_command)
+            {            
+                const default_cmd   = Settings.GetSetting (Constants.SETTINGS.DefaultCommand);            
+                const default_param = Settings.GetSetting (Constants.SETTINGS.DefaultCommandParam);
+                
+                if (default_cmd == null)
+                {
+                    Sys.WARN ("Default command set in config is null - defaulting to 'console'.");
+                    default_cmd = "console";
+                }
+                this.Command = default_cmd;            
+                args = new Args ([default_param]);  
+            }
+            else
+                return this.Failed = Sys.ERR ("ExecuteCommand: No command given.", this);
+        }
 
-        this.Handler = GetCommandHandler (this.Command);
+
+
+        
+        // Get the handler for the command
+        this.Handler = COMMANDS.GetCommandHandler (this.Command);
 
         if (this.Handler == null)
             return this.Failed = Sys.ERR ("Command '" + this.Command + "' not recognized or handler missing.", this);
         
-        else
+        else if (args.GetAmount () < this.Handler.MinArgsAmount)
         {
-            Sys.VERBOSE ("Executing command '" + this.Command + "'...");
-            await this.__DoExecute ();  
+            this.Handler.DisplayHelp ();       
+            return this.Failed = Sys.ERR ("Insufficient amount of parameters given - at least " + this.Handler.MinArgsAmount + " required.");
         }
 
-    }
 
-    async __DoExecute ()
-    {   
-        if (this.Handler == null)     
-            return this.OnProgramError ("Command-handler not set!", this);
 
-        else if (State.ActiveCommand != null)
-            return this.OnError ("A command is already running.");
-
+        // All fine, execute the command.
         else
         {            
-            State.ActiveCommand = this;
+            let handler = this.Handler;
 
+            Sys.VERBOSE ("Executing command '" + this.Command + "'...");
             this.StartTime = Util.GetUNIXTimeMS ();        
-            this.Success = await this.Handler.OnExecute (this);        
-            this.EndTime = Util.GetUNIXTimeMS ();        
 
-            this.Handler.OnOutput (this);
+            if (handler.OnExecute != null)
+            {
+                const subcmd = handler.GetSubcommand (args.Peek () );
+                
+                // Subcommand present, invoke that.
+                if (subcmd != null)
+                {
+                    Sys.DEBUG ("Executing subcommand-handler '" + subcmd + "' ...");
+                    args.Pop ();
+                    handler = subcmd;                    
+                }
+                else // Proceed with executing this.                                
+                    this.Success = await handler.OnExecute (args, this.Main);            
+            }
+            else
+            {
+                Sys.DEBUG ("Executing command '" + this.Command + "' as a direct function..");
+                this.Success = await handler (args, this.Main);
+            }
+            
+            this.EndTime = Util.GetUNIXTimeMS ();        COMMANDS
+
+            if (handler.OnOutput != null)
+                handler.OnOutput (args, this.Main);
 
             Sys.VERBOSE ("");        
             Sys.VERBOSE ("Command finished in " + this.GetRuntimeSec () + " sec with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
         } 
+
+
     }
-      
+
 
     ParseOptions (argv)
     {
@@ -362,15 +158,15 @@ class Command extends SARTObject
             Sys.ERR_PROGRAM ("'argv' null!", "Command.ParseOptions");
             return null;
         }
-
+        
         const len = argv.len;
         let index = 0;
         
         const command_args = [];
-
+        
         for (const w of argv)
         {
-            const invoked = InvokeOptionIfExists (this.Config, w, ++index < len ? argv[index] : null)
+            const invoked = Options.InvokeOptionIfExists (this.Config, w, ++index < len ? argv[index] : null)
             
             if (invoked != null)
             {
@@ -387,9 +183,11 @@ class Command extends SARTObject
             else
                 command_args.push (w);
         }
-
+        
         return new Args (command_args);
-    }        
+    }
+    
+  
 
 }
 
@@ -398,4 +196,33 @@ class Command extends SARTObject
 
 
 
-module.exports = { Command, CommandHandler };
+async function RunCommand (main, argv)
+{
+
+    if (State.ActiveCommand != null)
+        return this.OnError ("A command is already running.");
+
+    else
+    {      
+        const cmd      = new Command (main);
+        const is_first = State.PreviousCommand == null;
+        
+        State.ActiveCommand   = cmd;
+        State.PreviousCommand = cmd;
+
+        await State.ActiveCommand.Execute (argv, is_first);
+
+        State.ActiveCommand   = null;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+module.exports = { Command, RunCommand };
