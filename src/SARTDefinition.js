@@ -28,7 +28,7 @@ class SARTDefinition
     GetName           ()             { return this.Name; }
     GetDescription    ()             { return this.Description; }
     
-    HasName           (name, case_sensitive = this.NameCaseSensitive) { return Util.StrCmp (name, this.GetName(), !case_sensitive); }
+    HasName           (name, case_sensitive = this.NameCaseSensitive) { return Util.StrCmp (name, this.GetName (), !case_sensitive); }
 
 }
 

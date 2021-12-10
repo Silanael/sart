@@ -1,18 +1,20 @@
 const SARTDef = require ("./SARTDefinition");
 const Util    = require ("./Util");
+const Sys     = require ("./System");
 
 
 class CommandDef extends SARTDef
 {   
 
-    Aliases       = []; 
-    MinArgsAmount = 0;
-    Subcommands   = {};
+    Aliases         = []; 
+    MinArgsAmount   = 0;
+    Subcommands     = {};
         
-    Helplines     = [];
+    Helplines       = [];
 
-    ExecFunc      = null;
-    OutFunc       = null;
+    ExecFunc        = null;
+    OutFunc         = null;
+    AsActiveCommand = true;
     
 
     /* Overrsidable, this implementation does nothing. */
@@ -31,11 +33,12 @@ class CommandDef extends SARTDef
     WithFunc              (exec, out)     { this.ExecFunc      = exec; 
                                             this.OutFunc       = out;                     return this; }
     WithHelpLines         (helplines)     { this.Helplines     = helplines;               return this; }
-    WithSubcommands       (subcommands)   { this.SubCommands   = subcommands;             return this; }
+    WithSubcommands       (subcommands)   { this.Subcommands   = subcommands;             return this; }
    
     GetMinArgsAmount      ()              { return this.MinArgsAmount; }
     GetSubcommands        ()              { return this.Subcommands;   }
     HasSubcommands        ()              { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
+    RunAsActiveCommand    ()              { return this.AsActiveCommand == true; }
     toString              ()              { return this.GetName (); }
 
 
@@ -72,8 +75,11 @@ class CommandDef extends SARTDef
             Sys.INFO (l);         
         }
 
-        if (this.SubCommands != null && this.SubCommands.length > 0)
-            Sys.INFO ("Valid subcommands: " + Util.KeysToStr (this.SubCommands) );
+        if (this.HasSubcommands () )
+        {
+            Sys.INFO ("");
+            Sys.INFO ("Valid subcommands: " + Util.KeysToStr (this.Subcommands) );
+        }
                     
     }
 

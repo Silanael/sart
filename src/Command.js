@@ -47,26 +47,34 @@ class CommandInstance extends SARTObject
 
 
     /** Gets the time the task took. Call after completion. */
-    GetDurationMs      ()            { return this.StartTime != null && this.EndTime != null ? this.EndTime - this.StartTime : null }
-    GetDurationSec     ()            { return this.GetDurationMs () / 1000; }
+    GetDurationMs        ()            { return this.StartTime != null && this.EndTime != null ? this.EndTime - this.StartTime : null }
+    GetDurationSec       ()            { return this.GetDurationMs () / 1000; }
 
     /* Gets the duration if the task is completed, current runtime otherwise. */
-    GetRuntimeMs       ()            { return this.StartTime != null ? (this.EndTime != null ? this.EndTime : Util.GetUNIXTimeMS () ) - this.StartTime : null };
-    GetRuntimeSec      ()            { return this.GetRuntimeMs () / 1000; }
-
-    IncrementFetchesBy (amount)      { this.Fetches += amount;                        }
-    GetFetchesAmount   ()            { return this.Fetches != null ? this.Fetches : 0 }
-    WasSuccessful      ()            { return this.Success;                           }
-
-    HasSetting         (key)         { return this.Config.HasSetting (key);           }
-    GetSetting         (key)         { return this.Config.GetSetting (key);           }
-    GetArgsAmount      ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
-    Pop                ()            { return this.Arguments?.Pop   ();  }
-    PopLC              ()            { return this.Arguments?.PopLC ();  }
-    PopUC              ()            { return this.Arguments?.PopLC ();  }
-    Peek               ()            { return this.Arguments?.Peek ();  }
-    RequireAmount      (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
-
+    GetRuntimeMs         ()            { return this.StartTime != null ? (this.EndTime != null ? this.EndTime : Util.GetUNIXTimeMS () ) - this.StartTime : null };
+    GetRuntimeSec        ()            { return this.GetRuntimeMs () / 1000; }
+  
+    IncrementFetchesBy   (amount)      { this.Fetches += amount;                        }
+    GetFetchesAmount     ()            { return this.Fetches != null ? this.Fetches : 0 }
+    WasSuccessful        ()            { return this.Success;                           }
+  
+    HasSetting           (key)         { return this.Config.HasSetting (key);           }
+    GetSetting           (key)         { return this.Config.GetSetting (key);           }
+    GetConfig            ()            { return this.Config;                            }
+    GetArgsAmount        ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
+    Pop                  ()            { return this.Arguments?.Pop   ();  }
+    PopLC                ()            { return this.Arguments?.PopLC ();  }
+    PopUC                ()            { return this.Arguments?.PopLC ();  }
+    Peek                 ()            { return this.Arguments?.Peek ();  }
+    RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
+    
+    AppendConfigToGlobal ()            
+    { 
+        if (! this.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
+            return this.OnProgramError ("Failed to append command-config into the global config!");
+        else
+            return true;
+    }
 
 
     GetCommandDefFromArgs (args)
@@ -130,12 +138,20 @@ class CommandInstance extends SARTObject
         if (this.Command == null)
             return false;
 
+        else if (this.GetArgsAmount () < this.Command.GetMinArgsAmount () )
+        {
+            this.Command.DisplayHelp ();
+            Sys.ERR ("Insufficient arguments for the command '" + this.Command + "' - at least " + this.Command.GetMinArgsAmount () + " required.");
+        }
             
         // Good to go
         else
         {   
             Sys.VERBOSE ("Executing command '" + this.Command + "'...");         
-            
+                        
+            if (!this.Command.RunAsActiveCommand () )
+                State.ActiveCommandInst = null;
+
             // Execute
             this.StartTime = Util.GetUNIXTimeMS ();        
             this.Success   = await this.Command.OnExecute (this);  
@@ -170,7 +186,7 @@ async function RunCommand (main, argv)
 {
 
     if (State.ActiveCommandInst != null)
-        return this.OnError ("A command is already running.");
+        return Sys.ERR_ABORT ("A command is already running.");
 
     else
     {      
@@ -200,7 +216,8 @@ function GetCommandDef (name, commands = null, args = null)
 
 
     for (const o of Object.values (commands) )
-    {                           
+    {           
+                      
         if (o?.HasName (name) )
         {
             Sys.DEBUG ("Command handler found for '" + name + '".');

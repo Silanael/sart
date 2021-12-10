@@ -84,6 +84,8 @@ class Config extends SARTObject
         {
             this.SetSetting (c[0], c[1]);
         }
+
+        return true;
     }
 
     ResetToDefaults ()

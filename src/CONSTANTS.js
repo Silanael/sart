@@ -115,6 +115,8 @@ class Setting
     GetKey           ()      { return this.Name;                       }
     GetDefaultValue  ()      { return this.DefaultValue;               }
     CanBeModified    ()      { return !this.ReadOnly;                  }
+
+    toString         ()      { return this.Name;                       }
 }
 
 

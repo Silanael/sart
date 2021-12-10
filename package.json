@@ -6,6 +6,7 @@
   "description": "Silanael ARweave Tool",
   "versionseries": "Dying Light",
   "versionname": "Hachiroku",
+  "versiontype": "dev",
   "main": "src/Main.js",
   "bin":  "src/Main.js",
   "man":  "README.md",

@@ -38,7 +38,7 @@ class CMD_Help extends CommandDef
         // Requested command present.
         if (cmd_req != null)
         {            
-            const handler = cmd.Main.Commands.GetCommandHandler (cmd_req);
+            const handler = cmd.Main.GetCommandDef (cmd_req);
     
             if (handler != null)
             {

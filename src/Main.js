@@ -37,7 +37,6 @@ const FIRST_ARG         = 2;
 class Main
 {    
     State    = State;
-    Commands = COMMANDS;
 
     async Init (argv)
     {
@@ -46,9 +45,18 @@ class Main
 
         this.State.Main = this;
 
-        const args = argv.slice (FIRST_ARG);
+        await this.RunCommand (argv.slice (FIRST_ARG) );        
+    }
+
+    async RunCommand (args)
+    {
         await Command.RunCommand (this, args);
     }
+
+    GetCommandDef    (cmd_name)   { return Command.GetCommandDef (cmd_name); }
+    GetGlobalConfig  ()           { return State.GlobalConfig;   }
+    SetGlobalSetting (key, value) { return State.GlobalConfig.SetSetting (key, value); }
+    ExitConsole      ()           { State.ConsoleActive = false; }
 }
 
 

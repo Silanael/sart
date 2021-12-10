@@ -9,13 +9,40 @@
 
 const Util           = require ("./Util");
 const Sys            = require ("./System");
+const Constants      = require ("./CONSTANTS");
+const CommandDef     = require ("./CommandDef");
 const CMD_Help       = require ("./Commands/CMD_Help");
 const CMD_ReadMe     = require ("./Commands/CMD_ReadMe");
 const CMD_Info       = require ("./Commands/CMD_Info");
-const CommandDef     = require ("./CommandDef");
+const CMD_Console    = require ("./Commands/CMD_Console");
 
 
+class MessageCmd extends CommandDef { constructor (name, msg) { super (name); this.Message = msg;} OnOutput (c) { Sys.INFO (this.Message); } }
 
+class SettingCmd extends CommandDef
+{
+    Key    = null;
+    Value  = null;
+
+    constructor (name, key, value)
+    {
+        super (name);
+        this.Key   = key;
+        this.Value = value;
+        this.MinArgsAmount = value != null ? 0 : 1;
+    }
+    
+    OnExecute (cmd_instance)
+    {
+        const value = this.Value != null ? this.Value : cmd_instance.Pop ();
+
+        if ( cmd_instance.GetMain ()?.SetGlobalSetting (this.Key, value) )
+            Sys.INFO ("Global setting '" + this.Key + "' set to '" + value + "'.");
+
+        else            
+            cmd_instance.OnError ("Failed to set global setting '" + this.Key + " to '" + value + "'.");
+    }
+}
 
 
 const COMMANDS =  
@@ -23,8 +50,7 @@ const COMMANDS =
     "help"        : new CMD_Help ()         .WithAliases ("--help", "-h", "/h", "/?"),    
     "version"     : new CommandDef  ("VERSION").WithFunc (null, function () { Sys.OUT_TXT (Util.GetVersionStr ()); }).WithAliases ("-v")
                                             .WithDescription ("Displays the program version."),    
-    "info"        : new CMD_Info ()         .WithAliases ("-i"),
-    "-i"          : null,
+    "info"        : new CMD_Info ()         .WithAliases ("-i"),    
     "connect"     : null,
     "list"        : null,
     "-l"          : null,
@@ -34,12 +60,16 @@ const COMMANDS =
     "-s"          : null,
     "verify"      : null,
     "pending"     : null,
-    "console"     : null,
-    "exit"        : null,
-    "quit"        : null,
+    "console"     : new CMD_Console (),
+    "exit"        : new CommandDef ("EXIT").WithFunc (function (c) {c.GetMain ().ExitConsole (); } ).WithAliases ("quit", "q", "/quit", "/exit"),    
     "set"         : null,
     "readme"      : new CMD_ReadMe (),
-    "test"        : new CommandDef ("test").WithFunc (function () { return true}, function () { Sys.INFO ("Testing."); } ),
+    "quiet"       : new MessageCmd ("quiet", "You be quiet."),
+    "verbose"     : new SettingCmd ("VERBOSE",        Constants.SETTINGS.LogLevel, Constants.LOGLEVELS.VERBOSE),
+    "debug"       : new SettingCmd ("DEBUG",          Constants.SETTINGS.LogLevel, Constants.LOGLEVELS.DEBUG),
+    "loglevel-msg": new SettingCmd ("LOGLEVEL-MSG",   Constants.SETTINGS.LogLevel, Constants.LOGLEVELS.MSG),
+    "test"        : new CommandDef ("test").WithFunc (function (c) { return true}, function () { Sys.INFO ("Testing."); } ),
+    
     /*
     "date"        : function ()
     { 

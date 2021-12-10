@@ -53,6 +53,7 @@ class SARTObject
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
     IsValid            ()                                      { return this.Valid == true;                                                  }
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
+    GetMain            ()                                      { return this.Main;                                                           }
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
     
