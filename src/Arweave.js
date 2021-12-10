@@ -11,7 +11,7 @@
 // Imports
 const ArweaveLib  = require ('arweave');
 
-const Constants   = require ("./CONST_SART.js");
+const Constants   = require ("./CONSTANTS.js");
 const State       = require ("./ProgramState.js");
 const Sys         = require ('./System.js');
 const Settings    = require ('./Settings.js');

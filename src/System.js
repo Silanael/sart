@@ -8,7 +8,7 @@
 //
 
 // Local imports
-const Constants     = require ("./CONST_SART.js");
+const Constants     = require ("./CONSTANTS.js");
 const LogLevels     = Constants.LOGLEVELS;
 const OutputDests   = Constants.OUTPUTDESTS;
 const OutputFormats = Constants.OUTPUTFORMATS;
@@ -76,6 +76,7 @@ function ErrorHandler (error)
     
     if (error != null)
     {
+        console.log (error);
         DEBUG (error);
         
         // The Error is an exception

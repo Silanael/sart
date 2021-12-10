@@ -17,12 +17,12 @@ const Arweave        = require ('../Arweave.js');
 const ArFS_DEF       = require ('../CONST_ARFS.js');
 const ArFSEntity     = require ("../ArFSEntity");
 const Transaction    = require ("../Transaction.js");
-const CommandHandler = require ("../CommandHandler");
+const CommandDef = require ("../CommandDef");
 
 
-class CMD_Info extends CommandHandler
+class CMD_Info extends CommandDef
 {
-
+    Name          = "INFO";
     MinArgsAmount = 1;
 
     Subcommands = 
@@ -58,34 +58,34 @@ class CMD_Info extends CommandHandler
         "Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS."
     ];
 
-    OnExecute (args, cmd)
+    OnExecute (cmd)
     {
 
     }
 
-    OnOutput (args, cmd)
+    OnOutput (cmd)
     {
-        Sys.INFO ("Foo");
+        Sys.INFO ("Info-handler");
     }
 
 }
 
 
-class SubCMD_TX extends CommandHandler
+class SubCMD_TX extends CommandDef
 {
     MinArgsAmount = 1;
     Name = "TX";
 
-    async OnExecute (args, cmd)
+    async OnExecute (cmd)
     {
-        if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
+        if ( ! cmd.RequireAmount (1, "Transaction ID (TXID) required.") )
             return false;
     
-        const txid = args.Pop ();
+        const txid = cmd.Pop ();
         Sys.VERBOSE ("INFO: Processing TXID: " + txid);
             
         if (!Util.IsArweaveHash (txid) )            
-            return Sys.ERR_ABORT ("Not a valid transaction ID: " + txid);
+            return cmd.OnProgramError ("Not a valid transaction ID: " + txid);
                      
         cmd.Transaction = new Transaction (txid);
 
@@ -93,9 +93,9 @@ class SubCMD_TX extends CommandHandler
         return true;  
     }
 
-    OnOutput (args, cmd)
+    OnOutput (cmd)
     {
-        cmd?.Transaction?.Output ();
+        cmd.Transaction?.Output ();
     }    
 }
 

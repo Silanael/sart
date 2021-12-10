@@ -8,7 +8,7 @@
 //
 
 // Imports
-const Constants  = require ("./CONST_SART.js");
+const Constants  = require ("./CONSTANTS.js");
 const ArFSConst  = require ("./CONST_ARFS.js");
 const State      = require ("./ProgramState.js");
 const Arweave    = require ('./Arweave.js');

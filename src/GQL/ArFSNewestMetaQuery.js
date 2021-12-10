@@ -8,7 +8,7 @@
 // Query for the newest metadata of ArFS-entity/entities.
 //
 
-const Constants  = require ("../CONST_SART");
+const Constants  = require ("../CONSTANTS");
 const Const_ArFS = require ("../CONST_ARFS");
 const State      = require ("../ProgramState");
 const TXQuery    = require ("./TXQuery");

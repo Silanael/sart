@@ -7,13 +7,14 @@
 // Command 'HELP'
 //
 
-const CommandHandler = require ("../CommandHandler");
-const Util           = require ("../Util");
-const Sys            = require ("../System");
+
+const Util       = require ("../Util");
+const Sys        = require ("../System");
+const CommandDef = require ("../CommandDef");
 
 
 
-class CMD_Help extends CommandHandler
+class CMD_Help extends CommandDef
 {
     
     constructor ()
@@ -24,15 +25,15 @@ class CMD_Help extends CommandHandler
     }
 
 
-    OnExecute (args, cmd)
+    OnExecute (cmd)
     {
         return true;        
     }
 
 
-    OnOutput (args, cmd)
+    OnOutput (cmd)
     {
-        const cmd_req =  args?.PopLC ();
+        const cmd_req =  cmd.PopLC ();
 
         // Requested command present.
         if (cmd_req != null)

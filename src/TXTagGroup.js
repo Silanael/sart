@@ -11,7 +11,7 @@ const SARTObject = require ("./SARTObject");
 const TXTag      = require ("./TXTag");
 const State      = require ("./ProgramState");
 const Sys        = require ("./System");
-const Constants  = require ("./CONST_SART");
+const Constants  = require ("./CONSTANTS");
 const Util       = require ("./Util");
 
 

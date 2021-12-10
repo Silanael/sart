@@ -4,26 +4,35 @@
 //
 // Command.js - 2021-12-07_01
 //
-// The command-instance.
+// Contains the command-instance and supporting functions.
 //
 
-const Constants      = require ("./CONST_SART");
-const SARTObject     = require ("./SARTObject");
-const State          = require ("./ProgramState");
-const Util           = require ("./Util");
 const Sys            = require ("./System");
+const Util           = require ("./Util");
+const Constants      = require ("./CONSTANTS");
+const State          = require ("./ProgramState");
 const Settings       = require ("./Settings");
 const Args           = require ("./Arguments");
+const SARTObject     = require ("./SARTObject");
+const COMMANDS       = require ("./CONST_COMMANDS");
 const Options        = require ("./Options");
-const COMMANDS       = require ("./COMMANDS");
 
 
-class Command extends SARTObject
+
+
+
+
+
+
+
+
+class CommandInstance extends SARTObject
 {
-    Handler   = null;
+    Command   = null;
     
     Command   = null;    
     ArgV      = null;
+    Arguments = null;
 
     Config    = new Settings.Config ();
 
@@ -37,159 +46,120 @@ class Command extends SARTObject
 
 
 
-    GetConfig          ()       { return this.Config; }
-
     /** Gets the time the task took. Call after completion. */
-    GetDurationMs      ()       { return this.StartTime != null && this.EndTime != null ? this.EndTime - this.StartTime : null }
-    GetDurationSec     ()       { return this.GetDurationMs () / 1000; }
+    GetDurationMs      ()            { return this.StartTime != null && this.EndTime != null ? this.EndTime - this.StartTime : null }
+    GetDurationSec     ()            { return this.GetDurationMs () / 1000; }
 
     /* Gets the duration if the task is completed, current runtime otherwise. */
-    GetRuntimeMs       ()       { return this.StartTime != null ? (this.EndTime != null ? this.EndTime : Util.GetUNIXTimeMS () ) - this.StartTime : null };
-    GetRuntimeSec      ()       { return this.GetRuntimeMs () / 1000; }
+    GetRuntimeMs       ()            { return this.StartTime != null ? (this.EndTime != null ? this.EndTime : Util.GetUNIXTimeMS () ) - this.StartTime : null };
+    GetRuntimeSec      ()            { return this.GetRuntimeMs () / 1000; }
 
-    IncrementFetchesBy (amount) { this.Fetches += amount;                        }
-    GetFetchesAmount   ()       { return this.Fetches != null ? this.Fetches : 0 }
-    WasSuccessful      ()       { return this.Success;                           }
+    IncrementFetchesBy (amount)      { this.Fetches += amount;                        }
+    GetFetchesAmount   ()            { return this.Fetches != null ? this.Fetches : 0 }
+    WasSuccessful      ()            { return this.Success;                           }
+
+    HasSetting         (key)         { return this.Config.HasSetting (key);           }
+    GetSetting         (key)         { return this.Config.GetSetting (key);           }
+    GetArgsAmount      ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
+    Pop                ()            { return this.Arguments?.Pop   ();  }
+    PopLC              ()            { return this.Arguments?.PopLC ();  }
+    PopUC              ()            { return this.Arguments?.PopLC ();  }
+    Peek               ()            { return this.Arguments?.Peek ();  }
+    RequireAmount      (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
 
 
-    async Execute (argv, is_first_command = false)
+
+    GetCommandDefFromArgs (args)
+    {
+        let cmd_name = args.PopLC ();
+        let def      = null;
+        
+        // No command given
+        if (cmd_name == null)
+        {
+            // Use the default-command if this is the first command (ie. not a comman from the console).
+            if (State.PreviousCommandInst == null)
+            {            
+                const default_cmd   = Constants.COMMAND_DEFAULT;
+                const default_param = Constants.COMMAND_DEFAULT_ARGS;
+
+                if (default_cmd == null)
+                {
+                    Sys.ERR_PROGRAM ("Default command set in constants is null - defaulting to 'console'.");
+                    cmd_name = "console";
+                }
+                else
+                    cmd_name = default_cmd;            
+
+                args = new Args ([default_param]);  
+            }
+            else
+            {
+                this.Failed = Sys.ERR ("ExecuteCommand: No command given.", this);
+                return null;
+            }
+        }
+        
+        def = GetCommandDef (cmd_name, COMMANDS, args);
+
+        if (def == null)
+            this.Failed = Sys.ERR ("Command '" + cmd_name + "' not recognized or definition missing.", this);
+        
+
+        return def;
+    }
+
+
+
+
+    async Execute (argv)
     {
         this.ArgV    = argv;
         this.Success = false;
         this.Fetches = 0;
-        this.Config  = new Settings.Config ();
-
-        if (!is_first_command && (argv == null || argv.length <= 0) )
-            return this.Failed = Sys.ERR_PROGRAM ("Execute: 'argv' null!", this);
-                    
-
+        this.Config  = new Settings.Config ().WithName ("Command");
 
 
         // Extract options and get the remaining arguments
-        let args = this.ParseOptions (argv);
-
-
-
-        this.Command  = args.PopLC ();
+        this.Arguments = Options.ParseOptions (argv, this.Config);
         
-        // No command given
+
+        // Get command-handler
+        this.Command = this.GetCommandDefFromArgs (this.Arguments);
+        
         if (this.Command == null)
-        {
-            // Use the default-command if this is the first command (ie. not a comman from the console).
-            if (is_first_command)
-            {            
-                const default_cmd   = Settings.GetSetting (Constants.SETTINGS.DefaultCommand);            
-                const default_param = Settings.GetSetting (Constants.SETTINGS.DefaultCommandParam);
-                
-                if (default_cmd == null)
-                {
-                    Sys.WARN ("Default command set in config is null - defaulting to 'console'.");
-                    default_cmd = "console";
-                }
-                this.Command = default_cmd;            
-                args = new Args ([default_param]);  
-            }
-            else
-                return this.Failed = Sys.ERR ("ExecuteCommand: No command given.", this);
-        }
+            return false;
 
-
-
-        
-        // Get the handler for the command
-        this.Handler = COMMANDS.GetCommandHandler (this.Command);
-
-        if (this.Handler == null)
-            return this.Failed = Sys.ERR ("Command '" + this.Command + "' not recognized or handler missing.", this);
-        
-        else if (args.GetAmount () < this.Handler.MinArgsAmount)
-        {
-            this.Handler.DisplayHelp ();       
-            return this.Failed = Sys.ERR ("Insufficient amount of parameters given - at least " + this.Handler.MinArgsAmount + " required.");
-        }
-
-
-
-        // All fine, execute the command.
-        else
-        {            
-            let handler = this.Handler;
-
-            Sys.VERBOSE ("Executing command '" + this.Command + "'...");
-            this.StartTime = Util.GetUNIXTimeMS ();        
-
-            if (handler.OnExecute != null)
-            {
-                const subcmd = handler.GetSubcommand (args.Peek () );
-                
-                // Subcommand present, invoke that.
-                if (subcmd != null)
-                {
-                    Sys.DEBUG ("Executing subcommand-handler '" + subcmd + "' ...");
-                    args.Pop ();
-                    handler = subcmd;                    
-                }
-                
-                this.Success = await handler.OnExecute (args, this);            
-            }
-            else
-            {
-                Sys.DEBUG ("Executing command '" + this.Command + "' as a direct function..");
-                this.Success = await handler (args, this);
-            }
             
-            this.EndTime = Util.GetUNIXTimeMS ();        COMMANDS
+        // Good to go
+        else
+        {   
+            Sys.VERBOSE ("Executing command '" + this.Command + "'...");         
+            
+            // Execute
+            this.StartTime = Util.GetUNIXTimeMS ();        
+            this.Success   = await this.Command.OnExecute (this);  
+            this.EndTime   = Util.GetUNIXTimeMS ();       
 
-            if (handler.OnOutput != null)
-                handler.OnOutput (args, this);
-
+            this.Command.OnOutput (this);
+            
             Sys.VERBOSE ("");        
             Sys.VERBOSE ("Command finished in " + this.GetRuntimeSec () + " sec with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
         } 
 
-
+        return this.Success;
     }
 
 
-    ParseOptions (argv)
-    {
-        if (argv == null)
-        {
-            Sys.ERR_PROGRAM ("'argv' null!", "Command.ParseOptions");
-            return null;
-        }
-        
-        const len = argv.len;
-        let index = 0;
-        
-        const command_args = [];
-        
-        for (const w of argv)
-        {
-            const invoked = Options.InvokeOptionIfExists (this.Config, w, ++index < len ? argv[index] : null)
-            
-            if (invoked != null)
-            {
-                // Skip over the parameter.
-                if (invoked.HasParameter)
-                    ++index;
-            }
-            else if (w.startsWith ("--") )            
-            {
-                Sys.ERR ("Unrecognized option '" + w + "'. Aborting.");
-                return null;
-            }
-                                            
-            else
-                command_args.push (w);
-        }
-        
-        return new Args (command_args);
-    }
-    
-  
 
 }
+
+
+
+
+
+
+
 
 
 
@@ -199,21 +169,63 @@ class Command extends SARTObject
 async function RunCommand (main, argv)
 {
 
-    if (State.ActiveCommand != null)
+    if (State.ActiveCommandInst != null)
         return this.OnError ("A command is already running.");
 
     else
     {      
-        const cmd      = new Command (main);
-        const is_first = State.PreviousCommand == null;
+        const cmd = new CommandInstance (main);
         
-        State.ActiveCommand   = cmd;
-        State.PreviousCommand = cmd;
+        State.ActiveCommandInst   = cmd;
+    
+        await cmd.Execute (argv);
 
-        await State.ActiveCommand.Execute (argv, is_first);
-
-        State.ActiveCommand   = null;
+        State.PreviousCommandInst = cmd;
+        State.ActiveCommandInst   = null;
     }
+}
+
+
+
+
+
+function GetCommandDef (name, commands = null, args = null)
+{    
+    if (commands == null)
+        commands = COMMANDS;
+    
+
+    if (name == null)
+        return null;
+
+
+    for (const o of Object.values (commands) )
+    {                           
+        if (o?.HasName (name) )
+        {
+            Sys.DEBUG ("Command handler found for '" + name + '".');
+            
+            if (args != null && o.HasSubcommands () && args.GetAmount () > 0)
+            {
+                const scname = args.Peek ();                
+
+                if (scname != null)
+                {
+                    const subcommand = GetCommandDef (scname, o.GetSubcommands ())
+
+                    if (subcommand != null)
+                    {
+                        Sys.DEBUG ("Found a subcommand-handler for  '" + scname + '".');
+                        args.Pop ();
+                        return subcommand;
+                    }
+                }
+            }
+            return o;        
+        }
+    }
+    Sys.DEBUG ("No command-handler found for '" + name + "'");
+    return null;
 }
 
 
@@ -225,4 +237,4 @@ async function RunCommand (main, argv)
 
 
 
-module.exports = { Command, RunCommand };
+module.exports = { CommandInstance, RunCommand, GetCommandDef }

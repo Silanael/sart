@@ -6,7 +6,7 @@
 // TXAnalyze.js - 2021-11-02
 //
 
-const Constants = require ("./CONST_SART.js");
+const Constants = require ("./CONSTANTS.js");
 const State     = require ("./ProgramState.js");
 const Util      = require ('./Util.js');
 const Sys       = require ('./System.js');

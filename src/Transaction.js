@@ -7,7 +7,7 @@
 // SART transaction object
 //
 
-const Constants    = require ("./CONST_SART.js");
+const Constants    = require ("./CONSTANTS.js");
 const State        = require ("./ProgramState.js");
 const Settings     = require ('./Settings.js');
 const Util         = require ('./Util.js');

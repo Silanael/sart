@@ -9,18 +9,21 @@
 
 const Util           = require ("./Util");
 const Sys            = require ("./System");
-const CommandHandler = require ("./CommandHandler");
 const CMD_Help       = require ("./Commands/CMD_Help");
 const CMD_ReadMe     = require ("./Commands/CMD_ReadMe");
 const CMD_Info       = require ("./Commands/CMD_Info");
+const CommandDef     = require ("./CommandDef");
+
+
+
 
 
 const COMMANDS =  
 {
-    "help"        : new CMD_Help       ().WithAliases ("--help", "-h", "/h", "/?"),    
-    "version"     : new CommandHandler ("version").WithFunc (null, function () { Sys.OUT_TXT (Util.GetVersionStr ()); }).WithAliases ("-v")
-                                                  .WithDescription ("Displays the program version."),    
-    "info"        : new CMD_Info ().WithAliases ("-i"),
+    "help"        : new CMD_Help ()         .WithAliases ("--help", "-h", "/h", "/?"),    
+    "version"     : new CommandDef  ("VERSION").WithFunc (null, function () { Sys.OUT_TXT (Util.GetVersionStr ()); }).WithAliases ("-v")
+                                            .WithDescription ("Displays the program version."),    
+    "info"        : new CMD_Info ()         .WithAliases ("-i"),
     "-i"          : null,
     "connect"     : null,
     "list"        : null,
@@ -36,7 +39,8 @@ const COMMANDS =
     "quit"        : null,
     "set"         : null,
     "readme"      : new CMD_ReadMe (),
-    "test"        : new CommandHandler ("test").WithFunc (function () { return true}, function () { Sys.INFO ("Testing."); } ),
+    "test"        : new CommandDef ("test").WithFunc (function () { return true}, function () { Sys.INFO ("Testing."); } ),
+    /*
     "date"        : function ()
     { 
         const unixtime = args.GetAmount () >= 1 ? Number (args.Pop() ) : null;
@@ -58,19 +62,11 @@ const COMMANDS =
             Sys.INFO (Util.GetSizeStr (b, true, State.Config.SizeDigits) );
 
         return true;
-    },    
+    }, 
+    */   
         
 };
 
 
 
-
-function GetCommandHandler (name)
-{    
-    return CommandHandler.GET_HANDLER (COMMANDS, name);    
-}
-
-
-
-
-module.exports = { GetCommandHandler};
+module.exports = COMMANDS;

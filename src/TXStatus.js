@@ -1,6 +1,6 @@
 const Sys       = require('./System.js');
 const Arweave   = require('./Arweave.js');
-const Constants = require ("./CONST_SART.js");
+const Constants = require ("./CONSTANTS.js");
 const State     = require ("./ProgramState");
 
 

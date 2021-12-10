@@ -1,21 +1,10 @@
-// *****************************
-// *** Silanael ARweave Tool ***
-// *****************************
-//
-// CommandHandler.js - 2021-12-07_01
-//
-// Base class for a command-implementation.
-//
-
-const Sys     = require ("./System");
-const Util    = require ("./Util");
 const SARTDef = require ("./SARTDefinition");
+const Util    = require ("./Util");
 
 
-
-
-class CommandHandler extends SARTDef
+class CommandDef extends SARTDef
 {   
+
     Aliases       = []; 
     MinArgsAmount = 0;
     Subcommands   = {};
@@ -27,8 +16,8 @@ class CommandHandler extends SARTDef
     
 
     /* Overrsidable, this implementation does nothing. */
-    async OnExecute (args, cmd) { if (this.ExecFunc != null) return await this.ExecFunc (args, cmd); else return true; }
-    async OnOutput  (args, cmd) { if (this.OutFunc  != null) return await this.OutFunc  (args, cmd); else return true; }    
+    async OnExecute (cmd_instance) { if (this.ExecFunc != null) return await this.ExecFunc (cmd_instance); else return true; }
+    async OnOutput  (cmd_instance) { if (this.OutFunc  != null) return await this.OutFunc  (cmd_instance); else return true; }    
 
 
     constructor (command_name)
@@ -45,11 +34,9 @@ class CommandHandler extends SARTDef
     WithSubcommands       (subcommands)   { this.SubCommands   = subcommands;             return this; }
    
     GetMinArgsAmount      ()              { return this.MinArgsAmount; }
-    GetSubcommands        ()              { return this.SubCommands;   }
-    HasSubcommands        ()              { return this.SubCommands != null ? Object.keys (this.SubCommands)?.length > 0 : false; }
+    GetSubcommands        ()              { return this.Subcommands;   }
+    HasSubcommands        ()              { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
     toString              ()              { return this.GetName (); }
-
-    GetSubcommand         (subcmd)        { return CommandHandler.GET_HANDLER (this.Subcommands, subcmd); }
 
 
     HasName (name)
@@ -90,38 +77,9 @@ class CommandHandler extends SARTDef
                     
     }
 
- 
-
-    static GET_HANDLER (commands, name)
-    {    
-        if (commands == null)
-        {            
-            Sys.ERR_PROGRAM ("'commands' null!", "CommandHandler.GET_HANDLER");
-            return null;
-        }
-
-        if (name == null)
-            return null;
-
-        for (const o of Object.entries (commands) )
-        {               
-            const key     = o[0];
-            const handler = o[1];
-    
-            if (o != null && (Util.StrCmp (key, name, true) || (handler?.HasName != null && handler.HasName (name) )  ) )
-            {
-                Sys.DEBUG ("Command handler found for '" + name + '".');
-                return handler;        
-            }
-        }
-        Sys.DEBUG ("No command-handler found for '" + name + "'");
-        return null;
-    }
 }
 
 
 
+module.exports = CommandDef;
 
-
-
-module.exports = CommandHandler;

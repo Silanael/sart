@@ -7,7 +7,7 @@
 // A query for multiple transactions matching criteria.
 //
 
-const Constants = require ("../CONST_SART");
+const Constants = require ("../CONSTANTS");
 const State     = require ("../ProgramState");
 const Sys       = require ("../System");
 const Util      = require ("../Util");

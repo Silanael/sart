@@ -6,10 +6,11 @@
 //
 // Command-line option-definitions.
 //
-const Constants     = require ("./CONST_SART");
+const Constants     = require ("./CONSTANTS");
 const SARTDef       = require ("./SARTDefinition");
 const Util          = require ("./Util");
 const Sys           = require ("./System");
+const Args          = require ("./Arguments");
 const SETTINGS      = Constants.SETTINGS;
 const LOGLEVELS     = Constants.LOGLEVELS;
 const OUTPUTDESTS   = Constants.OUTPUTDESTS;
@@ -162,4 +163,43 @@ function InvokeOptionIfExists (config, opt_name, param)
 }
 
 
-module.exports = { OPTIONS, InvokeOptionIfExists }
+/** Adds the valid options to the config provided, returning an Arguments-instance containing non-arguments (command and command-parameters). */
+function ParseOptions (argv, config)
+{
+    if (argv == null)
+    {
+        Sys.ERR_PROGRAM ("'argv' null!", "Command.ParseOptions");
+        return null;
+    }
+    
+    const len = argv.len;
+    let index = 0;
+    
+    const command_args = [];
+    
+    for (const w of argv)
+    {
+        const invoked = InvokeOptionIfExists (config, w, ++index < len ? argv[index] : null)
+        
+        if (invoked != null)
+        {
+            // Skip over the parameter.
+            if (invoked.HasParameter)
+                ++index;
+        }
+        else if (w.startsWith ("--") )            
+        {
+            Sys.ERR ("Unrecognized option '" + w + "'. Aborting.");
+            return null;
+        }
+                                        
+        else
+            command_args.push (w);
+    }
+    
+    return new Args (command_args);
+}
+
+
+
+module.exports = { ParseOptions, InvokeOptionIfExists, OPTIONS }

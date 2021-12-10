@@ -3,7 +3,7 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// CONST_SART.js - 2021-11-25_01
+// CONSTANTS.js - 2021-11-25_01
 //
 // Constants values for SART.
 //
@@ -17,6 +17,9 @@ const CONFIG_FILESIZE_MAX_BYTES = 83886080;
 const CONFIGFILE_ENCODING       = "utf-8";
 const CONFIG_RECURSIVE_FIELDS   = ["ArFSTXQueryTags"]
 const CONFIG_TX_TAGS_TOTAL_SIZE = 2048;
+
+const COMMAND_DEFAULT           = "console"
+const COMMAND_DEFAULT_ARGS      = [];
 
 const TXSTATUS_OK               = 200;
 const TXSTATUS_PENDING          = 202;
@@ -163,8 +166,6 @@ const SETTINGS =
     TXTagsMaxTotalBytes     : new Setting ("TXTagsMaxTotalBytes")      .DV (CONFIG_TX_TAGS_TOTAL_SIZE),
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
-    DefaultCommand          : new Setting ("DefaultCommand")           .DV ("console"),
-    DefaultCommandParam     : new Setting ("DefaultCommandParam")      .DV (null),
 }
 Object.freeze (SETTINGS);
 
@@ -207,5 +208,7 @@ module.exports =
     CONNSTATES,   
     SYSTEM_ACCESS,
     SETTINGS,
+    COMMAND_DEFAULT,
+    COMMAND_DEFAULT_ARGS,
     Setting,
 };

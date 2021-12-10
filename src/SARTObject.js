@@ -45,6 +45,8 @@ class SARTObject
     HasWarnings        ()                                      { return this.Warnings?.length > 0;                                           }
     HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }
     SetInfoFields      (fields)                                { this.InfoFields = fields;                                                   }
+    WithName           (name)                                  { this.Name       = name;                                        return this; }
+    WithMain           (main)                                  { this.Main       = main;                                        return this; }
     WithInfoField      (field)                                 { this.InfoFields = Util.AppendToArray (this.InfoFields, field); return this; }
     GetID              ()                                      { return null; }
     GetName            ()                                      { return this.Name; }

@@ -7,7 +7,7 @@
 //
 
 const Package       = require ("../package.json");
-const Constants     = require ("./CONST_SART.js");
+const Constants     = require ("./CONSTANTS.js");
 const Sys           = require ("./System.js");
 const State         = require ("./ProgramState.js");
 const SARTObject    = require ("./SARTObject");
@@ -29,7 +29,13 @@ class Config extends SARTObject
     Values          = {};
     KeyNamesPresent = {};
 
+
+    HasSetting (key)
+    { 
+        return this.KeyNamesPresent[key instanceof Constants.Setting ? key.GetKey () : key] != null; 
+    }
     
+
     SetSetting (key, value)
     {
         if (key instanceof Constants.Setting)
@@ -67,6 +73,17 @@ class Config extends SARTObject
 
         else
             return null;
+    }
+
+    AppendSettings (config_src)
+    {
+        if (config_src == null)
+            return this.OnProgramError ("AppendSettings: 'config_src' null!", this);
+
+        for (const c of Object.entries (config_src.Values) )
+        {
+            this.SetSetting (c[0], c[1]);
+        }
     }
 
     ResetToDefaults ()
@@ -195,8 +212,8 @@ function GetSetting (key)
         key = key.GetKey ();
 
 
-    if (State.ActiveCommand != null)
-        return State.ActiveCommand.GetConfig()?.GetSetting (key);
+    if (State.ActiveCommandInst != null && State.ActiveCommandInst.HasSetting (key) )
+        return State.ActiveCommandInst.GetSetting (key);
 
     else if (State.GlobalConfig != null)
         return State.GlobalConfig.GetSetting (key);

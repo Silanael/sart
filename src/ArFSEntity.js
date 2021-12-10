@@ -8,7 +8,7 @@
 // and the GQL-query to create them.
 //
 
-const Constants        = require ("./CONST_SART.js");
+const Constants        = require ("./CONSTANTS.js");
 const Constants_ArFS   = require ("./CONST_ARFS.js");
 const State            = require ("./ProgramState");
 const Sys              = require ("./System.js");

@@ -7,13 +7,14 @@
 // Command 'README'
 //
 
-const CommandHandler = require ("../CommandHandler");
+const FS             = require ("fs");
 const Util           = require ("../Util");
 const Sys            = require ("../System");
-const FS             = require ("fs");
+const CommandDef = require ("../CommandDef");
 
 
-class CMD_ReadMe extends CommandHandler
+
+class CMD_ReadMe extends CommandDef
 {
     constructor () 
     { 

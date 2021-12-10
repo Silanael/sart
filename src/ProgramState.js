@@ -7,7 +7,7 @@
 // A singleton-class to hold the program state.
 //
 
-const Constants = require ("./CONST_SART.js");
+const Constants = require ("./CONSTANTS.js");
 
 
 class ProgramState
@@ -26,9 +26,10 @@ class ProgramState
     CacheHits               = 0;
     CacheMisses             = 0;
     
-    PreviousCommand         = null;
-    ActiveCommand           = null;
+    PreviousCommandInst     = null;
+    ActiveCommandInst       = null;
     ActiveConcurrentFetches = [];
+
 
     GetConfig         () { return this.GlobalConfig;   }
     IsConsoleActive   () { return this.ConsoleActive;  }
@@ -41,13 +42,13 @@ class ProgramState
 
     /* This is only for System. */
     GetSetting (key)
-    {
-        if (this.ActiveCommand != null)
-            return this.ActiveCommand.GetConfig()?.GetSetting (key);
-
-        else if (this.GlobalConfig != null)
+    {        
+        if (this.ActiveCommandInst != null && this.ActiveCommandInst.HasSetting (key) )        
+            return this.ActiveCommandInst.GetSetting (key);
+        
+        else if (this.GlobalConfig != null)        
             return this.GlobalConfig.GetSetting (key);
-
+        
         else
             return null;
     }

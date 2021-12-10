@@ -13,13 +13,13 @@
 // Imports
 const Package    = require ("../package.json");
 
-const Constants  = require ("./CONST_SART.js");
+const Constants  = require ("./CONSTANTS.js");
+const COMMANDS   = require ("./CONST_COMMANDS");
 const State      = require ("./ProgramState.js");
 
 const Concurrent = require ("./Concurrent");
 const Cache      = require ("./Cache");
 const Command    = require ("./Command");
-const COMMANDS   = require ("./COMMANDS");
 const Sys        = require ('./System.js');
 const Settings   = require ('./Settings.js');
 const Util       = require ('./Util.js');
