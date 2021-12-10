@@ -9,13 +9,14 @@
 
 
 // Imports
-const ArweaveLib  = require ('arweave');
+const ArweaveLib     = require ('arweave');
 
-const Constants   = require ("./CONSTANTS.js");
-const State       = require ("./ProgramState.js");
-const Sys         = require ('./System.js');
-const Settings    = require ('./Settings.js');
-const Fetch       = require ("./Concurrent");
+const Constants      = require ("./CONSTANTS.js");
+const State          = require ("./ProgramState.js");
+const Sys            = require ('./System.js');
+const Settings       = require ('./Config.js');
+const Fetch          = require ("./Concurrent");
+const { SETTINGS }   = require ("./CONST_SETTINGS");
 
 
 
@@ -38,10 +39,10 @@ function Init ()
         State.ArweaveInstance = ArweaveLib.init
         (
             {
-                host:     State.GetSetting (Constants.SETTINGS.ArweaveHost),
-                port:     State.GetSetting (Constants.SETTINGS.ArweavePort),
-                protocol: State.GetSetting (Constants.SETTINGS.ArweaveProto),
-                timeout:  State.GetSetting (Constants.SETTINGS.ArweaveTimeout_ms)
+                host:     State.GetSetting (SETTINGS.ArweaveHost),
+                port:     State.GetSetting (SETTINGS.ArweavePort),
+                protocol: State.GetSetting (SETTINGS.ArweaveProto),
+                timeout:  State.GetSetting (SETTINGS.ArweaveTimeout_ms)
             }
         );    
  
@@ -74,7 +75,7 @@ async function Connect (args)
         if (await TestConnection () )
         {
             Sys.INFO ("Connected to " + GetHostStr (State.ArweaveInstance) );
-            Sys.VERBOSE ("Using " + State.GetSetting (Constants.SETTINGS.ArweaveTimeout_ms) + "ms timeout.");            
+            Sys.VERBOSE ("Using " + State.GetSetting (SETTINGS.ArweaveTimeout_ms) + "ms timeout.");            
             
         }
         else
@@ -141,7 +142,7 @@ async function GetConnectionStatus ()
 
 function IsConfirmationAmountSafe (confirmations)
 {
-    return confirmations != null && Number (confirmations) >= State.GetSetting (Constants.SETTINGS.SafeConfirmationsMin);
+    return confirmations != null && Number (confirmations) >= State.GetSetting (SETTINGS.SafeConfirmationsMin);
 }
 
 

@@ -10,6 +10,7 @@
 const Util           = require ("./Util");
 const Sys            = require ("./System");
 const Constants      = require ("./CONSTANTS");
+const { SETTINGS }   = require ("./CONST_SETTINGS");
 const CommandDef     = require ("./CommandDef");
 const CMD_Help       = require ("./Commands/CMD_Help");
 const CMD_ReadMe     = require ("./Commands/CMD_ReadMe");
@@ -65,9 +66,9 @@ const COMMANDS =
     "set"         : null,
     "readme"      : new CMD_ReadMe (),
     "quiet"       : new MessageCmd ("quiet", "You be quiet."),
-    "verbose"     : new SettingCmd ("VERBOSE",        Constants.SETTINGS.LogLevel, Constants.LOGLEVELS.VERBOSE),
-    "debug"       : new SettingCmd ("DEBUG",          Constants.SETTINGS.LogLevel, Constants.LOGLEVELS.DEBUG),
-    "loglevel-msg": new SettingCmd ("LOGLEVEL-MSG",   Constants.SETTINGS.LogLevel, Constants.LOGLEVELS.MSG),
+    "verbose"     : new SettingCmd ("VERBOSE",        SETTINGS.LogLevel, Constants.LOGLEVELS.VERBOSE),
+    "debug"       : new SettingCmd ("DEBUG",          SETTINGS.LogLevel, Constants.LOGLEVELS.DEBUG),
+    "loglevel-msg": new SettingCmd ("LOGLEVEL-MSG",   SETTINGS.LogLevel, Constants.LOGLEVELS.MSG),
     "test"        : new CommandDef ("test").WithFunc (function (c) { return true}, function () { Sys.INFO ("Testing."); } ),
     
     /*

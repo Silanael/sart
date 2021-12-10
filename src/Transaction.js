@@ -9,7 +9,7 @@
 
 const Constants    = require ("./CONSTANTS.js");
 const State        = require ("./ProgramState.js");
-const Settings     = require ('./Settings.js');
+const Settings     = require ('./Config.js');
 const Util         = require ('./Util.js');
 const Sys          = require ('./System.js');
 const Arweave      = require ("./Arweave.js");

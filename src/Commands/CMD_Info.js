@@ -11,7 +11,7 @@
 const Package        = require ('../../package.json');
 const State          = require ("../ProgramState.js");
 const Sys            = require ('../System.js');
-const Settings       = require ('../Settings.js');
+const Settings       = require ('../Config.js');
 const Util           = require ('../Util.js');
 const Arweave        = require ('../Arweave.js');
 const ArFS_DEF       = require ('../CONST_ARFS.js');

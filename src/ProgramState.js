@@ -46,8 +46,8 @@ class ProgramState
         if (this.ActiveCommandInst != null && this.ActiveCommandInst.HasSetting (key) )        
             return this.ActiveCommandInst.GetSetting (key);
         
-        else if (this.GlobalConfig != null)        
-            return this.GlobalConfig.GetSetting (key);
+        else if (this.GlobalConfig != null)
+            return this.GlobalConfig.GetSetting (key); 
         
         else
             return null;

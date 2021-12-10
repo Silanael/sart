@@ -21,7 +21,7 @@ const Concurrent = require ("./Concurrent");
 const Cache      = require ("./Cache");
 const Command    = require ("./Command");
 const Sys        = require ('./System.js');
-const Settings   = require ('./Settings.js');
+const Settings   = require ('./Config.js');
 const Util       = require ('./Util.js');
 
 

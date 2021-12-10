@@ -12,7 +12,7 @@ const Constants     = require ("./CONSTANTS.js");
 const LogLevels     = Constants.LOGLEVELS;
 const OutputDests   = Constants.OUTPUTDESTS;
 const OutputFormats = Constants.OUTPUTFORMATS;
-const SETTINGS      = Constants.SETTINGS;
+const { SETTINGS }  = require ("./CONST_SETTINGS");
 const State         = require ("./ProgramState.js");
 
 

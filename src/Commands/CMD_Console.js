@@ -18,7 +18,7 @@ const Package    = require ("../../package.json");
 const Constants  = require ("../CONSTANTS.js");
 const State      = require ("../ProgramState.js");
 const Sys        = require ('../System.js');
-const Settings   = require ('../Settings.js');
+const Settings   = require ('../Config.js');
 const Util       = require ('../Util.js');
 const Arweave    = require ('../Arweave.js');
 const ArFS       = require ('../ArFS.js');
@@ -52,15 +52,16 @@ class CMD_Console extends CommandDef
         // Append the command config to the global one
         cmd_instance.AppendConfigToGlobal ();
     
+        
         // Banner
         PrintBanner ();
     
         // Info message
         PrintInfoMessage ();
     
-    
         PrintPrompt    ();
     
+
         const input = ReadLine.createInterface ( {input: process.stdin, output: null} );
     
         for await (const line of input)
@@ -77,7 +78,8 @@ class CMD_Console extends CommandDef
     
                 else
                 {
-                    await cmd_instance.Main.RunCommand (argv);                
+                    await cmd_instance.GetMain ().RunCommand (argv);                
+
                     if (!State.ConsoleActive)
                         break;
                 }
@@ -129,10 +131,10 @@ function PrintInfoMessage ()
         Sys.INFO (Buffer.from ("52656D656D626572207468652046616C6C656E2E", 'hex').toString () );    
 
     else if (Package.versiontype == "dev")
-        PrintLine ("!!! DEVELOPMENT VERSION !!!");
+        PrintLine (Sys.ANSIRED ("!!! DEVELOPMENT VERSION !!!") );
 
     else if (Package.versiontype == "testing")
-        PrintLine ("TESTING-VERSION");
+        PrintLine (Sys.ANSIYELLOW ("TESTING-VERSION") );
 
     PrintEmptyLine ();
     
@@ -146,9 +148,11 @@ function PrintBanner ()
                "*************************\n"
              + "* SILANAEL ARWEAVE TOOL *\n"
              + "*************************\n"
-             + Util.GetVersionStr () + "\n\n"             
+             
         
-    Sys.OUT_TXT_RAW (text);
+    Sys.OUT_TXT_RAW (Sys.ANSIRED (text) );
+    Sys.INFO        (Util.GetVersionStr () );
+    Sys.INFO        ("");
 }
 
 

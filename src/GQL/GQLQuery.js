@@ -10,7 +10,7 @@
 // Imports
 const Constants   = require ("../CONSTANTS.js");
 const State       = require ("../ProgramState.js");
-const Settings    = require ('../Settings.js');
+const Settings    = require ('../Config.js');
 const Sys         = require ('../System.js');
 const Util        = require ('../Util.js');
 const ArFSDefs    = require ('../CONST_ARFS.js');

@@ -9,7 +9,7 @@
 //
 
 const Sys        = require ("./System");
-const Settings   = require ("./Settings");
+const Settings   = require ("./Config");
 const State      = require ("./ProgramState");
 const SARTObject = require("./SARTObject");
 

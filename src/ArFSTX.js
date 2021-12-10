@@ -12,7 +12,7 @@ const Const_ArFS  = require ("./CONST_ARFS");
 const State       = require ("./ProgramState");
 const Transaction = require ("./Transaction");
 const TXGroup     = require ("./TXGroup");
-const Settings    = require ("./Settings");
+const Settings    = require ("./Config");
 const Util        = require ("./Util");
 
 

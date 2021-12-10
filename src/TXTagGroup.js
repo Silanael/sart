@@ -7,12 +7,13 @@
 // A group of transaction tags.
 //
 
-const SARTObject = require ("./SARTObject");
-const TXTag      = require ("./TXTag");
-const State      = require ("./ProgramState");
-const Sys        = require ("./System");
-const Constants  = require ("./CONSTANTS");
-const Util       = require ("./Util");
+const SARTObject   = require ("./SARTObject");
+const TXTag        = require ("./TXTag");
+const State        = require ("./ProgramState");
+const Sys          = require ("./System");
+const Constants    = require ("./CONSTANTS");
+const { SETTINGS } = require ("./CONST_SETTINGS");
+const Util         = require ("./Util");
 
 
 class TXTagGroup extends SARTObject
@@ -46,7 +47,7 @@ class TXTagGroup extends SARTObject
         }
         this.TotalBytes = total_bytes;
         
-        const txmaxbytes = State.GetSetting (Constants.SETTINGS.TXTagsMaxTotalBytes);
+        const txmaxbytes = State.GetSetting (SETTINGS.TXTagsMaxTotalBytes);
 
         if (txmaxbytes == null)
             Sys.WARN_ONCE ("Config.TXTagsMaxTotalBytes is not set. Hope you know what you're doing.");
