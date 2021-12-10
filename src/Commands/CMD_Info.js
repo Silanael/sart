@@ -27,7 +27,7 @@ class CMD_Info extends CommandHandler
 
     Subcommands = 
     {
-        "tx"     : Handler_TX,
+        "tx"     : new SubCMD_TX,
         "arfs"   : Handler_ArFS,
         "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
         "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
@@ -58,18 +58,46 @@ class CMD_Info extends CommandHandler
         "Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS."
     ];
 
-    OnExecute (args, main)
+    OnExecute (args, cmd)
     {
 
     }
 
-    OnOutput (args, main)
+    OnOutput (args, cmd)
     {
         Sys.INFO ("Foo");
     }
 
 }
 
+
+class SubCMD_TX extends CommandHandler
+{
+    MinArgsAmount = 1;
+    Name = "TX";
+
+    async OnExecute (args, cmd)
+    {
+        if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
+            return false;
+    
+        const txid = args.Pop ();
+        Sys.VERBOSE ("INFO: Processing TXID: " + txid);
+            
+        if (!Util.IsArweaveHash (txid) )            
+            return Sys.ERR_ABORT ("Not a valid transaction ID: " + txid);
+                     
+        cmd.Transaction = new Transaction (txid);
+
+        await cmd.Transaction.FetchAll ();
+        return true;  
+    }
+
+    OnOutput (args, cmd)
+    {
+        cmd?.Transaction?.Output ();
+    }    
+}
 
 
 

@@ -91,7 +91,10 @@ function ContainsString (str, strings, case_insensitive = true, trim = true)
 function _StrCmp_Prep (str, compare_to, lowercase = true)
 { 
     if (str == null || compare_to == null)
-        return Sys.ERR ("StrCmp: Invalid input: str:'" + str + "', compare_to:'" + compare_to + "'.");
+    {
+        //Sys.ERR ("StrCmp: Invalid input: str:'" + str + "', compare_to:'" + compare_to + "'.");
+        return null;
+    }
     
     else if (!lowercase)
         return { str: str, compare_to: compare_to }

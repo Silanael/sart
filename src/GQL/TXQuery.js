@@ -51,8 +51,8 @@ class TXQuery extends Query
 
 
         let block_str = "";
-        const minblock = State.Config.QueryMinBlockHeight;
-        const maxblock = State.Config.QueryMaxBlockHeight;
+        const minblock = State.GetSetting (Constants.SETTINGS.QueryMinBlockHeight);
+        const maxblock = State.GetSetting (Constants.SETTINGS.QueryMaxBlockHeight);
 
         if (minblock != null || maxblock != null)
         {            
@@ -154,11 +154,12 @@ class TXQuery extends Query
            const q_str = TXQuery.CreateTxQuery
            ( 
                { 
-                   "cursor" : cursor, 
-                   "first"  : fetch_amount, 
-                   "owner"  : config.owner, 
-                   "tags"   : config.tags, 
-                   "sort"   : config.sort 
+                   cursor : cursor, 
+                   first  : fetch_amount, 
+                   owner  : config.owner, 
+                   tags   : config.tags, 
+                   sort   : config.sort,
+                   id     : config.id
                } 
            );                         
            

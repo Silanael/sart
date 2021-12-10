@@ -24,20 +24,20 @@ class CMD_Help extends CommandHandler
     }
 
 
-    OnExecute (args, main)
+    OnExecute (args, cmd)
     {
         return true;        
     }
 
 
-    OnOutput (args, main)
+    OnOutput (args, cmd)
     {
         const cmd_req =  args?.PopLC ();
 
         // Requested command present.
         if (cmd_req != null)
         {            
-            const handler = main.Commands.GetCommandHandler (cmd_req);
+            const handler = cmd.Main.Commands.GetCommandHandler (cmd_req);
     
             if (handler != null)
             {

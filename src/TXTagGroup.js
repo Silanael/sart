@@ -46,13 +46,13 @@ class TXTagGroup extends SARTObject
         }
         this.TotalBytes = total_bytes;
         
-        const conf = State.GetConfig ();
+        const txmaxbytes = State.GetSetting (Constants.SETTINGS.TXTagsMaxTotalBytes);
 
-        if (conf?.TXTagsMaxTotalBytes == null)
+        if (txmaxbytes == null)
             Sys.WARN_ONCE ("Config.TXTagsMaxTotalBytes is not set. Hope you know what you're doing.");
 
-        else if (total_bytes > conf?.TXTagsMaxTotalBytes)
-            return Sys.ERR ("Total size of TX-tags (" + total_bytes + " bytes) exceeds the set maximum of " + conf?.TXTagsMaxTotalBytes + ".",
+        else if (total_bytes > txmaxbytes)
+            return Sys.ERR ("Total size of TX-tags (" + total_bytes + " bytes) exceeds the set maximum of " + txmaxbytes + ".",
                              "TXTagGroup.Validate", { error_id: Constants.ERROR_IDS.TAG_TOTAL_MAX_SIZE_EXCEED } );
 
         return true;

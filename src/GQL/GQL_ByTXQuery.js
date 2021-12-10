@@ -1,5 +1,6 @@
 const Constants = require ("../CONST_SART");
 const Util      = require ("../Util");
+const Sys       = require ("../System");
 const TXQuery   = require ("./TXQuery");
 
 
@@ -17,16 +18,13 @@ class ByTXQuery extends TXQuery
             return null;
         }
 
-        await super.ExecuteOnce
-        (
-            TXQuery.CreateTxQuery 
-            ({                     
-                    first:  1,
-                    id:     txid,
-                    owner:  owner,                     
-                    sort:   this.Sort,                                                            
-            })
-        );
+        await super.Execute
+        ({                             
+            first:  1,
+            id:     txid,
+            owner:  owner,                     
+            sort:   this.Sort,                                                                     
+        });
 
         const amount = this.GetEdgesAmount ();
 

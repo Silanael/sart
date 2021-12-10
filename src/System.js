@@ -415,6 +415,17 @@ function ERR_ONCE (str, src, args = {error_id: null})
     return false;
 }
 
+function WARN_ONCE (str, src, args = {error_id: null})
+{    
+    if (!IsQuiet () && DISPLAYED_ERRORS[str] == null )
+    {
+        DISPLAYED_ERRORS [str] = true;
+        return WARN (str, src, args);
+    }
+
+    return false;
+}
+
 
 // Error message output + exit or return false.
 function ERR_ABORT (str, src, args = {error_id: null})
@@ -504,6 +515,7 @@ module.exports =
     VERBOSE,
     DEBUG,
     WARN,
+    WARN_ONCE,
     ERR,
     ERR_ABORT,
     ERR_OVERRIDABLE,

@@ -38,10 +38,10 @@ function Init ()
         State.ArweaveInstance = ArweaveLib.init
         (
             {
-                host:     Config.ArweaveHost,
-                port:     Config.ArweavePort,
-                protocol: Config.ArweaveProto,
-                timeout:  Config.ArweaveTimeout_ms,
+                host:     State.GetSetting (Constants.SETTINGS.ArweaveHost),
+                port:     State.GetSetting (Constants.SETTINGS.ArweavePort),
+                protocol: State.GetSetting (Constants.SETTINGS.ArweaveProto),
+                timeout:  State.GetSetting (Constants.SETTINGS.ArweaveTimeout_ms)
             }
         );    
  
@@ -74,7 +74,7 @@ async function Connect (args)
         if (await TestConnection () )
         {
             Sys.INFO ("Connected to " + GetHostStr (State.ArweaveInstance) );
-            Sys.VERBOSE ("Using " + config.ArweaveTimeout_ms + "ms timeout.");            
+            Sys.VERBOSE ("Using " + State.GetSetting (Constants.SETTINGS.ArweaveTimeout_ms) + "ms timeout.");            
             
         }
         else
@@ -141,7 +141,7 @@ async function GetConnectionStatus ()
 
 function IsConfirmationAmountSafe (confirmations)
 {
-    return confirmations != null && Number (confirmations) >= State.Config.SafeConfirmationsMin;
+    return confirmations != null && Number (confirmations) >= State.GetSetting (Constants.SETTINGS.SafeConfirmationsMin);
 }
 
 

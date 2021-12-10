@@ -14,7 +14,7 @@ const SARTObject    = require ("./SARTObject");
 const LogLevels     = Constants.LOGLEVELS;
 const OutputDests   = Constants.OUTPUTDESTS;
 const OutputFormats = Constants.OUTPUTFORMATS;
-
+const SETTINGS      = Constants.SETTINGS;
 
 let FUP = 0;
 
@@ -223,7 +223,7 @@ function GetSetting (key)
 
 
 function GetConfig                 ()            { return State.GetConfig (); }
-function GetHostString             (path = null) { return GetSetting (SETTINGS.ArweaveHost) + "://" 
+function GetHostString             (path = null) { return GetSetting (SETTINGS.ArweaveProto) + "://" 
                                                         + GetSetting (SETTINGS.ArweaveHost)  + ":" 
                                                         + GetSetting (SETTINGS.ArweavePort)
                                                         + ( path != null ? path : "");                                                              }

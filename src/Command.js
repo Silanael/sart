@@ -129,19 +129,19 @@ class Command extends SARTObject
                     args.Pop ();
                     handler = subcmd;                    
                 }
-                else // Proceed with executing this.                                
-                    this.Success = await handler.OnExecute (args, this.Main);            
+                
+                this.Success = await handler.OnExecute (args, this);            
             }
             else
             {
                 Sys.DEBUG ("Executing command '" + this.Command + "' as a direct function..");
-                this.Success = await handler (args, this.Main);
+                this.Success = await handler (args, this);
             }
             
             this.EndTime = Util.GetUNIXTimeMS ();        COMMANDS
 
             if (handler.OnOutput != null)
-                handler.OnOutput (args, this.Main);
+                handler.OnOutput (args, this);
 
             Sys.VERBOSE ("");        
             Sys.VERBOSE ("Command finished in " + this.GetRuntimeSec () + " sec with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );

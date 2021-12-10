@@ -22,12 +22,12 @@ class CMD_ReadMe extends CommandHandler
         this.WithDescription ("Displays the content of the README.md -file.")
     }
 
-    OnExecute (args)
+    OnExecute (args, cmd)
     {
         return true;        
     }
 
-    OnOutput (args)
+    OnOutput (args, cmd)
     {
         try
         {

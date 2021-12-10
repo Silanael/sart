@@ -21,12 +21,12 @@ class CommandNAMEHERE extends CommandHandler
         this.MinArgsAmount = 0;
     }
 
-    OnExecute (args, main)
+    OnExecute (args, cmd)
     {
         return true;        
     }
 
-    OnOutput (args, main)
+    OnOutput (args, cmd)
     {
     }
 }

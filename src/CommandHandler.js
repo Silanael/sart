@@ -27,8 +27,8 @@ class CommandHandler extends SARTDef
     
 
     /* Overrsidable, this implementation does nothing. */
-    async OnExecute (args, main) { if (this.ExecFunc != null) return this.ExecFunc (args, main); else return true; }
-    async OnOutput  (args, main) { if (this.OutFunc  != null) return this.OutFunc  (args, main); else return true; }    
+    async OnExecute (args, cmd) { if (this.ExecFunc != null) return await this.ExecFunc (args, cmd); else return true; }
+    async OnOutput  (args, cmd) { if (this.OutFunc  != null) return await this.OutFunc  (args, cmd); else return true; }    
 
 
     constructor (command_name)
@@ -95,8 +95,11 @@ class CommandHandler extends SARTDef
     static GET_HANDLER (commands, name)
     {    
         if (commands == null)
-            return Sys.ERR_PROGRAM ("'commands' null!", "CommandHandler.GET_HANDLER");
-            
+        {            
+            Sys.ERR_PROGRAM ("'commands' null!", "CommandHandler.GET_HANDLER");
+            return null;
+        }
+
         if (name == null)
             return null;
 
