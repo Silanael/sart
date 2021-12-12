@@ -8,8 +8,8 @@
 // Runtime- and on-disk cache.
 //
 
-const TXGroup         = require ("./TXGroup");
-const ArFSEntityGroup = require ("./ArFSEntityGroup");
+const TXGroup         = require ("./Arweave/TXGroup");
+const ArFSEntityGroup = require ("./ArFS/ArFSEntityGroup");
 const Sys             = require ("./System");
 const State           = require ("./ProgramState");
 

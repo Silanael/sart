@@ -31,28 +31,15 @@ class ProgramState
     ActiveConcurrentFetches = [];
 
 
-    GetConfig         () { return this.GlobalConfig;   }
-    IsConsoleActive   () { return this.ConsoleActive;  }
-    IsCacheEnabled    () { return this.Cache != null;  }
-    GetCacheHits      () { return this.CacheHits   ;   }
-    GetCacheMisses    () { return this.CacheMisses ;   }
-    GetHost           () { return this.CurrentHost;    }
-    GetActiveCommand  () { return this.ActiveTask;     }
-
-
-    /* This is only for System. */
-    GetSetting (key)
-    {        
-        if (this.ActiveCommandInst != null && this.ActiveCommandInst.HasSetting (key) )        
-            return this.ActiveCommandInst.GetSetting (key);
-        
-        else if (this.GlobalConfig != null)
-            return this.GlobalConfig.GetSetting (key); 
-        
-        else
-            return null;
-    }
-
+    GetGlobalConfig   ()   { return this.GlobalConfig;           }
+    IsConsoleActive   ()   { return this.ConsoleActive;          }
+    IsCacheEnabled    ()   { return this.Cache != null;          }
+    GetCacheHits      ()   { return this.CacheHits   ;           }
+    GetCacheMisses    ()   { return this.CacheMisses ;           }
+    GetHost           ()   { return this.CurrentHost;            }
+    GetActiveCommand  ()   { return this.ActiveTask;             }
+    GetSetting       (key) { return this.Main?.GetSetting (key)  }
+    
 
     GetArFSEntity (args = { entity_type: null, arfs_id: null} )
     {

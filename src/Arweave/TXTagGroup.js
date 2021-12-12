@@ -7,13 +7,14 @@
 // A group of transaction tags.
 //
 
-const SARTObject   = require ("./SARTObject");
+const SARTObject   = require ("../SARTObject");
+const State        = require ("../ProgramState");
+const Sys          = require ("../System");
+const Constants    = require ("../CONSTANTS");
+const { SETTINGS } = require ("../SETTINGS");
+const Config       = require ("../Config");
+const Util         = require ("../Util");
 const TXTag        = require ("./TXTag");
-const State        = require ("./ProgramState");
-const Sys          = require ("./System");
-const Constants    = require ("./CONSTANTS");
-const { SETTINGS } = require ("./CONST_SETTINGS");
-const Util         = require ("./Util");
 
 
 class TXTagGroup extends SARTObject
@@ -119,6 +120,22 @@ class TXTagGroup extends SARTObject
                 Sys.ERR_ONCE ("Tag not in corrent format - need to be { name:'foo', values:['bar','baz'] } - " + Util.ObjToStr (t), "TXTag.ADD_NATIVE_TAGS");
         }
     }
+
+
+    AddArFSTagsIfEnabled ()
+    {        
+        if (Config.GetSetting (SETTINGS.ArFSQueryTagsEnabled) == true)
+        {
+            const tags = Config.GetSetting (SETTINGS.ArFSQueryTags);
+
+            if (tags == null || tags.length <= 0)
+                Sys.ERR_ONCE ("Setting 'ArFSQueryTagsEnabled' is set to true, but 'ArFSQueryTags' is not set. "
+                             + "This should be an array of native Arweave-tags.");
+
+            else
+                this.AddArweaveTXTags (tags);
+        }
+    } 
 
 
     GetTag (tag, case_sensitive = true)

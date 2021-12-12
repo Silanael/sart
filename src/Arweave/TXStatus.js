@@ -1,7 +1,10 @@
-const Sys       = require('./System.js');
-const Arweave   = require('./Arweave.js');
-const Constants = require ("./CONSTANTS.js");
-const State     = require ("./ProgramState");
+const Sys         = require ('../System.js');
+const Constants   = require ("../CONSTANTS.js");
+const State       = require ("../ProgramState");
+const Config      = require ("../Config");
+const { SETTINGS} = require ("../SETTINGS");
+const Arweave     = require ('./Arweave.js');
+
 
 
 class TXStatus 
@@ -80,14 +83,17 @@ class TXStatus
     IsFailed    () { return this.StatusCode == Constants.TXSTATUS_NOTFOUND; };
     IsConfirmed () 
     {
-        if (State.Config.SafeConfirmationsMin == null || isNaN (State.Config.SafeConfirmationsMin) ) 
+        const key = SETTINGS.SafeConfirmationsMin;
+        const safe_confirm_min = Config.GetSetting (key);
+
+        if (safe_confirm_min == null || isNaN (safe_confirm_min) ) 
         {
-            Sys.ERR_ONCE ("Config.SafeConfirmationsMin not properly set!");
+            Sys.ERR_ONCE ("Setting '" + key.GetKey () + "' not properly set!");
             return false;
         }
 
         else
-            return this.IsMined () && this.Confirmations != null && this.Confirmations >= State.Config.SafeConfirmationsMin;
+            return this.IsMined () && this.Confirmations != null && this.Confirmations >= safe_confirm_min;
     }
 
     //toString() { return this.Status != null ? this.Status : this.StatusCode != null ? this.StatusCode : "UNKNOWN"; }

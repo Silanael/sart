@@ -11,13 +11,14 @@
 const Package        = require ('../../package.json');
 const State          = require ("../ProgramState.js");
 const Sys            = require ('../System.js');
+const Constants      = require ("../CONSTANTS");
 const Settings       = require ('../Config.js');
 const Util           = require ('../Util.js');
-const Arweave        = require ('../Arweave.js');
-const ArFS_DEF       = require ('../CONST_ARFS.js');
-const ArFSEntity     = require ("../ArFSEntity");
-const Transaction    = require ("../Transaction.js");
-const CommandDef = require ("../CommandDef");
+const Arweave        = require ('../Arweave/Arweave.js');
+const ArFS_DEF       = require ('../ArFS/CONST_ARFS.js');
+const ArFSEntity     = require ("../ArFS/ArFSEntity");
+const Transaction    = require ("../Arweave/Transaction.js");
+const CommandDef     = require ("../CommandDef").CommandDef;
 
 
 class CMD_Info extends CommandDef
@@ -27,15 +28,32 @@ class CMD_Info extends CommandDef
 
     Subcommands = 
     {
-        "tx"     : new SubCMD_TX,
-        "arfs"   : Handler_ArFS,
-        "drive"  : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
-        "file"   : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
-        "folder" : async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
-        "config" : function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
-        "sart"   : Handler_SART,
-        "author" : Handler_Author,
+        TX      : new SubCMD_TX,
+        ARFS    : new SubCMD_ARFS,
+        DRIVE   : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
+        FILE    : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
+        FOLDER  : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
+        CONFIG  : null, //function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
+        SART    : new CommandDef ("SART").WithFunc (null, Handler_SART),
+        AUTHOR  : new CommandDef ("AUTHOR").WithFunc (null, Handler_Author),
     };
+
+    GetCustomSubCommand (next_arg_peek)
+    {
+        if (next_arg_peek == null)
+            return false;
+
+        else if (Util.IsArweaveHash (next_arg_peek) )
+        {
+            Sys.VERBOSE ("Treating '" + next_arg_peek + "' as an Arweave-TXID.");
+            return this.Subcommands.TX;
+        }
+
+        else if (next_arg_peek.toUpperCase () == "SILANAEL")
+            return this.Subcommands.AUTHOR;
+
+    }
+
 
     Helplines =
     [
@@ -58,24 +76,19 @@ class CMD_Info extends CommandDef
         "Arweave-Base64s default to TX, ArFS-IDs are handled by ARFS."
     ];
 
-    OnExecute (cmd)
-    {
-
-    }
-
-    OnOutput (cmd)
-    {
-        Sys.INFO ("Info-handler");
-    }
+    async OnExecute (cmd) { return false; }
+          OnOutput  (cmd) { Sys.ERR ("Unknown subcommand '" + cmd.Peek () + "'."); }
 
 }
+
+
 
 
 class SubCMD_TX extends CommandDef
 {
     MinArgsAmount = 1;
-    Name = "TX";
-
+    Name          = "TX";
+        
     async OnExecute (cmd)
     {
         if ( ! cmd.RequireAmount (1, "Transaction ID (TXID) required.") )
@@ -101,110 +114,42 @@ class SubCMD_TX extends CommandDef
 
 
 
-async function HandleCommand (args)
+class SubCMD_ARFS extends CommandDef 
 {
-    if (args.GetAmount () <= 0)
+
+    Name          = "ARFS";
+    MinArgsAmount = 1;
+
+
+    async OnExecute (cmd, entity_type = null)
     {
-        Help ();
-        Sys.INFO ("Valid subcommands: " + Util.KeysToStr (SUBCOMMANDS) )
-        return false;
-    }
-
-    const target  = args.Pop ();
-    const handler = SUBCOMMANDS[target.toLowerCase () ];
-
-    // Invoke handler if found
-    if (handler != null)
-    {
-        Sys.VERBOSE ("Invoking subcommand-handler for '" + target + "'...");
-        await handler (args);
-    }
-
-
-    // Arweave-hash, could be either an address or a transaction.
-    else if (Util.IsArweaveHash (target) )
-    {        
-        // Check for transaction
-        const tx = await Arweave.GetTx (target);
-        if (tx != null)
+        if (entity_type == null)
         {
-            Sys.VERBOSE ("Assuming " + target + " is a TXID.");
-            await Handler_TX (args, tx);
+            if (! cmd.RequireAmount (2, "Two arguments required: <ENTITY-TYPE> <ARFS-ID>") )
+                return false;
+
+            entity_type = cmd.PopLC ();
         }
-        else
-            Sys.ERR ("Could not find transaction " + target + ". Address info display not yet implemented.");
+
+        const arfs_id = cmd.Pop ();
+
+        if (! Util.IsArFSID (arfs_id) 
+            && !cmd.OnOverridableError ("Invalid ArFS-ID: " + arfs_id + " (use --force to proceed anyway)", this, {error_id: Constants.ERROR_IDS.ARFS_ID_INVALID}) )
+                return false;
+
+        cmd.Entity = ArFSEntity.GET_ENTITY ( {arfs_id: arfs_id, entity_type:entity_type } ); 
+
+        return await cmd.Entity.FetchAll (); 
     }
 
-    // ArFS-ID.
-    else if (Util.IsArFSID (target) )    
+    OnDisplay (cmd)
     {
-        Sys.VERBOSE ("Assuming " + target + " is an ArFS-ID.");
-        await Handler_ArFS (args, target);
+        cmd.Entity?.Output ();
     }
-    
-
-    else if (target.toUpperCase () == "SILANAEL")
-        await Handler_Author (args);
-
-    else
-        return Sys.ERR_ABORT ("Unable to determine what '" + target + "' is.");
-  
 }
 
 
 
-class InfoTask_TX 
-{
-    Transaction = null;
-
-    constructor (tx)
-    {
-        
-        this.Transaction = tx;
-    }
-
-    async __DoExecute ()
-    {
-        await this.Transaction.FetchAll ();
-        return true;
-    }
-
-    __DoOutput ()
-    {
-        this.Transaction.Output ();
-    }
-}
-
-
-async function Handler_TX (args, tx = null)
-{
- 
-    if (tx == null)
-    {
-        if ( ! args.RequireAmount (1, "Transaction ID (TXID) required.") )
-            return false;
-
-        const txid = args.Pop ();
-        Sys.VERBOSE ("INFO: Processing TXID: " + txid);
-
-        tx = new Transaction (txid);
-
-        if (!Util.IsArweaveHash (txid) )            
-            return Sys.ERR_ABORT ("Not a valid transaction ID: " + txid);
-                 
-    }
-
-    if (tx == null)
-        return Sys.ERR_PROGRAM ("'tx' null.", "cmd_info.Handler_TX");
-    
-        
-    // Get status of the transaction
-    await new InfoTask_TX (tx).Execute ();
-    
-    
-
-    return true;
-}
 
 
 
@@ -306,28 +251,6 @@ may never see the light of day...
 }
 
 
-class InfoTask_ArFSEntity 
-{
-    Entity = null;
-
-    constructor (param = {entity_type: null, arfs_id: null} )
-    {
-        //super ();
-                
-        this.Entity = ArFSEntity.GET_ENTITY (param)                
-    }
-
-    async __DoExecute ()
-    {
-        const success = await this.Entity.FetchAll ();
-        return success;
-    }
-
-    __DoOutput ()
-    {
-        this.Entity.Output ();
-    }
-}
 
 
 

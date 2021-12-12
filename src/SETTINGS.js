@@ -80,6 +80,7 @@ const SETTINGS =
     MaxTXFormat             : new Setting ("MaxTXFormat")              .DV (2),
     MinArFSVersion          : new Setting ("MinArFSVersion")           .DV (0.11),
     MaxArFSVersion          : new Setting ("MaxArFSVersion")           .DV (0.11),
+    ArFSQueryTagsEnabled    : new Setting ("ArFSQueryTagsEnabled")     .DV (false),
     ArFSTXQueryTags         : new Setting ("ArFSTXQueryTags")          .DV ([ {name:"App-Name", values:["ArDrive","ArDrive-Web","ArDrive-CLI","ArDrive-Desktop","ArDrive-Sync"] } ]),
     SafeConfirmationsMin    : new Setting ("SafeConfirmationsMin")     .DV (15),
     TXTagsMaxTotalBytes     : new Setting ("TXTagsMaxTotalBytes")      .DV (Constants.CONFIG_TX_TAGS_TOTAL_SIZE),

@@ -14,8 +14,8 @@ const State          = require ("./ProgramState");
 const Settings       = require ("./Config");
 const Args           = require ("./Arguments");
 const SARTObject     = require ("./SARTObject");
-const COMMANDS       = require ("./CONST_COMMANDS");
-const Options        = require ("./Options");
+const COMMANDS       = require ("./COMMANDS");
+const OPTIONS        = require ("./OPTIONS");
 
 
 
@@ -28,20 +28,20 @@ const Options        = require ("./Options");
 
 class CommandInstance extends SARTObject
 {
-    Command   = null;
+    CDef        = null;
     
-    Command   = null;    
-    ArgV      = null;
-    Arguments = null;
+    CommandName = null;    
+    ArgV        = null;
+    Arguments   = null;
 
-    Config    = new Settings.Config ();
+    Config      = new Settings.Config ();
 
-    StartTime = null;
-    EndTime   = null;
-    Fetches   = 0;
+    StartTime   = null;
+    EndTime     = null;
+    Fetches     = 0;
 
-    Success   = null;
-    Failed    = null;
+    Success     = null;
+    Failed      = null;
 
 
 
@@ -58,6 +58,7 @@ class CommandInstance extends SARTObject
     GetFetchesAmount     ()            { return this.Fetches != null ? this.Fetches : 0 }
     WasSuccessful        ()            { return this.Success;                           }
   
+    GetCommandName       ()            { return this.CommandName;                       }
     HasSetting           (key)         { return this.Config.HasSetting (key);           }
     GetSetting           (key)         { return this.Config.GetSetting (key);           }
     GetConfig            ()            { return this.Config;                            }
@@ -68,6 +69,7 @@ class CommandInstance extends SARTObject
     Peek                 ()            { return this.Arguments?.Peek ();  }
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
     
+
     AppendConfigToGlobal ()            
     { 
         if (! this.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
@@ -81,7 +83,8 @@ class CommandInstance extends SARTObject
     {
         let cmd_name = args.PopLC ();
         let def      = null;
-        
+                
+
         // No command given
         if (cmd_name == null)
         {
@@ -108,8 +111,11 @@ class CommandInstance extends SARTObject
             }
         }
         
-        def = GetCommandDef (cmd_name, COMMANDS, args);
+        this.CommandName = cmd_name;
+        
 
+        def = GetCommandDef (cmd_name, COMMANDS, args);
+        
         if (def == null)
             this.Failed = Sys.ERR ("Command '" + cmd_name + "' not recognized or definition missing.", this);
         
@@ -129,35 +135,35 @@ class CommandInstance extends SARTObject
 
 
         // Extract options and get the remaining arguments
-        this.Arguments = Options.ParseOptions (argv, this.Config);
+        this.Arguments = OPTIONS.ParseOptions (argv, this.Config);
         
 
         // Get command-handler
-        this.Command = this.GetCommandDefFromArgs (this.Arguments);
+        this.CDef = this.GetCommandDefFromArgs (this.Arguments);
         
-        if (this.Command == null)
+        if (this.CDef == null)
             return false;
 
-        else if (this.GetArgsAmount () < this.Command.GetMinArgsAmount () )
+        else if (this.GetArgsAmount () < this.CDef.GetMinArgsAmount () )
         {
-            this.Command.DisplayHelp ();
-            Sys.ERR ("Insufficient arguments for the command '" + this.Command + "' - at least " + this.Command.GetMinArgsAmount () + " required.");
+            this.CDef.DisplayHelp ();
+            Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
         }
             
         // Good to go
         else
         {   
-            Sys.VERBOSE ("Executing command '" + this.Command + "'...");         
+            Sys.VERBOSE ("Executing command '" + this.CDef + "'...");         
                         
-            if (!this.Command.RunAsActiveCommand () )
+            if (!this.CDef.RunAsActiveCommand () )
                 State.ActiveCommandInst = null;
 
             // Execute
             this.StartTime = Util.GetUNIXTimeMS ();        
-            this.Success   = await this.Command.OnExecute (this);  
+            this.Success   = await this.CDef.OnExecute (this);  
             this.EndTime   = Util.GetUNIXTimeMS ();       
 
-            this.Command.OnOutput (this);
+            this.CDef.OnOutput (this);
             
             Sys.VERBOSE ("");        
             Sys.VERBOSE ("Command finished in " + this.GetRuntimeSec () + " sec with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
@@ -218,7 +224,7 @@ function GetCommandDef (name, commands = null, args = null)
     for (const o of Object.values (commands) )
     {           
                       
-        if (o?.HasName (name) )
+        if (o?.Matches (name) )
         {
             Sys.DEBUG ("Command handler found for '" + name + '".');
             
@@ -235,6 +241,12 @@ function GetCommandDef (name, commands = null, args = null)
                         Sys.DEBUG ("Found a subcommand-handler for  '" + scname + '".');
                         args.Pop ();
                         return subcommand;
+                    }
+                    else
+                    {
+                        const custom_cmd = o.GetCustomSubCommand (args.Peek () );
+                        if (custom_cmd != null)
+                            return custom_cmd;
                     }
                 }
             }

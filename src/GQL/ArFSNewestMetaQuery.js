@@ -9,11 +9,11 @@
 //
 
 const Constants  = require ("../CONSTANTS");
-const Const_ArFS = require ("../CONST_ARFS");
+const Const_ArFS = require ("../ArFS/CONST_ARFS");
 const State      = require ("../ProgramState");
-const TXQuery    = require ("./TXQuery");
-const TXTagGroup = require ("../TXTagGroup");
+const TXTagGroup = require ("../Arweave/TXTagGroup");
 const Util       = require ("../Util");
+const TXQuery    = require ("./TXQuery");
 
 
 
@@ -42,10 +42,10 @@ class ArFSNewestMetaQuery extends TXQuery
             return this.OnProgramError ("'arfs_id' null.", this);
 
 
-        const tags            = new TXTagGroup ();        
-        tags.Add              ( new Const_ArFS.TXTag_EntityType     (entity_type) );
-        tags.Add              ( new Const_ArFS.TXTag_ArFSID         (entity_type, arfs_id))                
-        tags.AddArweaveTXTags ( State.GetConfig ().ArFSTXQueryTags );
+        const tags = new TXTagGroup ();        
+        tags.Add   ( new Const_ArFS.TXTag_EntityType     (entity_type) );
+        tags.Add   ( new Const_ArFS.TXTag_ArFSID         (entity_type, arfs_id))                
+        tags.AddArFSTagsIfEnabled ();
         
 
         await super.Execute

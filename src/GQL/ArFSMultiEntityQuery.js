@@ -9,11 +9,11 @@
 //
 
 const Constants  = require ("../CONSTANTS");
-const Const_ArFS = require ("../CONST_ARFS");
+const Const_ArFS = require ("../ArFS/CONST_ARFS");
 const State      = require ("../ProgramState");
-const TXQuery    = require ("./TXQuery");
-const TXTagGroup = require ("../TXTagGroup");
+const TXTagGroup = require ("../Arweave/TXTagGroup");
 const Util       = require ("../Util");
+const TXQuery    = require ("./TXQuery");
 
 
 
@@ -48,7 +48,7 @@ class ArFSMultiEntityQuery extends TXQuery
         if (parent_folder_id != null)
             tags.Add          ( new Const_ArFS.TXTag_ParentFolderID (parent_folder_id)  );
 
-        tags.AddArweaveTXTags ( State.GetConfig ().ArFSTXQueryTags                      );
+        tags.AddArFSTagsIfEnabled ();
         
 
         await super.Execute

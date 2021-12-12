@@ -7,11 +7,12 @@
 // A query for multiple transactions matching criteria.
 //
 
-const Constants = require ("../CONSTANTS");
-const State     = require ("../ProgramState");
-const Sys       = require ("../System");
-const Util      = require ("../Util");
-const Query     = require ("./GQLQuery");
+const Constants    = require ("../CONSTANTS");
+const { SETTINGS } = require ("../SETTINGS");
+const State        = require ("../ProgramState");
+const Sys          = require ("../System");
+const Util         = require ("../Util");
+const Query        = require ("./GQLQuery");
 
 
 

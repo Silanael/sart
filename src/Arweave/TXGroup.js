@@ -1,7 +1,7 @@
-const Constants   = require ("./CONSTANTS.js");
-const Sys         = require ('./System.js');
+const Constants   = require ("../CONSTANTS.js");
+const Sys         = require ('../System.js');
+const SARTGroup   = require ("../SARTGroup");
 const Transaction = require ("./Transaction.js");
-const SARTGroup   = require ("./SARTGroup");
 
 
 
@@ -49,7 +49,8 @@ class TXGroup extends SARTGroup
 
     GetByTXID  (txid)  { return this.GetByID (txid);  }
     HasTXID    (txid)  { return this.HasID   (txid);  }
-    toString   ()      { return "TXGroup";            }    
+    toString   ()      { return "TXGroup";            }   
+    GetSort    ()      { return this.SortOrder;       } 
     
 
 
@@ -75,13 +76,13 @@ class TXGroup extends SARTGroup
         {
             if (sort == Constants.GQL_SORT_OLDEST_FIRST)
             {
-                this.List.sort ( (a, b) => a.GetBlockHeight () - b.GetBlockHeight () );
+                this.Entries.sort ( (a, b) => a.GetBlockHeight () - b.GetBlockHeight () );
                 this.SortDone = true;
             }
 
             else if (sort == Constants.GQL_SORT_NEWEST_FIRST)
             {
-                this.List.sort ( (a, b) => b.GetBlockHeight () - a.GetBlockHeight () );
+                this.Entries.sort ( (a, b) => b.GetBlockHeight () - a.GetBlockHeight () );
                 this.SortDone = true;
             }
 
@@ -106,7 +107,7 @@ class TXGroup extends SARTGroup
             Transactions: {}
         }
 
-        for (const tx of this.List)
+        for (const tx of this.AsArray () )
         {
             const txid = tx.GetTXID ();
 
@@ -176,14 +177,11 @@ class TXGroup extends SARTGroup
     {
         const ret = new TXGroup (this.SortOrder);
 
-        for (const e of Object.entries (this.ByTXID) )
-        {
-            const txid = e[0];
-            const obj  = e[1];
-
-            if ( (criteria.owner == null || obj.Getowner () == criteria.owner ) &&
-                 (criteria.tag   == null || obj.HasTag   (tag, value)         ) )
-                ret.Add (obj, txid);
+        for (const t of this.AsArray () )
+        {            
+            if ( (criteria.owner == null || t.Getowner () == criteria.owner ) &&
+                 (criteria.tag   == null || t.HasTag   (tag, value)         ) )
+                ret.Add (t);
         }
         return ret;
     }
@@ -193,19 +191,17 @@ class TXGroup extends SARTGroup
     /** Set value to null to get entries that contain the tag (with any value). */
     GetTransactionsByTag (tag, value = null)
     {
-        const ret = new TXGroup (this.SortOrder);
+        const ret = new TXGroup (this.GetSort () );
 
-        for (const e of Object.entries (this.ByTXID) ) 
-        {
-            const txid = e[0];
-            const obj  = e[1];
-
-            if (obj.HasTag (tag, value) )
-                ret.Add (obj, txid);
+        for (const e of this.AsArray () ) 
+        {            
+            if (e.HasTag (tag, value) )
+                ret.Add (e);
         }
 
         const sel_amount  = ret.GetAmount  ();
         const this_amount = this.GetAmount ();
+
         Sys.VERBOSE ("Selected " + sel_amount + " / " + this_amount + " transactions by tag " + tag + ":" + value
                      + " (" + (this_amount - sel_amount) + " omitted)");
         return ret;
@@ -214,7 +210,7 @@ class TXGroup extends SARTGroup
     
     GetTransactionsByOwner (owner) 
     {
-        const ret = new TXGroup (this.SortOrder);
+        const ret = new TXGroup (this.GetSort () );
 
         if (owner == null) 
         {
@@ -222,18 +218,16 @@ class TXGroup extends SARTGroup
             return ret;
         }
 
-        for (const e of Object.entries (this.ByTXID) )
-        {
-            const txid = e[0];
-            const obj  = e[1];
-
-            if (obj.GetOwner () == owner)
-                ret.Add (obj, txid);
+        for (const e of this.AsArray () )
+        {            
+            if (e.GetOwner () == owner)
+                ret.Add (e);
         }
 
         
         const sel_amount  = ret.GetAmount  ();
         const this_amount = this.GetAmount ();
+
         Sys.VERBOSE ("Selected " + sel_amount + " / " + this_amount + " transactions by owner '" + owner + "'"
                           + " (" + (this_amount - sel_amount) + " omitted)");
         
@@ -243,10 +237,10 @@ class TXGroup extends SARTGroup
 
     GetOldestEntry () 
     {
-        const entries = this.AsArray ();
-        const amount = entries != null ? entries.length : 0;
-        const listfe = entries != null ? entries[0]     : null;
-
+        const entries    = this.AsArray ();
+        const amount     = entries != null ? entries.length : 0;
+        const listfe     = entries != null ? entries[0]     : null;
+        const sort_order = this.GetSort ();
 
         if (amount <= 0)
             return null;
@@ -257,9 +251,9 @@ class TXGroup extends SARTGroup
 
         else 
         {
-            let oldest = this.SortOrder == Constants.GQL_SORT_OLDEST_FIRST ? listfe
-                                                                      : this.SortOrder == Constants.GQL_SORT_NEWEST_FIRST ? entries[entries.length - 1]
-                                                                                                                     : null;
+            let oldest = sort_order == Constants.GQL_SORT_OLDEST_FIRST ? listfe
+                                                                       : sort_order == Constants.GQL_SORT_NEWEST_FIRST ? entries[entries.length - 1]
+                                                                                                                       : null;
 
             Sys.DEBUG ("Initial set oldest to " + (oldest != null ? oldest.GetTXID () : null) );
 

@@ -7,8 +7,8 @@
 // Transaction-tag handling
 //
 
-const Util = require('./Util.js');
-const Sys  = require('./System.js');
+const Util = require('../Util.js');
+const Sys  = require('../System.js');
 
 
 class TXTag

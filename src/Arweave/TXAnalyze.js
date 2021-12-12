@@ -11,7 +11,7 @@ const State     = require ("./ProgramState.js");
 const Util      = require ('./Util.js');
 const Sys       = require ('./System.js');
 const Settings  = require ('./Settings.js');
-const ArFSDefs  = require ('./CONST_ARFS.js');
+const ArFSDefs  = require ('./ArFS/CONST_ARFS.js');
 const ZLib      = require('zlib');
 
 

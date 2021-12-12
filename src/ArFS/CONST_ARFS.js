@@ -7,8 +7,8 @@
 // ArFS-constants.
 //
 
-const TXTag = require ("./TXTag.js");
-const Util  = require ("./Util.js");
+const TXTag = require ("../Arweave/TXTag.js");
+const Util  = require ("../Util.js");
 
 
 class TXTag_EntityType extends TXTag

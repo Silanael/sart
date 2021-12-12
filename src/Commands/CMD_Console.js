@@ -4,7 +4,7 @@
 // *****************************
 //
 // cmd_console.js - 2021-10-19_01
-// Command 'console'
+// Command 'CONSOLE'
 //
 
 // External imports
@@ -20,9 +20,9 @@ const State      = require ("../ProgramState.js");
 const Sys        = require ('../System.js');
 const Settings   = require ('../Config.js');
 const Util       = require ('../Util.js');
-const Arweave    = require ('../Arweave.js');
-const ArFS       = require ('../ArFS.js');
-const CommandDef = require ("../CommandDef");
+const Arweave    = require ('../Arweave/Arweave.js');
+const ArFS       = require ('../ArFS/ArFS.js');
+const CommandDef = require ("../CommandDef").CommandDef;
 
 
 
@@ -52,7 +52,7 @@ class CMD_Console extends CommandDef
         // Append the command config to the global one
         cmd_instance.AppendConfigToGlobal ();
     
-        
+
         // Banner
         PrintBanner ();
     

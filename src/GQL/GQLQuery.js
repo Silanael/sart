@@ -13,7 +13,7 @@ const State       = require ("../ProgramState.js");
 const Settings    = require ('../Config.js');
 const Sys         = require ('../System.js');
 const Util        = require ('../Util.js');
-const ArFSDefs    = require ('../CONST_ARFS.js');
+const ArFSDefs    = require ('../ArFS/CONST_ARFS.js');
 const SARTObject  = require("../SARTObject.js");
 
 

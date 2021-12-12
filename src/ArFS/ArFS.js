@@ -8,20 +8,19 @@
 //
 
 // Imports
-const Constants  = require ("./CONSTANTS.js");
+const Constants  = require ("../CONSTANTS.js");
+const State      = require ("../ProgramState.js");
+const Sys        = require ('../System.js');
+const Settings   = require ('../Config.js');
+const Util       = require ('../Util.js');
+const Query      = require ('../GQL/GQLQuery.js');
+const TXQuery    = require ("../GQL/TXQuery");
+const Listing    = require ('../Listing.js');
+const Arweave    = require ('../Arweave/Arweave.js');
+const STX        = require ("../Arweave/Transaction.js");
+const TXTag      = require ("../Arweave/TXTag.js");
+const TXTagGroup = require ("../Arweave/TXTagGroup");
 const ArFSConst  = require ("./CONST_ARFS.js");
-const State      = require ("./ProgramState.js");
-const Arweave    = require ('./Arweave.js');
-const Sys        = require ('./System.js');
-const Settings   = require ('./Config.js');
-const Util       = require ('./Util.js');
-const Query      = require ('./GQL/GQLQuery.js');
-const TXQuery    = require ("./GQL/TXQuery");
-const Listing    = require ('./Listing.js');
-const Entity     = require ('./ArFSEntity.js');
-const STX        = require ("./Transaction.js");
-const TXTag      = require ("./TXTag.js");
-const TXTagGroup = require ("./TXTagGroup");
 const ArFSEntity = require ("./ArFSEntity");
 
 
@@ -96,7 +95,7 @@ class ArFSEntityQuery extends TXQuery
         const tags = new TXTagGroup ();        
         tags.Add              (new ArFSConst.TXTag_EntityType (entity_type),         );
         tags.Add              (new ArFSConst.TXTag_ArFSID     (entity_type, arfs_id) );        
-        tags.AddArweaveTXTags (State.Config.ArFSTXQueryTags                          );
+        tags.AddArFSTagsIfEnabled ();
         
 
         await super.Execute

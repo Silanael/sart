@@ -11,7 +11,7 @@ const Constants              = require ("./CONSTANTS.js");
 const Sys                    = require ("./System.js");
 const State                  = require ("./ProgramState.js");
 const SARTObject             = require ("./SARTObject");
-const { SETTINGS, Setting }  = require ("./CONST_SETTINGS");
+const { SETTINGS, Setting }  = require ("./SETTINGS");
 const LogLevels              = Constants.LOGLEVELS;
 const OutputDests            = Constants.OUTPUTDESTS;
 const OutputFormats          = Constants.OUTPUTFORMATS;
@@ -30,36 +30,8 @@ class Config extends SARTObject
 
 
     HasSetting                (key)         { return this.KeyNamesPresent[key instanceof Setting ? key.GetKey () : key] != null;                         }
-
-    GetHostString             (path = null) { return this.GetSetting (SETTINGS.ArweaveProto) + "://" 
-                                                   + this.GetSetting (SETTINGS.ArweaveHost)  + ":" 
-                                                   + this.GetSetting (SETTINGS.ArweavePort)
-                                                   + ( path != null ? path : "");                                                                        }
-    GetGQLHostString          ()            { return this.GetHostString () + "/graphql";                                                                 }
-    IsQuiet                   ()            { return this.GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                             }
-    IsMSGOutputAllowed        ()            { return this.GetSetting (SETTINGS.LogLevel) >  LogLevels.QUIET;                                             }
-    IsNoMsg                   ()            { return this.GetSetting (SETTINGS.LogLevel) <= LogLevels.NOMSG   || this.GetSetting (SETTINGS.MsgOut) <= 0; }
-    IsMsg                     ()            { return this.GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && this.GetSetting (SETTINGS.MsgOut)  > 0; }
-    IsVerbose                 ()            { return this.GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && this.GetSetting (SETTINGS.MsgOut)  > 0; }
-    IsDebug                   ()            { return this.GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && this.GetSetting (SETTINGS.MsgOut)  > 0; }
-    IsMsgSTDOUT               ()            { return ( this.GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                     }
-    IsMsgSTDERR               ()            { return ( this.GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                     }
-    IsErrSTDOUT               ()            { return ( this.GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                     }
-    IsErrSTDERR               ()            { return ( this.GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                     }
-    IsForceful                ()            { return this.GetSetting (SETTINGS.Force);                                                                   }
-    IsConcurrentAllowed       ()            { return this.GetSetting (SETTINGS.MaxConcurrentFetches) >= 2;                                               } 
-    IsHTMLOut                 ()            { return this.GetSetting (SETTINGS.OutputFormat) == OutputFormats.HTML;                                      }
-    IsCSVOut                  ()            { return this.GetSetting (SETTINGS.OutputFormat) == OutputFormats.CSV;                                       }
-    IsTXTOut                  ()            { return this.GetSetting (SETTINGS.OutputFormat) == OutputFormats.TXT;                                       }
-    IsANSIAllowed             ()            { return this.GetSetting (SETTINGS.ANSIAllowed ) == true;                                                    }
-    IsJSONOut                 ()            { return this.GetSetting (SETTINGS.OutputFormat) == OutputFormats.JSON;                                      }
-    CanAlterConf              (key)         { return SETTINGS[key]?.CanBeModified ();                                                                    }
-    GetOutputFormat           ()            { return this.GetSetting (SETTINGS.OutputFormat);                                                            }
-    GetMaxConcurrentFetches   ()            { return this.GetSetting (SETTINGS.MaxConcurrentFetches);                                                    }
-    IncludeInvalidTX          ()            { return this.GetSetting (SETTINGS.IncludeInvalidTX) == true;                                                }
-    AreFieldsCaseSensitive    ()            { return this.GetSetting (SETTINGS.OutputFieldsCaseSens);                                                    }
-
     
+
     
 
     SetSetting (key, value)
@@ -164,14 +136,14 @@ class Config extends SARTObject
 
     SetLessFiltersMode ()
     {
-        this.SetSetting (LessFiltersMode    , true);
-        this.SetSetting (ArFSTXQueryTags    , null);
-        this.SetSetting (MinArFSVersion     , null);
-        this.SetSetting (MaxArFSVersion     , null);
-        this.SetSetting (MaxTXFormat        , null);
+        SetSetting (LessFiltersMode    , true);
+        SetSetting (ArFSTXQueryTags    , null);
+        SetSetting (MinArFSVersion     , null);
+        SetSetting (MaxArFSVersion     , null);
+        SetSetting (MaxTXFormat        , null);
     }
-
-
+    
+    
     SetHost (host)
     {
         // Parse protocol and port from the string if present.
@@ -179,7 +151,7 @@ class Config extends SARTObject
         {
             const s = host.split ('://');
             SetProto (s[0]);
-
+    
             if (s[1].includes (':') )
             {
                 const s2 = s[1].split (':');
@@ -190,7 +162,7 @@ class Config extends SARTObject
                 this.SetSetting (SETTINGS.ArweaveHost, s[1]);
             
         }
-
+    
         // A hostname and a port
         else if (host.includes (':') )
         {
@@ -198,13 +170,13 @@ class Config extends SARTObject
             this.SetPort (s[1]);
             this.SetSetting (SETTINGS.ArweaveHost, s[0]);            
         }
-
+    
         // Just a hostname
         else
             this.SetSetting (SETTINGS.ArweaveHost, host);
         
     }
-
+    
 
 }
 
@@ -295,13 +267,42 @@ function AppendConfig (config_json)
 
 
 
+function GetSetting (key) { return State.GetSetting (key); }
 
 
 
+function GetHostString      (path = null) { return GetSetting (SETTINGS.ArweaveProto) + "://" 
+                                                 + GetSetting (SETTINGS.ArweaveHost)  + ":" 
+                                                 + GetSetting (SETTINGS.ArweavePort)
+                                                 + ( path != null ? path : "");                  }
+function GetGQLHostString   ()            { return GetHostString () + "/graphql";                }
 
 
-
-
+    
+function IsQuiet                   ()            { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
+function IsMSGOutputAllowed        ()            { return GetSetting (SETTINGS.LogLevel) >  LogLevels.QUIET;                                        }
+function IsNoMsg                   ()            { return GetSetting (SETTINGS.LogLevel) <= LogLevels.NOMSG   || GetSetting (SETTINGS.MsgOut) <= 0; }
+function IsMsg                     ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsVerbose                 ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsDebug                   ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsMsgSTDOUT               ()            { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                }
+function IsMsgSTDERR               ()            { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                }
+function IsErrSTDOUT               ()            { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                }
+function IsErrSTDERR               ()            { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
+function IsForceful                ()            { return GetSetting (SETTINGS.Force);                                                              }
+function IsConcurrentAllowed       ()            { return GetSetting (SETTINGS.MaxConcurrentFetches) >= 2;                                          } 
+function IsHTMLOut                 ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.HTML;                                 }
+function IsCSVOut                  ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.CSV;                                  }
+function IsTXTOut                  ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.TXT;                                  }
+function IsANSIAllowed             ()            { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                               }
+function IsJSONOut                 ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.JSON;                                 }
+function CanAlterConf              (key)         { return SETTINGS[key]?.CanBeModified ();                                                          }
+function GetOutputFormat           ()            { return GetSetting (SETTINGS.OutputFormat);                                                       }
+function GetMaxConcurrentFetches   ()            { return GetSetting (SETTINGS.MaxConcurrentFetches);                                               }
+function IncludeInvalidTX          ()            { return GetSetting (SETTINGS.IncludeInvalidTX) == true;                                           }
+function AreFieldsCaseSensitive    ()            { return GetSetting (SETTINGS.OutputFieldsCaseSens);                                               }
+    
+    
 
 State.GlobalConfig = new Config ();
 State.GlobalConfig.ResetToDefaults ();
@@ -311,8 +312,36 @@ State.GlobalConfig.ResetToDefaults ();
 // I can think of a better way of doing this. But CBA at the moment.
 module.exports =
 { 
-    Config,
+    Config,    
     LoadConfig,
     AppendConfig,
+    GetSetting,
+    
+    GetHostString,
+    GetGQLHostString,
+    IsQuiet                 ,
+    IsMSGOutputAllowed      ,
+    IsNoMsg                 ,
+    IsMsg                   ,
+    IsVerbose               ,
+    IsDebug                 ,
+    IsMsgSTDOUT             ,
+    IsMsgSTDERR             ,
+    IsErrSTDOUT             ,
+    IsErrSTDERR             ,
+    IsForceful              ,
+    IsConcurrentAllowed     ,
+    IsHTMLOut               ,
+    IsCSVOut                ,
+    IsTXTOut                ,
+    IsANSIAllowed           ,
+    IsJSONOut               ,
+    CanAlterConf            ,
+    GetOutputFormat         ,
+    GetMaxConcurrentFetches ,
+    IncludeInvalidTX        ,
+    AreFieldsCaseSensitive  ,
+
+
 };
 

@@ -7,19 +7,19 @@
 // SART transaction object
 //
 
-const Constants    = require ("./CONSTANTS.js");
-const State        = require ("./ProgramState.js");
-const Settings     = require ('./Config.js');
-const Util         = require ('./Util.js');
-const Sys          = require ('./System.js');
+const Constants    = require ("../CONSTANTS.js");
+const State        = require ("../ProgramState.js");
+const Settings     = require ('../Config.js');
+const Util         = require ('../Util.js');
+const Sys          = require ('../System.js');
 const Arweave      = require ("./Arweave.js");
 const TXTag        = require ("./TXTag.js");
 const TXTagGroup   = require ("./TXTagGroup");
 const TXStatus     = require ("./TXStatus.js");
-const SARTObject   = require ("./SARTObject.js");
-const ByTXQuery    = require ("./GQL/GQL_ByTXQuery");
-const Concurrent   = require ("./Concurrent");
-const OutputField  = require ("./OutputField");
+const SARTObject   = require ("../SARTObject.js");
+const ByTXQuery    = require ("../GQL/ByTXQuery");
+const Concurrent   = require ("../Concurrent");
+const OutputField  = require ("../OutputField");
 
 
 const OUTPUT_FIELDS = 
@@ -105,6 +105,7 @@ class Transaction extends SARTObject
     toString     () { return "TX " + this.GetTXID (); }  
 
     GetTXID                  ()         { return this.TXID;                                                                           }
+    GetID                    ()         { return this.GetTXID ();                                                                     }
     GetOwner                 ()         { return this.Owner;                                                                          }
     GetBlockID               ()         { return this.BlockID;                                                                        }
     GetBlockHeight           ()         { return this.BlockHeight;                                                                    }
@@ -117,7 +118,7 @@ class Transaction extends SARTObject
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
     HasTransfer              ()         { return this.Quantity_AR      != null && this.Quantity_AR     > 0;                           }
-    DataLoaded                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
+    DataLoaded               ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
     HasRecipient             ()         { return this.Recipient != null && this.Recipient != "";                                      }
     GetRecipient             ()         { return this.HasRecipient   () ? this.Recipient : null;                                      }
     HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                      }    
@@ -267,7 +268,7 @@ class Transaction extends SARTObject
     async SetArweaveTX (arweave_tx)
     {        
         this.ArweaveTX = arweave_tx;        
-        const config = State.GetConfig ();
+        const config = State.GetGlobalConfig ();
 
         if (config.MaxTXFormat == null || arweave_tx.format <= config.MaxTXFormat || Settings.IsForceful () )
         {            

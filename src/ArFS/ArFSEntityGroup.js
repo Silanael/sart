@@ -9,9 +9,9 @@
 // or an entire drive.
 //
 
-const Sys        = require ("./System");
-const SARTObject = require ("./SARTObject");
-const Util       = require ("./Util");
+const Sys        = require ("../System");
+const SARTObject = require ("../SARTObject");
+const Util       = require ("../Util");
 
 
 

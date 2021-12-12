@@ -11,12 +11,12 @@
 // Imports
 const ArweaveLib     = require ('arweave');
 
-const Constants      = require ("./CONSTANTS.js");
-const State          = require ("./ProgramState.js");
-const Sys            = require ('./System.js');
-const Settings       = require ('./Config.js');
-const Fetch          = require ("./Concurrent");
-const { SETTINGS }   = require ("./CONST_SETTINGS");
+const Constants      = require ("../CONSTANTS.js");
+const State          = require ("../ProgramState.js");
+const Sys            = require ('../System.js');
+const Config         = require ('../Config.js');
+const Fetch          = require ("../Concurrent");
+const { SETTINGS }   = require ("../SETTINGS");
 
 
 
@@ -32,17 +32,16 @@ const _TAG             = "Arweave";
 function Init ()
 {
     if (State.ArweaveInstance == null)
-    {
-        const Config = State.GetConfig ();
-        Sys.VERBOSE ("Initializing Arweave-js with host " + Settings.GetHostString () + " .")
+    {        
+        Sys.VERBOSE ("Initializing Arweave-js with host " + Config.GetHostString () + " .")
 
         State.ArweaveInstance = ArweaveLib.init
         (
             {
-                host:     State.GetSetting (SETTINGS.ArweaveHost),
-                port:     State.GetSetting (SETTINGS.ArweavePort),
-                protocol: State.GetSetting (SETTINGS.ArweaveProto),
-                timeout:  State.GetSetting (SETTINGS.ArweaveTimeout_ms)
+                host:     Config.GetSetting (SETTINGS.ArweaveHost),
+                port:     Config.GetSetting (SETTINGS.ArweavePort),
+                protocol: Config.GetSetting (SETTINGS.ArweaveProto),
+                timeout:  Config.GetSetting (SETTINGS.ArweaveTimeout_ms)
             }
         );    
  
@@ -54,16 +53,11 @@ function Init ()
 
 
 /** Initialize Arweave and verify the connection. Re-initialize if different host. */
-async function Connect (args)
+async function Connect ()
 {    
-    const hoststr = args != null ? args.Pop () : null;
-
-    if (hoststr != null)
-        Settings.SetHost (hoststr);
-
-    const desired_host = Settings.GetHostString ();
-    const config       = State.GetConfig ();
-
+    
+    const desired_host = Config.GetHostString ();
+    
     if (State.CurrentHost != desired_host)
     {
         State.ArweaveInstance = null;
@@ -75,11 +69,11 @@ async function Connect (args)
         if (await TestConnection () )
         {
             Sys.INFO ("Connected to " + GetHostStr (State.ArweaveInstance) );
-            Sys.VERBOSE ("Using " + State.GetSetting (SETTINGS.ArweaveTimeout_ms) + "ms timeout.");            
+            Sys.VERBOSE ("Using " + Config.GetSetting (SETTINGS.ArweaveTimeout_ms) + "ms timeout.");            
             
         }
         else
-            return Settings.IsForceful () ? State.ArweaveInstance : null;           
+            return Config.IsForceful () ? State.ArweaveInstance : null;           
     }
     
     return State.ArweaveInstance; 
@@ -112,7 +106,7 @@ async function TestConnection ()
 
 function GetTargetHost ()
 {
-    return State.ArweaveInstance != null ? GetHostStr (State.ArweaveInstance) : Settings.GetHostString ();
+    return State.ArweaveInstance != null ? GetHostStr (State.ArweaveInstance) : Config.GetHostString ();
 }
 
 
@@ -222,7 +216,7 @@ async function GetNetworkInfo ()
             if (typeof r === 'string')
             {
                 Sys.ERR ("Host " + GetHostStr (arweave) + " doesn't seem to be a valid gateway/node. Call with --force to use anyway.");
-                return Settings.IsForceful () ? r : null;
+                return Config.IsForceful () ? r : null;
             }
             else
                 return r;                         

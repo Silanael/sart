@@ -8,23 +8,23 @@
 // and the GQL-query to create them.
 //
 
-const Constants        = require ("./CONSTANTS.js");
-const Constants_ArFS   = require ("./CONST_ARFS.js");
-const State            = require ("./ProgramState");
-const Sys              = require ("./System.js");
-const Util             = require ("./Util.js");
-const Settings         = require ("./Config.js");
-const Arweave          = require ("./Arweave");
-const SARTObject       = require ("./SARTObject");
-const TXGroup          = require ("./TXGroup.js");
-const TXQuery          = require ("./GQL/TXQuery");
-const ContentQuery     = require ("./GQL/ArFSMultiEntityQuery");
-const LatestMetaQuery  = require ("./GQL/ArFSNewestMetaQuery");
+const Constants        = require ("../CONSTANTS.js");
+const State            = require ("../ProgramState");
+const Sys              = require ("../System.js");
+const Util             = require ("../Util.js");
+const Settings         = require ("../Config.js");
+const Arweave          = require ("../Arweave/Arweave");
+const SARTObject       = require ("../SARTObject");
+const TXGroup          = require ("../Arweave/TXGroup.js");
+const TXQuery          = require ("../GQL/TXQuery");
+const ContentQuery     = require ("../GQL/ArFSMultiEntityQuery");
+const LatestMetaQuery  = require ("../GQL/ArFSNewestMetaQuery");
+const TXTag            = require ("../Arweave//TXTag");
+const TXTagGroup       = require ("../Arweave//TXTagGroup");
+const Transaction      = require ("../Arweave//Transaction");
 const EntityGroup      = require ("./ArFSEntityGroup");
-const TXTag            = require ("./TXTag");
-const TXTagGroup       = require ("./TXTagGroup");
-const Transaction      = require ("./Transaction");
 const ArFSTX           = require ("./ArFSTX");
+const Constants_ArFS   = require ("./CONST_ARFS.js");
 
 
 
@@ -46,7 +46,7 @@ class MetaTXQuery extends TXQuery
         const tags            = new TXTagGroup ();        
         tags.Add              ( new Constants_ArFS.TXTag_EntityType (entity_type),         );
         tags.Add              ( new Constants_ArFS.TXTag_ArFSID     (entity_type, arfs_id) );        
-        tags.AddArweaveTXTags ( State.GetConfig ().ArFSTXQueryTags                         );
+        tags.AddArFSTagsIfEnabled ();
         
 
         await super.Execute

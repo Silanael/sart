@@ -7,7 +7,7 @@
 // Command 'NAMEHERE'
 //
 
-const CommandDef = require ("../CommandDef");
+const CommandDef = require ("../CommandDef").CommandDef;
 const Util       = require ("../Util");
 const Sys        = require ("../System");
 

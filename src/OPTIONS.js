@@ -2,19 +2,20 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// Option.js - 2021-12-08_01
+// Option.js - 2021-12-12_01
 //
-// Command-line option-definitions.
+// SART command-line options.
 //
-const Constants     = require ("./CONSTANTS");
+
+const CONSTANTS     = require ("./CONSTANTS");
 const SARTDef       = require ("./SARTDefinition");
 const Util          = require ("./Util");
 const Sys           = require ("./System");
 const Args          = require ("./Arguments");
-const { SETTINGS }  = require ("./CONST_SETTINGS");
-const LOGLEVELS     = Constants.LOGLEVELS;
-const OUTPUTDESTS   = Constants.OUTPUTDESTS;
-const OUTPUTFORMATS = Constants.OUTPUTFORMATS;
+const SETTINGS      = require ("./SETTINGS").SETTINGS;
+const LOGLEVELS     = CONSTANTS.LOGLEVELS;
+const OUTPUTDESTS   = CONSTANTS.OUTPUTDESTS;
+const OUTPUTFORMATS = CONSTANTS.OUTPUTFORMATS;
 
 
 
@@ -102,8 +103,6 @@ class Option extends SARTDef
     }
 }
 
-
-
 const OPTIONS =
 {    
     "--no-msg"          : new Option ("--no-msg"          ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.NOMSG),  
@@ -143,7 +142,6 @@ const OPTIONS =
     
 }
 Object.freeze (OPTIONS);
-
 
 
 function InvokeOptionIfExists (config, opt_name, param)
@@ -202,4 +200,5 @@ function ParseOptions (argv, config)
 
 
 
-module.exports = { ParseOptions, InvokeOptionIfExists, OPTIONS }
+
+module.exports = { ParseOptions, InvokeOptionIfExists, Option, OPTIONS }

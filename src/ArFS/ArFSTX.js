@@ -7,13 +7,13 @@
 //
 // ArFS-transaction
 
-const Sys         = require ("./System");
+const Sys         = require ("../System");
+const State       = require ("../ProgramState");
+const Transaction = require ("../Arweave/Transaction");
+const TXGroup     = require ("../Arweave/TXGroup");
+const Settings    = require ("../Config");
+const Util        = require ("../Util");
 const Const_ArFS  = require ("./CONST_ARFS");
-const State       = require ("./ProgramState");
-const Transaction = require ("./Transaction");
-const TXGroup     = require ("./TXGroup");
-const Settings    = require ("./Config");
-const Util        = require ("./Util");
 
 
 

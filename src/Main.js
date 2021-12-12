@@ -14,7 +14,7 @@
 const Package    = require ("../package.json");
 
 const Constants  = require ("./CONSTANTS.js");
-const COMMANDS   = require ("./CONST_COMMANDS");
+const COMMANDS   = require ("./COMMANDS");
 const State      = require ("./ProgramState.js");
 
 const Concurrent = require ("./Concurrent");
@@ -57,6 +57,20 @@ class Main
     GetGlobalConfig  ()           { return State.GlobalConfig;   }
     SetGlobalSetting (key, value) { return State.GlobalConfig.SetSetting (key, value); }
     ExitConsole      ()           { State.ConsoleActive = false; }
+
+      
+    GetSetting (key)
+    {                
+        if (this.State.ActiveCommandInst != null && this.State.ActiveCommandInst.HasSetting (key) )
+            return this.State.ActiveCommandInst.GetSetting (key);
+          
+        else if (this.State.GlobalConfig != null)
+            return this.State.GlobalConfig.GetSetting (key); 
+          
+        else
+            return null;
+    }
+
 }
 
 

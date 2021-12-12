@@ -10,7 +10,7 @@
 
 const Util       = require ("../Util");
 const Sys        = require ("../System");
-const CommandDef = require ("../CommandDef");
+const CommandDef = require ("../CommandDef").CommandDef;
 
 
 
