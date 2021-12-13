@@ -51,12 +51,12 @@ class Option extends SARTDef
         return this;
     }
 
-    WithAlias      (name)             { this.Alias      = name;         return this; }
-    WithFunc       (func)             { this.Function   = func;         return this; }
-    WithInvoke     (...option_names)  { this.Invokes    = option_names; return this; }
-    WithDeprecated ()                 { this.Deprecated = true;         return this; }
-    WithUnderWork  ()                 { this.UnderWork  = true;         return this; }
- 
+    WithAlias      (name)             { this.Alias       = name;         return this; }
+    WithFunc       (func)             { this.Function    = func;         return this; }
+    WithInvoke     (...option_names)  { this.Invokes     = option_names; return this; }
+    WithDeprecated ()                 { this.Deprecated  = true;         return this; }
+    WithUnderWork  ()                 { this.UnderWork   = true;         return this; }
+
 
     Invoke (config, param)
     {
@@ -64,8 +64,10 @@ class Option extends SARTDef
         if (this.Deprecated)
             return Sys.ERR ("Option deprecated and removed.", this);
 
+
         else if (this.UnderWork)
             return Sys.WARN ("This option is not yet ready. Stay tuned.", this);
+
 
         else if (this.HasParameter && param == null)
             return Sys.ERR ("Parameter missing.", this);
@@ -138,7 +140,8 @@ const OPTIONS =
     "--max-block"       : new Option ("--max-block"       ).WithSetting (SETTINGS.QueryMaxBlockHeight),
     "--format"          : new Option ("--format"          ).WithSetting (SETTINGS.OutputFormat),
     "--csv"             : new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
-    "--json"            : new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON)
+    "--json"            : new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON),
+    "--output-file"     : new Option ("--output-file"     ).WithSetting (SETTINGS.OutputFilename),
     
 }
 Object.freeze (OPTIONS);

@@ -21,20 +21,23 @@ class Setting
     DefaultValue = null;
     ReadOnly     = false;
     Deprecated   = false; 
-    
+    RuntimeOnly  = false;
+
     constructor (name) { this.Name = name; }
 
-    DV               (value) { this.DefaultValue = value; return this; }       
-    RO               ()      { this.ReadOnly     = true;  return this; }
-    DEPR             ()      { this.Deprecated   = true;  return this; }
+    DV               (value) { this.DefaultValue = value; return this;      }       
+    RO               ()      { this.ReadOnly     = true;  return this;      }
+    DEPR             ()      { this.Deprecated   = true;  return this;      }
+    NOCONF           ()      { this.RuntimeOnly  = true;  return this;      }
 
-    GetName          ()      { return this.Name;                       }
-    GetKey           ()      { return this.Name;                       }
-    GetDefaultValue  ()      { return this.DefaultValue;               }
-    CanBeModified    ()      { return !this.ReadOnly;                  }
-    IsValid          ()      { return !this.Deprecated;                }
+    GetName          ()      { return this.Name;                            }
+    GetKey           ()      { return this.Name;                            }
+    GetDefaultValue  ()      { return this.DefaultValue;                    }
+    CanBeModified    ()      { return !this.ReadOnly;                       }
+    IsValid          ()      { return !this.Deprecated;                     }
+    CanBeCopied      ()      { return !this.RuntimeOnly && this.IsValid (); }
 
-    toString         ()      { return this.Name;                       }
+    toString         ()      { return this.Name;                            }
 }
 
 
@@ -86,6 +89,8 @@ const SETTINGS =
     TXTagsMaxTotalBytes     : new Setting ("TXTagsMaxTotalBytes")      .DV (Constants.CONFIG_TX_TAGS_TOTAL_SIZE),
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
+
+    OutputFilename          : new Setting ("OutputFilename")           .DV (null).NOCONF (),
 }
 Object.freeze (SETTINGS);
 

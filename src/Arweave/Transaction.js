@@ -19,7 +19,7 @@ const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("../SARTObject.js");
 const ByTXQuery    = require ("../GQL/ByTXQuery");
 const Concurrent   = require ("../Concurrent");
-const OutputField  = require ("../OutputField");
+const OutputField  = require ("../FieldDef");
 
 
 const OUTPUT_FIELDS = 

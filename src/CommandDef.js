@@ -11,6 +11,7 @@ class CommandDef extends SARTDef
 
     Aliases         = []; 
     MinArgsAmount   = 0;
+    
     Subcommands     = {};
         
     Helplines       = [];

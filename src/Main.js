@@ -36,10 +36,12 @@ const FIRST_ARG         = 2;
 
 class Main
 {    
-    State    = State;
-
+    State          = State;
+    
     async Init (argv)
     {
+        Sys.Main = this;
+
         // Set a generic exception handler
         process.on ("uncaughtException", Sys.ErrorHandler);
 

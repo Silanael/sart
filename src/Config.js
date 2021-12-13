@@ -114,7 +114,7 @@ class Config extends SARTObject
             const key   = c[0];
             const value = c[1];
 
-            if (SETTINGS[key]?.IsValid () )
+            if (SETTINGS[key]?.CanBeCopied () )
                 this.SetSetting (key, value);
         }
 

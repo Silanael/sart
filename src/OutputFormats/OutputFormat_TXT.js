@@ -2,7 +2,7 @@
 // *** Silanael ARweave Tool ***
 // *****************************
 //
-// OutputWriter_TXT.js - 2021-12-07_01
+// OutputFormat_TXT.js - 2021-12-07_01
 //
-// Output writer for CSV.
+// Output writer for plaintext.
 //

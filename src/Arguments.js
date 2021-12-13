@@ -7,7 +7,22 @@
 // Command-arguments.
 //
 
-const Sys = require ("./System");
+const Sys     = require ("./System");
+const SARTDef = require ("./SARTDefinition");
+
+
+class Argument extends SARTDef
+{
+    HasParameter = false;
+    SettingKey   = null;
+    SettingValue = null;
+    Function     = null;
+    Alias        = null;
+    Invokes      = [];
+    Deprecated   = false;
+    UnderWork    = false;
+
+}
 
 
 class Args

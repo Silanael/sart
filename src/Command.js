@@ -16,6 +16,7 @@ const Args           = require ("./Arguments");
 const SARTObject     = require ("./SARTObject");
 const COMMANDS       = require ("./COMMANDS");
 const OPTIONS        = require ("./OPTIONS");
+const SETTINGS       = require ("./SETTINGS").SETTINGS;
 
 
 
@@ -28,20 +29,21 @@ const OPTIONS        = require ("./OPTIONS");
 
 class CommandInstance extends SARTObject
 {
-    CDef        = null;
+    CDef           = null;
     
-    CommandName = null;    
-    ArgV        = null;
-    Arguments   = null;
+    CommandName    = null;    
+    ArgV           = null;
+    Arguments      = null;
 
-    Config      = new Settings.Config ();
+    Config         = new Settings.Config ();
+    FileOutputDest = null;
 
-    StartTime   = null;
-    EndTime     = null;
-    Fetches     = 0;
+    StartTime      = null;
+    EndTime        = null;
+    Fetches        = 0;
 
-    Success     = null;
-    Failed      = null;
+    Success        = null;
+    Failed         = null;
 
 
 
@@ -68,7 +70,8 @@ class CommandInstance extends SARTObject
     PopUC                ()            { return this.Arguments?.PopLC ();  }
     Peek                 ()            { return this.Arguments?.Peek ();  }
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
-    
+    GetOutputDests       ()            { return this.OutputDest_File != null ? this.OutputDest_File : Sys.OUTPUTDEST_STDOUT; }
+
 
     AppendConfigToGlobal ()            
     { 
@@ -158,13 +161,28 @@ class CommandInstance extends SARTObject
             if (!this.CDef.RunAsActiveCommand () )
                 State.ActiveCommandInst = null;
 
+
+            // Open the output file if any.
+            const filename = this.GetSetting (SETTINGS.OutputFilename);
+            if (filename != null)
+                this.FileOutputDest = new Sys.OutputDest_File (filename);
+
+
             // Execute
             this.StartTime = Util.GetUNIXTimeMS ();        
             this.Success   = await this.CDef.OnExecute (this);  
             this.EndTime   = Util.GetUNIXTimeMS ();       
 
+
+            // Output
             this.CDef.OnOutput (this);
             
+
+            // Close file if one was opened.
+            if (this.FileOutputDest != null)
+                this.FileOutputDest.Done ();
+
+
             Sys.VERBOSE ("");        
             Sys.VERBOSE ("Command finished in " + this.GetRuntimeSec () + " sec with " + Util.AmountStr (this.Fetches, "fetch", "fetches") + "." );
         } 

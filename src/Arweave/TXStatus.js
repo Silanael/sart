@@ -3,7 +3,7 @@ const Constants   = require ("../CONSTANTS.js");
 const State       = require ("../ProgramState");
 const Config      = require ("../Config");
 const { SETTINGS} = require ("../SETTINGS");
-const Arweave     = require ('./Arweave.js');
+const Arweave     = require ("./Arweave.js");
 
 
 

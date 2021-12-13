@@ -13,7 +13,7 @@
 const Util = require ("./Util");
 
 
-class OutputField
+class FieldDef
 {
     FieldName           = null; // Display name.
     PropertyName        = null; // Actual property name of the object. If null, use FieldName.
@@ -70,4 +70,4 @@ class OutputField
 }
 
 
-module.exports = OutputField;
+module.exports = FieldDef;

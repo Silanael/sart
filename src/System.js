@@ -7,6 +7,8 @@
 // Mostly output-related things.
 //
 
+const FS            = require ("fs");
+
 // Local imports
 const Constants     = require ("./CONSTANTS.js");
 const LogLevels     = Constants.LOGLEVELS;
@@ -35,6 +37,8 @@ const ANSI_BLINK     = "\033[5m";
 const ANSI_BLINK_OFF = "\033[25m";
 
 const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
+
+var Main = null;
 
 
 function GetSetting         (key)                    { return State.GetSetting (key); }
@@ -124,6 +128,110 @@ function ErrorHandler (error)
 }
 
 
+class OutputDest
+{    
+    Start        ()     {}    
+    OutputLine   (str)  {}
+    OutputBinary (data) {}    
+    Done         ()     {}
+}
+
+class OutputDest_STDOUT extends OutputDest
+{
+    OutputLine (str)
+    {
+        console.log (str); 
+    }
+    OutputBinary (data)
+    {
+        process.stdout.write (data);
+    }
+}
+
+
+class OutputDest_STDERR extends OutputDest
+{
+    OutputLine (str)
+    {
+        console.error (str); 
+    }
+    OutputBinary (data)
+    {
+        process.stderr.write (data);
+    }   
+}
+
+
+class OutputDest_File extends OutputDest
+{
+    FilePath     = null;
+    Mode         = null;
+    Encoding     = null;
+
+    OutputStream = null;
+
+
+    constructor (file_path, mode = "wx", encoding = "utf-8")
+    {
+        super ();
+        this.FilePath = file_path;
+        this.Mode     = mode;
+        this.Encoding = encoding;
+    }
+
+    IsFileOpened () { return this.OutputStream != null; }
+
+    Start ()
+    {
+        //if (this.FileHandle != null)
+        //    this.FileHandle = FS.openSync (file_path, "wx");
+
+        if (this.OutputStream == null)
+            this.OutputStream = FS.createWriteStream 
+            (
+                this.FilePath,
+                {
+                    flags:     this.Mode,
+                    encoding:  this.Encoding,
+                    autoClose: true
+                }
+            );            
+    }
+
+    OutputLine (str)
+    {
+        if (! this.IsFileOpened () )
+            this.Start ();
+
+        this.OutputStream.write (str);
+    }
+
+    OutputBinary (data)
+    {
+        if (! this.IsFileOpened () )
+            this.Start ();
+
+        this.OutputStream.write (data);        
+    }   
+
+    Done ()
+    {
+        if (this.OutputStream != null)
+        {
+            this.OutputStream.close ();
+            this.OutputStream = null;
+        }        
+    }
+}
+
+
+const OUTPUTDESTS =
+{
+    STDOUT: new OutputDest_STDOUT (),
+    STDERR: new OutputDest_STDERR (),
+}
+
+
 
 // Data output. Non-silenceable.
 function OUT_BIN (str)
@@ -135,15 +243,17 @@ function OUT_BIN (str)
 
 // Data output. Non-silenceable.
 function OUT_TXT (str)
-{            
-    console.log (str);
+{    
+    OUTPUTDESTS.STDOUT.OutputLine (str);        
+    //console.log (str);
 }
 
 
 // Data output. Non-silenceable.
 function OUT_TXT_RAW (str)
 {
-    process.stdout.write (str);    
+    OUTPUTDESTS.STDOUT.OutputBinary (str); 
+    //process.stdout.write (str);    
 }
 
 /** Fields for 'recursive': 'depth', integer */
@@ -528,5 +638,9 @@ module.exports =
     ERR_FATAL,
     EXIT,
     ON_EXCEPTION,
-    ErrorHandler,    
+    ErrorHandler,
+    OutputDest_File,
+    OUTPUTDESTS,
+    OUTPUTDEST_STDOUT: OUTPUTDESTS.STDOUT,
+    OUTPUTDEST_STDERR: OUTPUTDESTS.STDERR,
 };
