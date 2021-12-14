@@ -19,26 +19,17 @@ const OUTPUTFORMATS = CONSTANTS.OUTPUTFORMATS;
 
 
 
-class Option extends SARTDef
+class Option extends Args.ArgDef
 {
-
-    HasParameter = false;
+    
     SettingKey   = null;
     SettingValue = null;
-    Function     = null;
-    Alias        = null;
-    Invokes      = [];
-    Deprecated   = false;
-    UnderWork    = false;
 
 
     constructor (name)
     {
         super (name);        
     }
-
-
-    HasName (name) { return super.HasName (name, true) || (this.Alias != null && Util.StrCmp (name, this.Alias, false) ); }
 
     WithSetting (key, value = null)
     {
@@ -51,33 +42,11 @@ class Option extends SARTDef
         return this;
     }
 
-    WithAlias      (name)             { this.Alias       = name;         return this; }
-    WithFunc       (func)             { this.Function    = func;         return this; }
-    WithInvoke     (...option_names)  { this.Invokes     = option_names; return this; }
-    WithDeprecated ()                 { this.Deprecated  = true;         return this; }
-    WithUnderWork  ()                 { this.UnderWork   = true;         return this; }
-
-
-    Invoke (config, param)
+ 
+    _DoInvoke (param, config)
     {
 
-        if (this.Deprecated)
-            return Sys.ERR ("Option deprecated and removed.", this);
-
-
-        else if (this.UnderWork)
-            return Sys.WARN ("This option is not yet ready. Stay tuned.", this);
-
-
-        else if (this.HasParameter && param == null)
-            return Sys.ERR ("Parameter missing.", this);
-
-
-        else if (this.Function != null)
-            this.Function (config, param);
-
-
-        else if (this.SettingKey != null)
+        if (this.SettingKey != null)
         {
             if (config == null)
                 Sys.ERR_PROGRAM ("Invoke: 'config' null!", this);
@@ -93,60 +62,52 @@ class Option extends SARTDef
             Sys.ERR_PROGRAM ("Was unable to set option '" + this + "' - no valid actions available.");
 
 
-        // Invoke all options listed, if any.
-        if (this.Invokes.length > 0)
-        {
-            for (const i of this.Invokes)
-            {
-                InvokeOptionIfExists (config, param);
-            }
-        }
-
+  
     }
 }
 
-const OPTIONS =
-{    
-    "--no-msg"          : new Option ("--no-msg"          ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.NOMSG),  
-    "--msg"             : new Option ("--msg"             ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
-    "--informative"     : new Option ("--informative"     ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
-    "--verbose"         : new Option ("--verbose"         ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.VERBOSE).WithAlias ("-V"),
-    "--quiet"           : new Option ("--quiet"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.QUIET),  
-    "--debug"           : new Option ("--debug"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.DEBUG),  
-    "--msg-out"         : new Option ("--msg-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
-    "--err-out"         : new Option ("--err-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.ErrOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
-    "--stderr"          : new Option ("--stderr"          ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, OUTPUTDESTS.STDERR);  
-                                                                                           if (conf.GetSetting (SETTINGS.LogLevel) != LOGLEVELS.MSG) 
-                                                                                               conf.SetSetting (SETTINGS.LogLevel,    LOGLEVELS.MSG) } ),
-    "--msg-stderr"      : new Option ("--msg-stderr"      ).WithInvoke ("--stderr", "--msg"),
-    "--verbose-stderr"  : new Option ("--verbose-stderr"  ).WithInvoke ("--stderr", "--verbose"),
-    "--debug-stderr"    : new Option ("--debug-stderr"    ).WithInvoke ("--stderr", "--debug"),
-    "--no-ansi"         : new Option ("--no-ansi"         ).WithSetting (SETTINGS.ANSIAllowed, false),  
-    "-all"              : new Option ("-a"                ).WithSetting (SETTINGS.DisplayAll,  true ).WithAlias ("-a"),    
-    "--recursive"       : new Option ("-r"                ).WithSetting (SETTINGS.Recursive,   true ).WithAlias ("-r"),        
-    "--host"            : new Option ("--host"            ).WithSetting (SETTINGS.ArweaveHost),
-    "--port"            : new Option ("--port"            ).WithSetting (SETTINGS.ArweavePort), 
-    "--proto"           : new Option ("--proto"           ).WithSetting (SETTINGS.ArweaveProto),
-    "--timeout-ms"      : new Option ("--timeout-ms"      ).WithSetting (SETTINGS.ArweaveTimeout_ms),
-    "--concurrent-ms"   : new Option ("--concurrent-ms"   ).WithUnderWork (),
-    "--retries"         : new Option ("--retries"         ).WithUnderWork (),
-    "--retry-ms"        : new Option ("--retry-ms"        ).WithUnderWork (),
-    "--fast"            : new Option ("--fast"            ).WithUnderWork (),
-    "--force"           : new Option ("--force"           ).WithSetting   (SETTINGS.Force, true),
-    "--less-filters"    : new Option ("--less-filters"    ).WithUnderWork (),
-    "--config-file"     : new Option ("--config-file"     ).WithUnderWork (),
-    "--config"          : new Option ("--config"          ).WithUnderWork (),
-    "--min-block"       : new Option ("--min-block"       ).WithSetting (SETTINGS.QueryMinBlockHeight),
-    "--max-block"       : new Option ("--max-block"       ).WithSetting (SETTINGS.QueryMaxBlockHeight),
-    "--format"          : new Option ("--format"          ).WithSetting (SETTINGS.OutputFormat),
-    "--csv"             : new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
-    "--json"            : new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON),
-    "--output-file"     : new Option ("--output-file"     ).WithSetting (SETTINGS.OutputFilename),
+const OPTIONS = new Args.ArgDefs 
+(    
+    new Option ("--no-msg"          ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.NOMSG),  
+    new Option ("--msg"             ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
+    new Option ("--informative"     ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
+    new Option ("--verbose"         ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.VERBOSE).WithAlias ("-V"),
+    new Option ("--quiet"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.QUIET),  
+    new Option ("--debug"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.DEBUG),  
+    new Option ("--msg-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
+    new Option ("--err-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.ErrOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
+    new Option ("--stderr"          ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, OUTPUTDESTS.STDERR);  
+                                                                     if (conf.GetSetting (SETTINGS.LogLevel) != LOGLEVELS.MSG) 
+                                                                         conf.SetSetting (SETTINGS.LogLevel,    LOGLEVELS.MSG) } ),
+    new Option ("--msg-stderr"      ).WithInvoke ("--stderr", "--msg"),
+    new Option ("--verbose-stderr"  ).WithInvoke ("--stderr", "--verbose"),
+    new Option ("--debug-stderr"    ).WithInvoke ("--stderr", "--debug"),
+    new Option ("--no-ansi"         ).WithSetting (SETTINGS.ANSIAllowed, false),  
+    new Option ("-a"                ).WithSetting (SETTINGS.DisplayAll,  true ).WithAlias ("-a"),    
+    new Option ("-r"                ).WithSetting (SETTINGS.Recursive,   true ).WithAlias ("-r"),        
+    new Option ("--host"            ).WithSetting (SETTINGS.ArweaveHost),
+    new Option ("--port"            ).WithSetting (SETTINGS.ArweavePort), 
+    new Option ("--proto"           ).WithSetting (SETTINGS.ArweaveProto),
+    new Option ("--timeout-ms"      ).WithSetting (SETTINGS.ArweaveTimeout_ms),
+    new Option ("--concurrent-ms"   ).WithUnderWork (),
+    new Option ("--retries"         ).WithUnderWork (),
+    new Option ("--retry-ms"        ).WithUnderWork (),
+    new Option ("--fast"            ).WithUnderWork (),
+    new Option ("--force"           ).WithSetting   (SETTINGS.Force, true),
+    new Option ("--less-filters"    ).WithUnderWork (),
+    new Option ("--config-file"     ).WithUnderWork (),
+    new Option ("--config"          ).WithUnderWork (),
+    new Option ("--min-block"       ).WithSetting (SETTINGS.QueryMinBlockHeight),
+    new Option ("--max-block"       ).WithSetting (SETTINGS.QueryMaxBlockHeight),
+    new Option ("--format"          ).WithSetting (SETTINGS.OutputFormat),
+    new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
+    new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON),
+    new Option ("--output-file"     ).WithSetting (SETTINGS.OutputFilename),
     
-}
+);
 Object.freeze (OPTIONS);
 
-
+/*
 function InvokeOptionIfExists (config, opt_name, param)
 {
     if (config == null)
@@ -165,6 +126,7 @@ function InvokeOptionIfExists (config, opt_name, param)
 
 
 /** Adds the valid options to the config provided, returning an Arguments-instance containing non-arguments (command and command-parameters). */
+/*
 function ParseOptions (argv, config)
 {
     if (argv == null)
@@ -201,7 +163,8 @@ function ParseOptions (argv, config)
     return new Args (command_args);
 }
 
+*/
 
 
 
-module.exports = { ParseOptions, InvokeOptionIfExists, Option, OPTIONS }
+module.exports = { Option, OPTIONS }

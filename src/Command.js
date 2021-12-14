@@ -12,7 +12,7 @@ const Util           = require ("./Util");
 const Constants      = require ("./CONSTANTS");
 const State          = require ("./ProgramState");
 const Settings       = require ("./Config");
-const Args           = require ("./Arguments");
+const Arguments           = require ("./Arguments");
 const SARTObject     = require ("./SARTObject");
 const COMMANDS       = require ("./COMMANDS");
 const OPTIONS        = require ("./OPTIONS");
@@ -32,7 +32,6 @@ class CommandInstance extends SARTObject
     CDef           = null;
     
     CommandName    = null;    
-    ArgV           = null;
     Arguments      = null;
 
     Config         = new Settings.Config ();
@@ -105,7 +104,7 @@ class CommandInstance extends SARTObject
                 else
                     cmd_name = default_cmd;            
 
-                args = new Args ([default_param]);  
+                args = new Arguments.Args ([default_param]);  
             }
             else
             {
@@ -129,20 +128,23 @@ class CommandInstance extends SARTObject
 
 
 
-    async Execute (argv)
+    async Execute (args)
     {
-        this.ArgV    = argv;
-        this.Success = false;
-        this.Fetches = 0;
-        this.Config  = new Settings.Config ().WithName ("Command");
+        if (args == null)
+            return Sys.ERR_PROGRAM ("Execute: 'args' null!", this);
+
+        this.Arguments = args;
+        this.Success   = false;
+        this.Fetches   = 0;
+        this.Config    = new Settings.Config ().WithName ("Command");
 
 
         // Extract options and get the remaining arguments
-        this.Arguments = OPTIONS.ParseOptions (argv, this.Config);
-        
+        args.ProcessArgs (OPTIONS.OPTIONS, this.Config);
+                
 
         // Get command-handler
-        this.CDef = this.GetCommandDefFromArgs (this.Arguments);
+        this.CDef = this.GetCommandDefFromArgs (args);
         
         if (this.CDef == null)
             return false;
@@ -206,7 +208,7 @@ class CommandInstance extends SARTObject
 
 
 
-async function RunCommand (main, argv)
+async function RunCommand (main, args)
 {
 
     if (State.ActiveCommandInst != null)
@@ -218,7 +220,7 @@ async function RunCommand (main, argv)
         
         State.ActiveCommandInst   = cmd;
     
-        await cmd.Execute (argv);
+        await cmd.Execute (args);
 
         State.PreviousCommandInst = cmd;
         State.ActiveCommandInst   = null;

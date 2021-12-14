@@ -9,6 +9,7 @@
 const Package                = require ("../package.json");
 const Constants              = require ("./CONSTANTS.js");
 const Sys                    = require ("./System.js");
+const Util                   = require ("./Util");
 const State                  = require ("./ProgramState.js");
 const SARTObject             = require ("./SARTObject");
 const { SETTINGS, Setting }  = require ("./SETTINGS");
@@ -54,7 +55,7 @@ class Config extends SARTObject
         {       
             this.KeyNamesPresent [key] = true;
 
-            if (value instanceof String)
+            if (Util.IsString (value) )
             {                       
                 const lc  = value?.toLowerCase ();
                 const num = value != null ? Number (value) : null;
@@ -63,23 +64,26 @@ class Config extends SARTObject
                 {
                     this.Values[key] = null;
                     Sys.VERBOSE ("Value '" + value + "' set to null.", key);            
+                    return true;
                 }
     
                 else if (num != null && !isNaN (num) )
                 {            
                     this.Values[key] = num;
                     Sys.VERBOSE ("Value '" + value + "' determined to be a number.", key);
+                    return true;
                 }
     
                 else if (lc == "true" || lc == "false")
                 {            
                     this.Values[key] = lc == "true";
                     Sys.VERBOSE ("Value '" + value + "' determined to be a boolean.", key);
+                    return true;
                 }                
             }
 
             this.Values[key] = value;
-            Sys.VERBOSE ("Setting value as-is.", key);
+            Sys.VERBOSE ("Setting value to '" + value + "' as-is.", key);
                                     
             return true;
         }

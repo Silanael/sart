@@ -22,6 +22,7 @@ const Settings   = require ('../Config.js');
 const Util       = require ('../Util.js');
 const Arweave    = require ('../Arweave/Arweave.js');
 const ArFS       = require ('../ArFS/ArFS.js');
+const Arguments  = require ("../Arguments");
 const CommandDef = require ("../CommandDef").CommandDef;
 
 
@@ -78,7 +79,7 @@ class CMD_Console extends CommandDef
     
                 else
                 {
-                    await cmd_instance.GetMain ().RunCommand (argv);                
+                    await cmd_instance.GetMain ().RunCommand (new Arguments.Args (argv) );
 
                     if (!State.ConsoleActive)
                         break;

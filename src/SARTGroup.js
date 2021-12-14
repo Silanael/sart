@@ -18,6 +18,14 @@ class SARTGroup extends SARTObject
     Entries = [];
     ByID    = {};
 
+    constructor (...entries)
+    {
+        super ();
+        for (const e of entries)
+        {            
+            this.Add (e);
+        }
+    }
 
     GetAmount    ()         { return this.Entries.length;                                                    }        
     GetByID      (id)       { return this.ByID[id];                                                          }
@@ -40,7 +48,7 @@ class SARTGroup extends SARTObject
 
         else 
         {
-            if (id == null)
+            if (id == null && entry.GetID != null)
                 id = entry.GetID ();
 
             if (id != null) 

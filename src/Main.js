@@ -11,21 +11,20 @@
 
 
 // Imports
-const Package    = require ("../package.json");
+const Package       = require ("../package.json");
 
-const Constants  = require ("./CONSTANTS.js");
-const COMMANDS   = require ("./COMMANDS");
-const State      = require ("./ProgramState.js");
+const Constants     = require ("./CONSTANTS.js");
+const COMMANDS      = require ("./COMMANDS");
+const ProgramState  = require ("./ProgramState.js");
+const Arguments     = require ("./Arguments");
+const Concurrent    = require ("./Concurrent");
+const Cache         = require ("./Cache");
+const Command       = require ("./Command");
+const Sys           = require ('./System.js');
+const Settings      = require ('./Config.js');
+const Util          = require ('./Util.js');
 
-const Concurrent = require ("./Concurrent");
-const Cache      = require ("./Cache");
-const Command    = require ("./Command");
-const Sys        = require ('./System.js');
-const Settings   = require ('./Config.js');
-const Util       = require ('./Util.js');
-
-
-const FS          = require ("fs");
+const FS            = require ("fs");
 
 
 // Constants
@@ -36,7 +35,7 @@ const FIRST_ARG         = 2;
 
 class Main
 {    
-    State          = State;
+    State = ProgramState;
     
     async Init (argv)
     {
@@ -47,7 +46,7 @@ class Main
 
         this.State.Main = this;
 
-        await this.RunCommand (argv.slice (FIRST_ARG) );        
+        await this.RunCommand (new Arguments.Args (argv.slice (FIRST_ARG)) );
     }
 
     async RunCommand (args)
@@ -56,9 +55,9 @@ class Main
     }
 
     GetCommandDef    (cmd_name)   { return Command.GetCommandDef (cmd_name); }
-    GetGlobalConfig  ()           { return State.GlobalConfig;   }
-    SetGlobalSetting (key, value) { return State.GlobalConfig.SetSetting (key, value); }
-    ExitConsole      ()           { State.ConsoleActive = false; }
+    GetGlobalConfig  ()           { return ProgramState.GlobalConfig;   }
+    SetGlobalSetting (key, value) { return ProgramState.GlobalConfig.SetSetting (key, value); }
+    ExitConsole      ()           { ProgramState.ConsoleActive = false; }
 
       
     GetSetting (key)
@@ -95,7 +94,7 @@ function SetSetting (args)
 
 function Handler_LoadConfig (arg)
 {
-    const console_active = State.IsConsoleActive ();
+    const console_active = ProgramState.IsConsoleActive ();
     const success = Settings.LoadConfig (arg);
     
     if (!success && !console_active)
