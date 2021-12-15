@@ -30,9 +30,7 @@ class Config extends SARTObject
     KeyNamesPresent = {};
 
 
-    HasSetting                (key)         { return this.KeyNamesPresent[key instanceof Setting ? key.GetKey () : key] != null;                         }
-    
-
+    HasSetting (key) { return this.KeyNamesPresent[key instanceof Setting ? key.GetKey () : key] != null;                         }
     
 
     SetSetting (key, value)

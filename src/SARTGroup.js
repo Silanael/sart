@@ -27,11 +27,12 @@ class SARTGroup extends SARTObject
         }
     }
 
-    GetAmount    ()         { return this.Entries.length;                                                    }        
-    GetByID      (id)       { return this.ByID[id];                                                          }
-    HasID        (id)       { return this.GetByID (id) != null;                                              }
-    GetByIndex   (index)    { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
-    AsArray      ()         { return this.Entries;                                                           }
+    GetAmount       ()       { return this.Entries.length;                                                    }        
+    GetByID         (id)     { return this.ByID[id];                                                          }
+    HasID           (id)     { return this.GetByID (id) != null;                                              }
+    GetByIndex      (index)  { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
+    AsArray         ()       { return this.Entries;                                                           }
+    AddAllFromGroup (group)  { return this.AddAll (group.AsArray () ); }
 
 
     Clear ()
@@ -67,18 +68,22 @@ class SARTGroup extends SARTObject
         return this;
     }
 
-    AddAll (group)
+
+    AddAll (...items)
     {
-        if (group == null)
+        if (items == null || items.length <= 0)
             return false;
 
-        for (const t of group.AsArray () )
+        for (const t of items)
         {
-            this.Add (t);
+            this.Add (t);            
         }
         return true;
     }
-    
+
 }
+
+
+
 
 module.exports = SARTGroup;

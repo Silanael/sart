@@ -23,8 +23,10 @@ const Command       = require ("./Command");
 const Sys           = require ('./System.js');
 const Settings      = require ('./Config.js');
 const Util          = require ('./Util.js');
+const Arweave       = require("./Arweave/Arweave");
 
 const FS            = require ("fs");
+
 
 
 // Constants
@@ -58,7 +60,7 @@ class Main
     GetGlobalConfig  ()           { return ProgramState.GlobalConfig;   }
     SetGlobalSetting (key, value) { return ProgramState.GlobalConfig.SetSetting (key, value); }
     ExitConsole      ()           { ProgramState.ConsoleActive = false; }
-
+    GetArweave       ()           { return Arweave; }
       
     GetSetting (key)
     {                

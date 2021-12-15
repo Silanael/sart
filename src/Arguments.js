@@ -30,11 +30,12 @@ class ArgDef extends SARTDef
     _DoInvoke (param, handler) {}
 
 
-    WithAlias      (name)             { this.Alias       = name;         return this; }
-    WithFunc       (func)             { this.Function    = func;         return this; }
-    WithInvoke     (...option_names)  { this.Invokes     = option_names; return this; }
-    WithDeprecated ()                 { this.Deprecated  = true;         return this; }
-    WithUnderWork  ()                 { this.UnderWork   = true;         return this; }
+    WithAlias      (name)             { this.Alias        = name;         return this; }
+    WithFunc       (func)             { this.Function     = func;         return this; }
+    WithInvoke     (...option_names)  { this.Invokes      = option_names; return this; }
+    WithDeprecated ()                 { this.Deprecated   = true;         return this; }
+    WithUnderWork  ()                 { this.UnderWork    = true;         return this; }
+    WithHasParam   ()                 { this.HasParameter = true;         return this; }
 
     CanBeInvoked   ()                 { return !this.Deprecated && !this.UnderWork; }
     MatchesName    (name)             { return super.HasName (name, true) || (this.Alias != null && Util.StrCmp (name, this.Alias, false) ); }
@@ -48,11 +49,13 @@ class ArgDef extends SARTDef
         {
             Sys.VERBOSE ("Invoking argument '" + this.GetName () + "' with " + (param != null ? "parameter '" + param + "'." : "no parameter.") );
 
+            let success = false;
+
             if (this.Function != null)
-                this.Function (param, handler);
+                success = this.Function (param, handler);
 
             else
-                this._DoInvoke (param, handler);
+                success = this._DoInvoke (param, handler);
 
             // Invoke listed arguments, if any.
             if (this.Invokes.length > 0)
@@ -62,10 +65,12 @@ class ArgDef extends SARTDef
 
                 else for (const i of this.Invokes)
                 {
-                    defs.InvokeArgIfExists (i, null, handler);
+                    if (defs.InvokeArgIfExists (i, null, handler)?.err )                    
+                        return Sys.ERR ("An error occurred during processing of one of the invokes - aborting.");
                 }
             }
 
+            return success;
         }
         else
         {
@@ -78,9 +83,11 @@ class ArgDef extends SARTDef
             else
                 return Sys.ERR_PROGRAM ("Unable to invoke argument '" + opt_name + " - argument not operational for undefined reason.");
         }
+
+        return false;
     }
 
-  
+    
 }
 
 
@@ -91,20 +98,23 @@ class ArgDefs extends SARTGroup
     InvokeArgIfExists (arg_name, arg_param, handler)
     {
         if (handler == null)
-            return Sys.ERR_PROGRAM ("'handler' null!", "InvokeArgsIfExists");
+        {
+            Sys.ERR_PROGRAM ("'handler' null!", "InvokeArgsIfExists");
+            return { def: null, error_occurred: true }
+        }
 
         for (const o of this.AsArray () )
         {            
             if (o != null && o.MatchesName (arg_name) )
             {                               
-                o.Invoke (arg_param, handler, this);
-                return o;
+                const success = o.Invoke (arg_param, handler, this);
+                return { def: o, error_occurred: !success }
             }
             else
                 Sys.DEBUG ("ArgDef " + o?.GetName () + " not matching arg_name '" + arg_name + "'.")
         }
 
-        return null;
+        return { def: null, error_occurred: false }
     }
 }
 
@@ -132,7 +142,8 @@ class Args
 
     SetTo (argv) 
     { 
-        this._Argv = argv; this._Pos = 0; 
+        this._Argv = argv; 
+        this._Pos = 0; 
 
         if (argv == null) 
             Sys.ERR_PROGRAM ("SetTo: 'argv' null!", "Args"); 
@@ -182,21 +193,28 @@ class Args
                                    argdefs == null ? "'argdefs'" : null +
                                    handler == null ? "'handler'" : null +
                                    + " null!", "Args");
-            return null;
+            return false;
         }
 
         Sys.DEBUG ("Starting to process " + this.GetAmount () + " arguments..");
              
-        const len = this._Argv.length;
+        const len         = this._Argv.length;
         const unprocessed = [];
+        let   success     = true;
      
         for (let i = this._Pos; i < len;)
         {            
             const arg_name = this._Argv[i];
-            Sys.DEBUG ("Argument #1: " + arg_name);
+            Sys.DEBUG ("Argument #" + i + ": " + arg_name);
 
-            const def = argdefs.InvokeArgIfExists (arg_name, ++i < len ? this._Argv[i] : null, handler)
+            const {def, error_occurred} = argdefs.InvokeArgIfExists (arg_name, ++i < len ? this._Argv[i] : null, handler)
         
+            if (error_occurred == true)
+            {
+                Sys.DEBUG ("Error with argument #" + i + " '" + arg_name + "'");
+                success = false; 
+            }
+
             if (def != null)
             {
                 // Skip over the parameter.
@@ -214,7 +232,8 @@ class Args
         }
                                         
         this.SetTo (unprocessed);
-        return true;        
+
+        return success;        
     }
 
 

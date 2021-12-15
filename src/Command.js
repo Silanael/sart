@@ -140,24 +140,38 @@ class CommandInstance extends SARTObject
 
 
         // Extract options and get the remaining arguments
-        args.ProcessArgs (OPTIONS.OPTIONS, this.Config);
-                
+        if (! args.ProcessArgs (OPTIONS.OPTIONS, this.Config) )
+        {
+            Sys.DEBUG ("Processing options returned false. Aborting the command execution sequence.");
+            return false;
+        }
 
         // Get command-handler
         this.CDef = this.GetCommandDefFromArgs (args);
         
         if (this.CDef == null)
             return false;
-
-        else if (this.GetArgsAmount () < this.CDef.GetMinArgsAmount () )
-        {
-            this.CDef.DisplayHelp ();
-            Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
-        }
-            
+    
         // Good to go
         else
-        {   
+        {               
+            Sys.VERBOSE ("Processing command's arguments (" + this.GetArgsAmount () + ")...");         
+
+            // Rest are arguments
+            if (! args.ProcessArgs (this.CDef.ArgDefs, this) )
+            {
+                Sys.DEBUG ("Processing command's ArgDefs returned false. Aborting the command execution sequence.");
+                return false;
+            }
+
+            if (this.GetArgsAmount () < this.CDef.GetMinArgsAmount () )
+            {
+                this.CDef.DisplayHelp ();
+                return Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
+            }
+        
+
+
             Sys.VERBOSE ("Executing command '" + this.CDef + "'...");         
                         
             if (!this.CDef.RunAsActiveCommand () )

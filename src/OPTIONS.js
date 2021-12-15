@@ -52,19 +52,18 @@ class Option extends Args.ArgDef
                 Sys.ERR_PROGRAM ("Invoke: 'config' null!", this);
             
             else if (this.HasParameter)            
-                config.SetSetting (this.SettingKey, param);
+                return config.SetSetting (this.SettingKey, param);
 
             else 
-                config.SetSetting (this.SettingKey, this.SettingValue);                            
+                return config.SetSetting (this.SettingKey, this.SettingValue);                            
         }
 
         else
-            Sys.ERR_PROGRAM ("Was unable to set option '" + this + "' - no valid actions available.");
-
-
-  
+            return Sys.ERR_PROGRAM ("Was unable to set option '" + this + "' - no valid actions available.");
     }
 }
+
+
 
 const OPTIONS = new Args.ArgDefs 
 (    

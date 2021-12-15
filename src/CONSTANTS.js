@@ -50,7 +50,7 @@ const ERROR_IDS =
     ARFS_ID_INVALID           : 5
 }
 
-function IS_GQL_SORT_VALID (sort) { return VALID_SORT.includes (sort?.toUpperCase() ); }
+function IS_GQL_SORT_VALID (sort) { return GQL_VALID_SORT.includes (sort?.toUpperCase() ); }
 
 
 

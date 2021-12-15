@@ -35,7 +35,7 @@ class TXQuery extends Query
     }
     
 
-    static CreateTxQuery ( config = { cursor: undefined, first: GQL_MAX_RESULTS, owner: undefined, tags: [], sort: SORT_DEFAULT, id:null } )
+    static CreateTxQuery ( config = { cursor: null, first: GQL_MAX_RESULTS, owner: null, tags: [], sort: SORT_DEFAULT, id: null } )
     {
     
         // No proper query arguments given
@@ -100,7 +100,7 @@ class TXQuery extends Query
    
 
    /* Returns true if desired amount of entries was gotten, false if not. Owner must be specified. */
-   async ExecuteReqOwner ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: SORT_DEFAULT, id: null} )
+   async ExecuteReqOwner ( config = { cursor: null, first: null, owner: null, tags: null, sort: SORT_DEFAULT, id: null} )
    {
         if (config?.owner != null)
         {
@@ -108,13 +108,13 @@ class TXQuery extends Query
             return ret;
         }
         else
-            return false; // TODO: Add error
+            return Sys.ERR_PROGRAM ("ExecuteReqOwner: Owner not provided.", this);
    }
 
   
 
    /* Returns true if desired amount of entries was gotten, false if not */
-   async Execute ( config = { cursor: undefined, first: undefined, owner: undefined, tags: [], sort: Constants.GQL_SORT_DEFAULT, id: null} )
+   async Execute ( config = { cursor: null, first: null, owner: null, tags: null, sort: Constants.GQL_SORT_DEFAULT, id: null} )
    {    
 
         if (config.sort == null)

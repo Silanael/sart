@@ -118,6 +118,7 @@ class Transaction extends SARTObject
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
     HasTransfer              ()         { return this.Quantity_AR      != null && this.Quantity_AR     > 0;                           }
+    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
     DataLoaded               ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
     HasRecipient             ()         { return this.Recipient != null && this.Recipient != "";                                      }
     GetRecipient             ()         { return this.HasRecipient   () ? this.Recipient : null;                                      }

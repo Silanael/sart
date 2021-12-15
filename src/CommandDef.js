@@ -1,6 +1,7 @@
-const SARTDef = require ("./SARTDefinition");
-const Util    = require ("./Util");
-const Sys     = require ("./System");
+const SARTDef   = require ("./SARTDefinition");
+const Arguments = require ("./Arguments");
+const Util      = require ("./Util");
+const Sys       = require ("./System");
 
 
 
@@ -12,6 +13,7 @@ class CommandDef extends SARTDef
     Aliases         = []; 
     MinArgsAmount   = 0;
     
+    ArgDefs         = new Arguments.ArgDefs ();
     Subcommands     = {};
         
     Helplines       = [];
@@ -34,6 +36,7 @@ class CommandDef extends SARTDef
     }   
 
 
+    WithArgs              (...argdefs)    { this.ArgDefs.AddAll (...argdefs); }
     WithAliases           (...aliases)    { this.Aliases = this.Aliases.concat (aliases); return this; }
     WithMinArgsAmount     (amount)        { this.MinArgsAmount = amount;                  return this; }
     WithMatchFunc         (func)          { this.MatchFunc     = func;                    return this; }
