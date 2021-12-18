@@ -12,13 +12,12 @@ const Sys        = require ("./System.js");
 const Util       = require ("./Util.js");
 const FieldData  = require ("./FieldData");
 const FieldDef   = require ("./FieldDef");
+const SARTBase   = require ("./SARTBase");
 const OutputArgs = Sys.OutputParams;
 
 
-class SARTObject
+class SARTObject extends SARTBase
 {
-    Name               = null;
-    
     Valid              = true;
     DataLoaded         = false;
 
@@ -28,11 +27,10 @@ class SARTObject
     static FIELDS      = [];
     static FIELDGROUPS = [];
 
-    Main               = null;
-
-
+ 
     constructor (name = null)
     {
+        super (name);
         this.Name = name;
     }
 
@@ -44,27 +42,12 @@ class SARTObject
     OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }
     HasWarnings        ()                                      { return this.Warnings?.length > 0;                                           }
     HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }    
-    WithName           (name)                                  { this.Name       = name;                                        return this; }
-    WithMain           (main)                                  { this.Main       = main;                                        return this; }    
-    GetID              ()                                      { return this.GetName ();                                                     }
-    GetName            ()                                      { return this.Name;                                                           }
-    HasName            (name, case_sensitive = true)           { return this.Name != null && name != null && 
-                                                                             Util.StrCmp (name, this.Name, !case_sensitive);                 }
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
     IsValid            ()                                      { return this.Valid == true;                                                  }
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
-    GetMain            ()                                      { return this.Main;                                                           }
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
     
-
-    MatchesNameRegex (name_regex, case_sensitive = true)
-    {
-        if (name_regex == null)
-            return false;
-
-        return Util.StrCmp_Regex (name_regex, this.Name, !case_sensitive);
-    }
 
     static GET_FIELD_DEFS (field_names = []) 
     { 
@@ -85,9 +68,9 @@ class SARTObject
                 else
                     Sys.ERR ("Unrecognized field: '" + fname + "'.");
             }
+            return field_defs;
         }
-
-        return field_defs;
+        
     }
 
     static GET_FIELD_DEF (field_name, case_sensitive = false)

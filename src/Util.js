@@ -8,16 +8,12 @@
 //
 
 // Imports
-const Path     = require ('path');
+const Path      = require ('path');
 
-const Constants = require ("./CONSTANTS.js");
-const State     = require ("./ProgramState.js");
-const Sys       = require ("./System.js");
 const Package   = require ("../package.json");
 
 
 
-const CHR_LF = "\n";
 
 
 
@@ -55,6 +51,7 @@ function AppendToArray   (array = [], val)       { if (array == null) array = []
 function CopyKeysToObj   (src, dest)             { if (src == null || dest == null) return; for (const e of Object.entries (src) ) { dest[e[0]] = e[1]; }  }
 async function Delay     (ms)                    { await new Promise (r => setTimeout (r, ms) ); }
 function AmountStr       (amount, sing, plur)    { return amount <= 0 || amount == null ? "no " + plur : amount == 1 ? "one " + sing : amount + " " + plur; }
+
 
 function AssignIfNotNull (dest, varname, value)
 {
@@ -245,10 +242,8 @@ function ObjToJSON (obj)
     if (obj != null)
     {
         try               { return JSON.stringify (obj); }
-        catch (exception) { Sys.ON_EXCEPTION (exception, "Util.ObjToJSON (" + obj?.name + ")"); }
+        catch (exception) { return null; }
     }
-    else
-        Sys.ERR ("Util.ObjToJSON (): obj null.");
     
     return null;
 }
@@ -412,31 +407,6 @@ function GetCmdArgs (argv, cmd_pos, flags)
 
 
 
-function RequireArgs (args, amount, src)
-{
-    const srcstr = src != null ? src + ": " : "";
-        
-    const len = args.length;
-
-    if (len < amount)
-        return Sys.ERR_ABORT (srcstr + "Missing arguments: " + len + " / " + amount + " supplied.");
-
-    else
-        return true;
-}
-
-
-
-function RequireParam (param, name, src)
-{
-    const srcstr = src != null ? src + ": " : "";
-
-    if (param == undefined)
-        return Sys.ERR_ABORT (srcstr + "Missing parameter: " + name);
-
-    else
-        return true;
-}
 
 
 
@@ -448,7 +418,7 @@ function RequireParam (param, name, src)
 
 
 module.exports = {  
-                   IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
+                   IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional };

@@ -10,12 +10,12 @@
 //   GetterFunction -> SARTObject[FromObjectName][FieldName] -> SARTObject[FieldName]
 //
 
-const Util       = require ("./Util");
+//const Util       = require ("./Util");
+const SARTBase   = require ("./SARTBase");
 
 
-class FieldDef
-{    
-    FieldName           = null;
+class FieldDef extends SARTBase
+{        
     PropertyName        = null; // Actual property name of the object. If null, use FieldName.
 
     FromObjectName      = null;
@@ -29,10 +29,9 @@ class FieldDef
 
     constructor (name)
     {
-        this.FieldName = name;        
+        super (name);
     }
-
-    WithName            (name)           { this.FieldName = name;}    
+    
     WithFunction        (func)           { this.GetterFunction      = func;        return this; }
     WithRequiredFetches (...fetch_names) { this.RequiredDataFetches = fetch_names; return this; }
     
@@ -43,7 +42,6 @@ class FieldDef
         return this;
     }
 
-    GetName            ()                              { return this.FieldName}
     GetFieldName       ()                              { return this.GetName (); }
     GetPropertyName    ()                              { return this.PropertyName != null ? this.PropertyName : this.GetFieldName (); }    
     IsFieldPresent     (sart_obj)                      { return this.GetFieldValue (sart_obj) != null; }
