@@ -7,17 +7,18 @@
 // Output writer for JSON.
 //
 
-const OutputFormat = require ("../OutputFormat");
+
+const Sys = require ("../System");
+const OutputFormat = Sys.OutputFormat;
+const OutputParams = Sys.OutputParams;
 
 
 class OutputFormat_JSON extends OutputFormat
 {
-    OutputObject (obj, outputdest)
+    __DoOutputObject (obj, field_data = [], params = new OutputParams () )
     {
-
+        
     }
 }
-
-
 
 module.exports = OutputFormat_JSON;

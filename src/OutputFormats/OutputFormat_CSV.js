@@ -7,17 +7,29 @@
 // Output writer for CSV.
 //
 
-const OutputFormat = require ("../OutputFormat");
+const Sys          = require ("../System");
+const OutputFormat = Sys.OutputFormat;
+const OutputParams = Sys.OutputParams;
 
 
-class OutputFormat_JSON extends OutputFormat
+class OutputFormat_CSV extends OutputFormat
 {
-    OutputObject (obj, outputdest)
+    __DoOutputObject (obj, field_data = [], params = new OutputParams () )
     {
-        outputdest 
+        if (params.UseListMode == true)
+        {
+            let str_line = "";
+            for (const i of field_data)
+            {
+                str_line += i.GetFieldValue () + " ";
+            }
+            this.__Out_Line (str_line);
+        }
+        else
+        {
+            this.__Out_Line ("foo");
+        }
     }
 }
 
-
-
-module.exports = OutputFormat_JSON;
+module.exports = OutputFormat_CSV;

@@ -97,6 +97,16 @@ const CONNSTATES =
     FAIL    : "FAILED",
 }
 
+const FLAGS =
+{
+    HASWARNINGS    : 1,
+    HASERRORS      : 2,
+    
+    TX_HASDATA     : 4,
+    TX_HASTRANSFER : 8,
+
+}
+
 
 
 
@@ -133,5 +143,6 @@ module.exports =
     SYSTEM_ACCESS,
     COMMAND_DEFAULT,
     COMMAND_DEFAULT_ARGS,
-    CONFIG_TX_TAGS_TOTAL_SIZE
+    CONFIG_TX_TAGS_TOTAL_SIZE,
+    FLAGS,
 };

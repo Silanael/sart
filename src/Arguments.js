@@ -106,12 +106,11 @@ class ArgDefs extends SARTGroup
         for (const o of this.AsArray () )
         {            
             if (o != null && o.MatchesName (arg_name) )
-            {                               
+            {   
+                Sys.DEBUG ("ArgDef " + o?.GetName () + " matched arg_name '" + arg_name + "'.")                            
                 const success = o.Invoke (arg_param, handler, this);
                 return { def: o, error_occurred: !success }
-            }
-            else
-                Sys.DEBUG ("ArgDef " + o?.GetName () + " not matching arg_name '" + arg_name + "'.")
+            }                           
         }
 
         return { def: null, error_occurred: false }

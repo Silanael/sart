@@ -79,7 +79,7 @@ class CMD_Console extends CommandDef
     
                 else
                 {
-                    await cmd_instance.GetMain ().RunCommand (new Arguments.Args (argv) );
+                    await Sys.GetMain ().RunCommand (new Arguments.Args (argv) );
 
                     if (!State.ConsoleActive)
                         break;

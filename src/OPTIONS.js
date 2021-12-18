@@ -102,6 +102,8 @@ const OPTIONS = new Args.ArgDefs
     new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
     new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON),
     new Option ("--output-file"     ).WithSetting (SETTINGS.OutputFilename),
+    new Option ("--list"            ).WithSetting (SETTINGS.OutputAsList, true),
+    new Option ("--entries"         ).WithSetting (SETTINGS.OutputAsList, false),
     
 );
 Object.freeze (OPTIONS);

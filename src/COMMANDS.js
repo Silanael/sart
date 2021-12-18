@@ -21,7 +21,7 @@ const CMD_Help       = require ("./Commands/CMD_Help");
 const CMD_ReadMe     = require ("./Commands/CMD_ReadMe");
 
 const CMD_Console    = require ("./Commands/CMD_Console");
-
+const CMD_Test       = Util.RequireOptional ("./Commands/CMD_Test");
 
 
 
@@ -40,14 +40,13 @@ const COMMANDS =
     "verify"      : null,
     "pending"     : null,
     "console"     : new CMD_Console (),
-    "exit"        : new CommandDef  ("EXIT").WithFunc (function (c) {c.GetMain ().ExitConsole (); } ).WithAliases ("quit", "q", "/quit", "/exit"),    
+    "exit"        : new CommandDef  ("EXIT").WithFunc (function (c) {Sys.GetMain ().ExitConsole (); } ).WithAliases ("quit", "q", "/quit", "/exit"),    
     "set"         : null,
     "readme"      : new CMD_ReadMe  (),
     "quiet"       : new MessageCMD  ("quiet", "You be quiet."),
     "verbose"     : new SettingCMD  ("VERBOSE",        SETTINGS.LogLevel, Constants.LOGLEVELS.VERBOSE),
     "debug"       : new SettingCMD  ("DEBUG",          SETTINGS.LogLevel, Constants.LOGLEVELS.DEBUG),
-    "loglevel-msg": new SettingCMD  ("LOGLEVEL-MSG",   SETTINGS.LogLevel, Constants.LOGLEVELS.MSG),
-    "test"        : new CommandDef  ("test").WithFunc (function (c) { return true}, function () { Sys.INFO ("Testing."); } ),
+    "loglevel-msg": new SettingCMD  ("LOGLEVEL-MSG",   SETTINGS.LogLevel, Constants.LOGLEVELS.MSG),    
     
     /*
     "date"        : function ()
@@ -76,6 +75,8 @@ const COMMANDS =
         
 };
 
+if (CMD_Test != null)
+    COMMANDS.test = new CMD_Test ();
 
 
 module.exports = COMMANDS;

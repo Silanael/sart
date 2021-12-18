@@ -7,33 +7,32 @@
 // A generic object with the basic functionality
 //
 
-const Sys      = require ("./System.js");
-const Util     = require ("./Util.js");
+const CONSTANTS  = require ("./CONSTANTS");
+const Sys        = require ("./System.js");
+const Util       = require ("./Util.js");
+const FieldData  = require ("./FieldData");
+const FieldDef   = require ("./FieldDef");
+const OutputArgs = Sys.OutputParams;
 
 
 class SARTObject
 {
-    Name             = null;
+    Name               = null;
     
-    Valid            = true;
-    DataLoaded       = false;
+    Valid              = true;
+    DataLoaded         = false;
 
-    Errors           = null;
-    Warnings         = null;
+    Errors             = null;
+    Warnings           = null;
 
-    OutputFields      = [];
-    OutputFieldGroups = [];
-    InfoFields        = ["Valid", "Warnings", "Errors"];
-    NoInfoFields      = ["NoInfoFields", "CustomFieldFuncs"];
-    RecursiveFields   = {"Warnings": {}, "Errors": {} };
+    static FIELDS      = [];
+    static FIELDGROUPS = [];
 
-    CustomFieldFuncs = {};
+    Main               = null;
 
-    Main             = null;
 
-    constructor (main, name = null)
+    constructor (name = null)
     {
-        this.Main = main;
         this.Name = name;
     }
 
@@ -44,13 +43,13 @@ class SARTObject
     OnErrorOnce        (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }  
     OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }
     HasWarnings        ()                                      { return this.Warnings?.length > 0;                                           }
-    HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }
-    SetInfoFields      (fields)                                { this.InfoFields = fields;                                                   }
+    HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }    
     WithName           (name)                                  { this.Name       = name;                                        return this; }
-    WithMain           (main)                                  { this.Main       = main;                                        return this; }
-    WithInfoField      (field)                                 { this.InfoFields = Util.AppendToArray (this.InfoFields, field); return this; }
-    GetID              ()                                      { return null; }
-    GetName            ()                                      { return this.Name; }
+    WithMain           (main)                                  { this.Main       = main;                                        return this; }    
+    GetID              ()                                      { return this.GetName ();                                                     }
+    GetName            ()                                      { return this.Name;                                                           }
+    HasName            (name, case_sensitive = true)           { return this.Name != null && name != null && 
+                                                                             Util.StrCmp (name, this.Name, !case_sensitive);                 }
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
     IsValid            ()                                      { return this.Valid == true;                                                  }
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
@@ -58,28 +57,111 @@ class SARTObject
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
     
-    GetField (field, case_sensitive = false)
+
+    MatchesNameRegex (name_regex, case_sensitive = true)
     {
-        if (case_sensitive)
-            return this.OutputFields?.[field];
+        if (name_regex == null)
+            return false;
+
+        return Util.StrCmp_Regex (name_regex, this.Name, !case_sensitive);
+    }
+
+    static GET_FIELD_DEFS (field_names = []) 
+    { 
+        if (field_names == null || field_names.length <= 0)
+            return this.FIELDS; 
 
         else
         {
-            for (const f of this.OutputFields)
-            {
-                if (f.MatchesFieldName (field, case_sensitive) )
-                    return this.OutputFields[f.GetFieldName () ];
+            const field_defs = [];
+            // Include only the given set of fields.
+            for (const fname of field_names)
+            {      
+                const field = this.GET_FIELD_DEF (fname);
+
+                if (field != null)
+                    field_defs.push (field);
+
+                else
+                    Sys.ERR ("Unrecognized field: '" + fname + "'.");
             }
         }
+
+        return field_defs;
     }
+
+    static GET_FIELD_DEF (field_name, case_sensitive = false)
+    {            
+        for (const f of this.FIELDS)
+        {            
+            if (f.HasName (field_name, case_sensitive) )
+                return f;
+        }
+        return null;
+    }
+
 
     GetFieldValue (field, case_sensitive = false)
     {
-        return this.GetField (field, case_sensitive)?.GetFieldValue ();
+        return this.GetFieldDef (field, case_sensitive)?.GetFieldValue (this);
     }
     
+    /** Field can be either string or FieldDef. */
+    GetFieldData (field)
+    {        
+        const def = field instanceof FieldDef ? field: this.GetFieldDef (field);
+
+        if (def != null)
+            return new FieldData (def, this, def.GetFieldValue (this) );
+        else
+            return null;
+    }
     
-    __SetObjectField (field, value)
+    GetFlagInt ()
+    {
+        let flags = 0;
+        
+        if (this.HasErrors   () ) flags |= CONSTANTS.FLAGS.HASERRORS;
+        if (this.HasWarnings () ) flags |= CONSTANTS.FLAGS.HASWARNINGS;
+
+        return flags;
+    }
+
+    GetDataForFields (fields = [])
+    {
+        const field_data = [];
+
+        // Parameter omitted, include all defined fields.
+        if (fields == null || fields.length <= 0)
+        {
+            Sys.VERBOSE ("No field-list provided - displaying all of them.");
+            
+            for (const fname of this.Fields)
+            {
+                if (fname != null)
+                    field_data.push (this.GetFieldData (fname) )                    
+                else
+                    this.OnProgramError ("Could not fetch field '" + fname + "' even though it's listed as object fields.");
+            }
+        }
+
+        // Include only the given set of fields.
+        else for (const f of fields)
+        {      
+            const field = this.GetFieldData (f);
+
+            if (field != null)
+                field_data.push (field);
+
+            else
+                Sys.ERR ("Unrecognized field: '" + f + "'.");
+        }
+
+        return field_data;
+    }
+
+    
+    __SetObjectProperty (field, value)
     {
         if (field == null)                   
             return this.OnProgramError ("Failed to set field, 'field' provided was null.", "SARTObject.__SetValue");
@@ -102,39 +184,7 @@ class SARTObject
     }
 
 
-    /** Excepts a string-array of field-names. */
-    GetInfo (fields = [])
-    {        
-        const info = {};
-        const case_sensitive = false;
 
-        // Parameter omitted, include all defined fields.
-        if (fields.length <= 0)
-        {
-            Sys.VERBOSE ("No fields provided - displaying all of them.");
-            
-            for (const field of this.OutputFields)
-            {
-                if (field != null)
-                    info[field.GetFieldName () ] = field.GetFieldValue (this);
-            }
-        }
-
-        // Include only the given set of fields.
-        else for (const f of fields)
-        {      
-            const field = this.GetField (f, case_sensitive);
-
-            if (field != null)
-                info[field.GetFieldName () ] = field.GetFieldValue (this);
-
-            else
-                Sys.ERR ("Unrecognized field: '" + f + "'.");
-        }
-
-        return info;
-    }
-   
 
     __OnError (field, errfunc, error, src, opts)
     {
@@ -148,9 +198,10 @@ class SARTObject
     }
 
 
-    Output (...fields)
-    {
-        Sys.OUT_OBJ (this.GetInfo (fields), { recursive: this.GetRecursiveFields () } );         
+    Output (output_args = new OutputArgs () )
+    {        
+        //Sys.OUT_OBJ (this.GetFieldsAsObject (fields), { recursive: this.GetRecursiveFields () } );         
+        Sys.OUT_OBJ (this, output_args);
     }
 
 }

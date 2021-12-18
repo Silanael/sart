@@ -7,7 +7,7 @@
 // SART transaction object
 //
 
-const Constants    = require ("../CONSTANTS.js");
+const CONSTANTS    = require ("../CONSTANTS.js");
 const State        = require ("../ProgramState.js");
 const Settings     = require ('../Config.js');
 const Util         = require ('../Util.js');
@@ -17,36 +17,42 @@ const TXTag        = require ("./TXTag.js");
 const TXTagGroup   = require ("./TXTagGroup");
 const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("../SARTObject.js");
+const SARTGroup    = require ("../SARTGroup");
 const ByTXQuery    = require ("../GQL/ByTXQuery");
 const Concurrent   = require ("../Concurrent");
-const OutputField  = require ("../FieldDef");
+const Field        = require ("../FieldDef");
 
 
-const OUTPUT_FIELDS = 
+
+
+
+const FIELDS =
 [
-    new OutputField ("Type"),
-    new OutputField ("Network"),
-    new OutputField ("TXID"),
-    new OutputField ("Owner"),         
-    new OutputField ("Target").WithFunction (function (t) { return t?.HasRecipient () ? t.GetRecipient () : "NONE"} ),
-    new OutputField ("Fee_AR"),           
-    new OutputField ("Fee_Winston"),        
-    new OutputField ("Quantity_AR"),      
-    new OutputField ("Quantity_Winston"), 
-    new OutputField ("DataSize_Bytes"),
-    new OutputField ("TagsTotalSizeB").WithFunction (function (t) { return t?.Tags?.GetTotalBytes (); } ),
-    new OutputField ("DataRoot"),         
-    new OutputField ("DataLocation"),             
-    new OutputField ("BlockID"),
-    new OutputField ("BlockDate"),
-    new OutputField ("BlockHeight"),        
-    new OutputField ("BlockUNIXTime"),        
-    new OutputField ("TXAnchor"),     
-    new OutputField ("Tags").WithFunction (function (t) { return t?.Tags?.GetList (); } ).WithRecursive (),                
-    new OutputField ("State").WithRecursive (),
-    new OutputField ("FetchedFrom").WithFunction (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
-    new OutputField ("Warnings").WithRecursive (),
-    new OutputField ("Errors").WithRecursive (),                  
+    new Field ("Type"),
+    new Field ("Network"),
+    new Field ("TXID"),
+    new Field ("Owner"),         
+    new Field ("Flags")   .WithFunction (function (t) {t.GetFlagStr (); } ),           
+    new Field ("FlagsInt").WithFunction (function (t) {t.GetFlagInt (); } ),
+    new Field ("Target"),//.WithFunction (function (t) { return t?.HasRecipient () ? t.GetRecipient () : "NONE"} ),
+    new Field ("Fee_AR"),           
+    new Field ("Fee_Winston"),        
+    new Field ("Quantity_AR"),      
+    new Field ("Quantity_Winston"), 
+    new Field ("DataSize_Bytes"),
+    new Field ("TagsTotalSizeB").WithFunction (function (t) { return t?.Tags?.GetTotalBytes (); } ),
+    new Field ("DataRoot"),         
+    new Field ("DataLocation"),             
+    new Field ("BlockID"),
+    new Field ("BlockDate"),
+    new Field ("BlockHeight"),        
+    new Field ("BlockUNIXTime"),        
+    new Field ("TXAnchor"),     
+    new Field ("Tags").WithFunction (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
+    new Field ("State").WithRecursive (),
+    new Field ("FetchedFrom").WithFunction (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
+    new Field ("Warnings").WithRecursive (),
+    new Field ("Errors").WithRecursive (),                  
 ];
 
 
@@ -78,8 +84,7 @@ class Transaction extends SARTObject
     Errors              = null;
     DataFetched         = false;
     
-    OutputFields = OUTPUT_FIELDS;
-    
+    static FIELDS       = FIELDS;
 
   
     //"Tags":           function (t) { return t?.Tags?.HasDuplicates () ? t.Tags.GetList () : t?.Tags?.GetNameValueObj () },
@@ -117,15 +122,16 @@ class Transaction extends SARTObject
     GetQTY_Winston           ()         { return this.Quantity_Winston != null ? this.Quantity_Winston : 0;                           }    
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
-    HasTransfer              ()         { return this.Quantity_AR      != null && this.Quantity_AR     > 0;                           }
+    HasTransfer              ()         { return this.Quantity_AR      > 0     || this.Quantity_Winston > 0;                          }
     HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
     DataLoaded               ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
-    HasRecipient             ()         { return this.Recipient != null && this.Recipient != "";                                      }
-    GetRecipient             ()         { return this.HasRecipient   () ? this.Recipient : null;                                      }
+    HasRecipient             ()         { return Util.IsSet (this.Target);                                                            }
+    GetRecipient             ()         { return this.HasRecipient   () ? this.Target : null;                                         }
     HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                      }    
     GetTag                   (tag)      { return this.Tags?.GetTag   (tag);                                                           }        
-    GetTagValue              (tag)      { return this.Tags?.GetValue (tag);                                                           }        
+    GetTagValue              (tag)      { return this.GetTag ()?.GetValue ();                                                         }        
     GetTags                  ()         { return this.Tags;                                                                           }        
+    GetTagsAsArray           ()         { return this.Tags != null ? this.Tags.AsArray () : [];                                       }        
     IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                                }        
     IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                                }            
     IsMined                  ()         { return this.Status?.IsMined       ()                                                        }
@@ -156,6 +162,26 @@ class Transaction extends SARTObject
                };
     }
 
+    GetFlagInt ()
+    {
+        let flags = super.GetFlagInt ();
+        
+        if (this.HasData      () ) flags |= CONSTANTS.FLAGS.TX_HASDATA
+        if (this.HasTransfer  () ) flags |= CONSTANTS.FLAGS.TX_HASTRANSFER;
+
+        return flags;
+    }
+
+    GetFlagStr ()
+    {
+        const flags = this.GetFlagInt ();
+
+        const dat = (flags & CONSTANTS.FLAGS.TX_HASDATA     ) != 0 ? "D" : "-";
+        const tra = (flags & CONSTANTS.FLAGS.TX_HASTRANSFER ) != 0 ? "T" : "-";
+        const err = (flags & CONSTANTS.FLAGS.HASERRORS      ) != 0 ? "E" : (flags & CONSTANTS.FLAGS.HASWARNINGS) != 0 ? "W" : "-";
+
+        return dat + tra + err;
+    }
  
     
     WithTag (name, value)
@@ -245,17 +271,18 @@ class Transaction extends SARTObject
             this.SetTXID  (edge.node?.id);
             this.SetOwner (edge.node?.owner?.address)
             
-            this.__SetObjectField ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
-            this.__SetObjectField ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
-            this.__SetObjectField ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
-            this.__SetObjectField ("BlockDate"          , this.GetDate ()                                                                  );     
-            this.__SetObjectField ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
+            this.__SetObjectProperty ("Target"             , edge.node?.recipient         != null ? edge.node.recipient                 : null);
+            this.__SetObjectProperty ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
+            this.__SetObjectProperty ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
+            this.__SetObjectProperty ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
+            this.__SetObjectProperty ("BlockDate"          , this.GetDate ()                                                                  );     
+            this.__SetObjectProperty ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
             
-            this.__SetObjectField ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
-            this.__SetObjectField ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
-            this.__SetObjectField ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
-            this.__SetObjectField ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
-            this.__SetObjectField ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
+            this.__SetObjectProperty ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);
+            this.__SetObjectProperty ("Fee_AR"             , edge.node?.fee?.ar           != null ? Number (edge.node.fee.ar)           : null);
+            this.__SetObjectProperty ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
+            this.__SetObjectProperty ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
+            this.__SetObjectProperty ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
 
             this.Validate ();
             this.__OnTXFetched ();
@@ -276,18 +303,18 @@ class Transaction extends SARTObject
             this.SetTXID      (arweave_tx.id);
             this.SetOwner     (await Arweave.OwnerToAddress (arweave_tx.owner) );   
             
-            this.__SetObjectField ("Recipient"        , Arweave.GetRecipient (arweave_tx)                   );
-            this.__SetObjectField ("Fee_Winston"      , Number (arweave_tx.reward)                          );
-            this.__SetObjectField ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
-            this.__SetObjectField ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
-            this.__SetObjectField ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
-            this.__SetObjectField ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
-            this.__SetObjectField ("DataRoot"         , arweave_tx.data_root                                );            
-            this.__SetObjectField ("TXAnchor"         , arweave_tx.last_tx                                  );            
-            this.__SetObjectField ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
+            this.__SetObjectProperty ("Target"           , Arweave.GetRecipient (arweave_tx)                   );
+            this.__SetObjectProperty ("Fee_Winston"      , Number (arweave_tx.reward)                          );
+            this.__SetObjectProperty ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
+            this.__SetObjectProperty ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
+            this.__SetObjectProperty ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
+            this.__SetObjectProperty ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
+            this.__SetObjectProperty ("DataRoot"         , arweave_tx.data_root                                );            
+            this.__SetObjectProperty ("TXAnchor"         , arweave_tx.last_tx                                  );            
+            this.__SetObjectProperty ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
             
 
-            this.__SetObjectField ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
+            this.__SetObjectProperty ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
                                                  : Util.IsSet (arweave_tx.data_root) ? "DataRoot" : "NO DATA" );
                                                  
             this.Validate ();
@@ -296,7 +323,7 @@ class Transaction extends SARTObject
         }
         else
             this.OnError ("Unsupported transaction format/version '" + arweave_tx.format + "'. Use --force to process anyway.", "Transaction.SetArweaveTXData",
-                        { error_id: Constants.ERROR_IDS.TXFORMAT_UNSUPPORTED } );
+                        { error_id: CONSTANTS.ERROR_IDS.TXFORMAT_UNSUPPORTED } );
     
         return this;
     }
@@ -304,7 +331,7 @@ class Transaction extends SARTObject
 
     Validate ()
     {
-        if ( (this.Quantity_Winston > 0 || this.Quantity_AR > 0) && !this.HasRecipient () )
+        if ( this.HasTransfer () && !this.HasRecipient () )
             this.OnError ("Quantity set to " + this.Quantity_Winston + " (W) but recipient missing.");        
     }
 

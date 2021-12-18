@@ -64,8 +64,11 @@ const SETTINGS =
     ErrorWaitVariationP     : new Setting ("ErrorWaitVariationP")      .DV (1.0),
     ErrorRetries            : new Setting ("ErrorRetries")             .DV (3),
     MaxConcurrentFetches    : new Setting ("MaxConcurrentFetches")     .DV (5),
-    OutputFields            : new Setting ("OutputFields")             .DV (null),
+    OutputFilename          : new Setting ("OutputFilename")           .DV (null).NOCONF (),
     OutputFormat            : new Setting ("OutputFormat")             .DV (OUTPUTFORMATS.TXT),
+    OutputFileDest          : new Setting ("OutputFileDest")           .DV (null).NOCONF (),    
+    OutputAsList            : new Setting ("OutputAsList")             .DV (null), // null = auto.
+    OutputFields            : new Setting ("OutputFields")             .DV (null).NOCONF (),    
     OutputFieldsCaseSens    : new Setting ("OutputFieldsCaseSens")     .DV (false),
     SizeDigits              : new Setting ("SizeDigits")               .DV (5),
     VarNamesUppercase       : new Setting ("VarNamesUppercase")        .DV (false),
@@ -90,7 +93,8 @@ const SETTINGS =
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
 
-    OutputFilename          : new Setting ("OutputFilename")           .DV (null).NOCONF (),
+
+
 }
 Object.freeze (SETTINGS);
 

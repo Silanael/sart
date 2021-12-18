@@ -20,7 +20,6 @@ const State         = require ("./ProgramState.js");
 
 
 
-
 // Constants
 const FIELD_RECURSIVE    = "__SART-RECURSIVE"
 const FIELD_ANSI         = "__ANSI";
@@ -40,6 +39,8 @@ const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
 var Main = null;
 
+function SetMain            (main)                   { Main = main; }
+function GetMain            ()                       { return Main; }
 
 function GetSetting         (key)                    { return State.GetSetting (key); }
 
@@ -231,32 +232,125 @@ const OUTPUTDESTS =
     STDERR: new OutputDest_STDERR (),
 }
 
+const OUTPUTDESTS_STDOUT = [ OUTPUTDESTS.STDOUT ];
+const OUTPUTDESTS_STDERR = [ OUTPUTDESTS.STDERR ];
+
+
+
+
+class OutputParams
+{
+    WantedFields = null;
+    UseListMode  = null;
+}
+
+class OutputFormat
+{
+    FileExtension = null;
+
+
+    OutputObjects (objects = [], params = new OutputParams () )
+    {
+        if (objects == null || objects.length <= 0)
+            return ERR_PROGRAM ("OutputFormat.OutputObjects: No objects given.");
+
+        if (params == null)
+            params = new OutputParams ();
+
+        const setting_list_mode = GetMain ().GetSetting (SETTINGS.OutputAsList);
+
+        if (setting_list_mode != null)
+            params.UseListMode = setting_list_mode;
+
+            
+        const field_defs = objects?.[0] != null ? objects[0].constructor.GET_FIELD_DEFS (params?.WantedFields) : null;
+
+        if (field_defs == null)
+            return ERR_PROGRAM ("No fields could be fetched for output-objects!");
+
+    
+        this.__DoOutputFieldCaptions (field_defs);
+
+        for (const obj of objects)
+        {
+            this.__DoOutputObject (obj, obj.GetDataForFields (field_defs), params);
+        }
+    }
+
+
+    /** Overridable. This implementation does nothing. */
+    __DoOutputFieldCaptions (field_names = [],                                  ) {}
+    __DoOutputObject        (obj, field_data = [], params = new OutputParams () ) {}
+
+    
+    __Out_Line   (line)  { OUT_TXT     (line); }
+    __Out_RawTXT (txt)   { OUT_TXT_RAW (txt);  }
+    __Out_BIN    (data)  { OUT_BIN     (data); }
+}
+
+
+const OUTPUTFORMATS =
+{
+    TXT:   new OutputDest_STDOUT (),
+    STDERR: new OutputDest_STDERR (),
+}
+
+
 
 
 // Data output. Non-silenceable.
-function OUT_BIN (str)
+function OUT_BIN (data)
 {
-    process.stdout.write (str);    
+    for (const d of Main.GetOutputDests () )
+    {
+        d?.OutputBinary (data);        
+    }
 }
 
 
 
 // Data output. Non-silenceable.
-function OUT_TXT (str)
-{    
-    OUTPUTDESTS.STDOUT.OutputLine (str);        
-    //console.log (str);
+function OUT_TXT (line)
+{
+    for (const d of Main.GetOutputDests () )
+    {
+        d?.OutputLine (line);        
+    }
 }
 
 
 // Data output. Non-silenceable.
 function OUT_TXT_RAW (str)
 {
-    OUTPUTDESTS.STDOUT.OutputBinary (str); 
-    //process.stdout.write (str);    
+    for (const d of Main.GetOutputDests () )
+    {
+        d?.OutputBinary (str);        
+    }    
 }
 
+
+function OUT_OBJ (obj, args = new OutputParams () )
+{
+    if (Main == null)
+        return ERR_PROGRAM_ONCE ("OUT_OBJ: Called before 'Main' is set!");
+
+    else
+    {
+        const fmt_handler = Main.GetActiveOutputFormat ();
+        
+        if (fmt_handler == null)
+            return ERR_PROGRAM_ONCE ("No suitable output-handler found!");
+
+        else
+        {
+            fmt_handler.OutputObjects ([obj], args);
+            return true;
+        }
+    }
+} 
+
 /** Fields for 'recursive': 'depth', integer */
+/*
 function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], recursive: {}, header: true, format: null, recursive_depth: 0 } ) 
 {
 
@@ -409,7 +503,7 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
     }
 
 }
-
+*/
 
 
 // Informative output, ie. for 'help'.
@@ -643,4 +737,10 @@ module.exports =
     OUTPUTDESTS,
     OUTPUTDEST_STDOUT: OUTPUTDESTS.STDOUT,
     OUTPUTDEST_STDERR: OUTPUTDESTS.STDERR,
+    OUTPUTDESTS_STDOUT,
+    OUTPUTDESTS_STDERR,
+    SetMain,
+    GetMain,
+    OutputParams,
+    OutputFormat,
 };

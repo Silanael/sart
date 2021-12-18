@@ -10,12 +10,12 @@
 //   GetterFunction -> SARTObject[FromObjectName][FieldName] -> SARTObject[FieldName]
 //
 
-const Util = require ("./Util");
+const Util       = require ("./Util");
 
 
 class FieldDef
-{
-    FieldName           = null; // Display name.
+{    
+    FieldName           = null;
     PropertyName        = null; // Actual property name of the object. If null, use FieldName.
 
     FromObjectName      = null;
@@ -29,9 +29,10 @@ class FieldDef
 
     constructor (name)
     {
-        this.FieldName = name;
+        this.FieldName = name;        
     }
 
+    WithName            (name)           { this.FieldName = name;}    
     WithFunction        (func)           { this.GetterFunction      = func;        return this; }
     WithRequiredFetches (...fetch_names) { this.RequiredDataFetches = fetch_names; return this; }
     
@@ -42,22 +43,20 @@ class FieldDef
         return this;
     }
 
-
-    GetFieldName       ()                              { return this.FieldName; }
-    GetPropertyName    ()                              { return this.PropertyName != null ? this.PropertyName : this.FieldName; }    
+    GetName            ()                              { return this.FieldName}
+    GetFieldName       ()                              { return this.GetName (); }
+    GetPropertyName    ()                              { return this.PropertyName != null ? this.PropertyName : this.GetFieldName (); }    
     IsFieldPresent     (sart_obj)                      { return this.GetFieldValue (sart_obj) != null; }
-    MatchesFieldName   (field, case_sensitive = false) { return Util.StrCmp (field, this.FieldName, !case_sensitive); }
     GetRequiredFetches ()                              { return this.RequiredDataFetches; }    
 
 
     GetFieldValue (sart_obj)
     {
         const property_name    = this.GetPropertyName ();
-        const from_object_name = sart_obj[this.FromObjectName];
+        const src_object       = this.FromObjectName != null ? sart_obj[this.FromObjectName] : sart_obj;
 
         const value = this.GetterFunction != null ? this.GetterFunction (sart_obj)
-                                                  : this.FromObjectName != null ? from_object_name ? from_object_name [property_name] : null
-                                                                                : sart_obj [property_name];
+                                                  : src_object [property_name];                                                                                
 
         if (value != null)
             return this.Recursive ? value.GetInfo != null ? value.GetInfo () : value 

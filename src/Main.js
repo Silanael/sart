@@ -21,9 +21,13 @@ const Concurrent    = require ("./Concurrent");
 const Cache         = require ("./Cache");
 const Command       = require ("./Command");
 const Sys           = require ('./System.js');
-const Settings      = require ('./Config.js');
+const Config        = require ('./Config.js');
+const SETTINGS      = require ("./SETTINGS").SETTINGS;
 const Util          = require ('./Util.js');
 const Arweave       = require("./Arweave/Arweave");
+const OutputF_TXT   = require ("./OutputFormats/OutputFormat_TXT");
+const OutputF_JSON  = require ("./OutputFormats/OutputFormat_JSON");
+const OutputF_CSV   = require ("./OutputFormats/OutputFormat_CSV");
 
 const FS            = require ("fs");
 
@@ -38,10 +42,16 @@ const FIRST_ARG         = 2;
 class Main
 {    
     State = ProgramState;
+    OutputFormats = 
+    {
+        TXT:  new OutputF_TXT  (),
+        JSON: new OutputF_JSON (),
+        CSV:  new OutputF_CSV  (),
+    }
     
     async Init (argv)
     {
-        Sys.Main = this;
+        Sys.SetMain (this);
 
         // Set a generic exception handler
         process.on ("uncaughtException", Sys.ErrorHandler);
@@ -56,12 +66,17 @@ class Main
         await Command.RunCommand (this, args);
     }
 
-    GetCommandDef    (cmd_name)   { return Command.GetCommandDef (cmd_name); }
-    GetGlobalConfig  ()           { return ProgramState.GlobalConfig;   }
-    SetGlobalSetting (key, value) { return ProgramState.GlobalConfig.SetSetting (key, value); }
-    ExitConsole      ()           { ProgramState.ConsoleActive = false; }
-    GetArweave       ()           { return Arweave; }
-      
+    GetCommandDef         (cmd_name)   { return Command.GetCommandDef (cmd_name); }
+    GetGlobalConfig       ()           { return ProgramState.GlobalConfig;   }
+    SetGlobalSetting      (key, value) { return ProgramState.GlobalConfig.SetSetting (key, value); }
+    ExitConsole           ()           { ProgramState.ConsoleActive = false; }
+    GetArweave            ()           { return Arweave; }
+    GetFileOutputDest     ()           { return ProgramState.ActiveCommandInst?.GetFileOutputDest (); }  
+    //GetOutputDests        ()           { return Util.Or (ProgramState.ActiveCommandInst?.GetOutputDests (), Sys.OUTPUTDESTS_STDOUT ); }
+    GetOutputDests        ()           { return Sys.OUTPUTDESTS_STDOUT; }
+    GetOutputFormat       (fmt_name)   { return this.OutputFormats[fmt_name?.toUpperCase () ]; }
+    GetActiveOutputFormat ()           { return this.GetOutputFormat (this.GetSetting (SETTINGS.OutputFormat) ); }
+
     GetSetting (key)
     {                
         if (this.State.ActiveCommandInst != null && this.State.ActiveCommandInst.HasSetting (key) )
@@ -73,6 +88,9 @@ class Main
         else
             return null;
     }
+
+    
+    
 
 }
 
@@ -90,14 +108,14 @@ function SetSetting (args)
     const key   = args.Pop ();
     const value = args.Pop ();
 
-    return Settings.SetConfigKey (key, value);        
+    return Config.SetConfigKey (key, value);        
 }
 
 
 function Handler_LoadConfig (arg)
 {
     const console_active = ProgramState.IsConsoleActive ();
-    const success = Settings.LoadConfig (arg);
+    const success = Config.LoadConfig (arg);
     
     if (!success && !console_active)
         Sys.EXIT (-1);

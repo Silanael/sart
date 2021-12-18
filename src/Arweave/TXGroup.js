@@ -48,7 +48,7 @@ class TXGroup extends SARTGroup
 
 
     GetByTXID  (txid)  { return this.GetByID (txid);  }
-    HasTXID    (txid)  { return this.HasID   (txid);  }
+    HasTXID    (txid)  { return this.ContainsID   (txid);  }
     toString   ()      { return "TXGroup";            }   
     GetSort    ()      { return this.SortOrder;       } 
     

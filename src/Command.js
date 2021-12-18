@@ -26,7 +26,6 @@ const SETTINGS       = require ("./SETTINGS").SETTINGS;
 
 
 
-
 class CommandInstance extends SARTObject
 {
     CDef           = null;
@@ -36,6 +35,7 @@ class CommandInstance extends SARTObject
 
     Config         = new Settings.Config ();
     FileOutputDest = null;
+    OutputDests    = [];
 
     StartTime      = null;
     EndTime        = null;
@@ -69,12 +69,13 @@ class CommandInstance extends SARTObject
     PopUC                ()            { return this.Arguments?.PopLC ();  }
     Peek                 ()            { return this.Arguments?.Peek ();  }
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
-    GetOutputDests       ()            { return this.OutputDest_File != null ? this.OutputDest_File : Sys.OUTPUTDEST_STDOUT; }
+    GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
+    GetFileOutputDest    ()            { return this.FileOutputDest; }
 
 
     AppendConfigToGlobal ()            
     { 
-        if (! this.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
+        if (! Sys.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
             return this.OnProgramError ("Failed to append command-config into the global config!");
         else
             return true;
@@ -146,11 +147,21 @@ class CommandInstance extends SARTObject
             return false;
         }
 
+        this.OutputDests = [ ]
+
         // Get command-handler
         this.CDef = this.GetCommandDefFromArgs (args);
         
         if (this.CDef == null)
             return false;
+
+
+        else if (this.GetArgsAmount () < this.CDef.GetMinArgsAmount () )
+        {
+            this.CDef.DisplayHelp ();
+            return Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
+        }
+        
     
         // Good to go
         else
@@ -164,12 +175,16 @@ class CommandInstance extends SARTObject
                 return false;
             }
 
-            if (this.GetArgsAmount () < this.CDef.GetMinArgsAmount () )
+            // Open output-file if need be
+            const filename_out = this.GetSetting (SETTINGS.OutputFilename);
+            if (filename_out != null)
             {
-                this.CDef.DisplayHelp ();
-                return Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
+                this.FileOutputDest = new Sys.OutputDest_File (filename_out);
+                this.GetConfig ().SetSetting (SETTINGS.OutputFileDest, this.FileOutputDest);
+                this.OutputDests = [ this.FileOutputDest ];
             }
-        
+            else
+                this.OutputDests = [ Sys.OUTPUTDEST_STDOUT ]; // TODO move.
 
 
             Sys.VERBOSE ("Executing command '" + this.CDef + "'...");         

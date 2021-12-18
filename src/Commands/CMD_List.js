@@ -15,6 +15,7 @@ const CommandDef = require ("../CommandDef").CommandDef;
 const TXQuery    = require ("../GQL/TXQuery");
 const TXGroup    = require ("../Arweave/TXGroup");
 const Arweave    = require ("../Arweave/Arweave");
+const Analyze    = require ("../Features/TXAnalyze");
 
 
 class CMD_List extends CommandDef
@@ -45,11 +46,12 @@ class SubCMD_Address extends CommandDef
         this.WithArgs 
         (
             new ArgDef ("sort")  .WithHasParam ()                               .WithFunc (SubCMD_Address._SetSort),
-            new ArgDef ("amount").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._SetAmount),
+            new ArgDef ("amount").WithHasParam ()                               .WithFunc (SubCMD_Address._SetAmount),
             new ArgDef ("last")  .WithHasParam ().WithAlias ("latest", "newest").WithFunc (SubCMD_Address._HandleLast),                                                                                            
-            new ArgDef ("oldest").WithHasParam ()                               .WithFunc (SubCMD_Address._HandleOldest)                                                                           
+            new ArgDef ("oldest").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._HandleOldest)                                                                           
         );        
     }
+  
     
     static _HandleLast (param, cmd)
     {
@@ -127,7 +129,7 @@ class SubCMD_Address extends CommandDef
 
         Sys.DEBUG ("Executing with sort:" + cmd.Sort + " amount:" + cmd.First);
 
-        cmd.Query = new TXQuery (cmd.GetMain()?.GetArweave () );
+        cmd.Query = new TXQuery (Sys.GetMain().GetArweave () );
 
         await cmd.Query.ExecuteReqOwner 
         ({ 
@@ -151,18 +153,14 @@ class SubCMD_Address extends CommandDef
             const amount = cmd.Transactions.GetAmount ();
             if (amount > 0)
             {
-                for (const e of cmd.Transactions.AsArray () )
+                for (const t of cmd.Transactions.AsArray () )
                 {                        
-                    const d = e.HasData      () ? "D" : "-";
-                    const t = e.HasTransfer  () ? "T" : "-";
-                    const r = e.HasRecipient () ? "R" : "-";
-                    const flags = d+t+r;
+                    size_bytes_total   += t.GetDataSize_B  ();
+                    fee_winston_total  += t.GetFee_Winston ();
+                    qty_winston_total  += t.GetQTY_Winston ();
     
-                    size_bytes_total   += e.GetDataSize_B  ();
-                    fee_winston_total  += e.GetFee_Winston ();
-                    qty_winston_total  += e.GetQTY_Winston ();
-    
-                    Sys.OUT_TXT (e.GetTXID () + " " + Util.GetDate (e.GetBlockTime () ) + " " + flags + " "); //+ Analyze.GetTXEntryDescription (e) );
+                    t.Output ( {UseListMode: true, WantedFields: ["TXID", "Owner"] } );
+                    //Sys.OUT_TXT (t.GetTXID () + " " + Util.GetDate (t.GetBlockTime () ) + " " + flags + " " + Analyze.GetTXDescription (t) );
                 }
                 Sys.INFO ("---");
                 Sys.INFO ("Listed " + amount + " transactions with total of " 

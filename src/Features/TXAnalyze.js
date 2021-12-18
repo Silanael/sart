@@ -6,12 +6,12 @@
 // TXAnalyze.js - 2021-11-02
 //
 
-const Constants = require ("./CONSTANTS.js");
-const State     = require ("./ProgramState.js");
-const Util      = require ('./Util.js');
-const Sys       = require ('./System.js');
-const Settings  = require ('./Settings.js');
-const ArFSDefs  = require ('./ArFS/CONST_ARFS.js');
+const Constants = require ("../CONSTANTS.js");
+const State     = require ("../ProgramState.js");
+const Util      = require ('../Util.js');
+const Sys       = require ('../System.js');
+const Config    = require ('../Config.js');
+const ArFSDefs  = require ('../ArFS/CONST_ARFS.js');
 const ZLib      = require('zlib');
 
 
@@ -34,48 +34,41 @@ class Pattern
     RequiredTags = [];
     
 
-
-    Matches (tx, tx_tags_decoded = null)
+    Matches (tx)
     { 
-        // Fetch and decode tags from the TX if not provided.
-        if (tx_tags_decoded == null)
-            tx_tags_decoded = Util.DecodeTXTags (tx);
-
-
-        if (tx_tags_decoded == null)
-        {
-            Sys.DEBUG (tx);
-            return Sys.ERR_ONCE ("Transaction provided has no tags!");
-        }
-    
-
+        if (tx == null)
+            return Sys.ERR_PROGRAM ("Pattern.Matches: 'tx' null!");
+        
         let found = false;
         
-
         for (const req_tag of this.RequiredTags)
         {            
             // Start with true if we want to NOT have this tag.
             found = req_tag.value == null;
 
-            for (const tx_tag of tx_tags_decoded)
+            for (const tx_tag of tx.GetTagsAsArray () )
             {                
-                if (tx_tag?.name?.match (req_tag.name) && req_tag.value == null)
+                if (tx_tag.MatchesNameRegex (req_tag.name) )
                 {
-                    if (Settings.IsVerbose () )      
+                    if (req_tag.value == null)
+                    {
+                        if (Config.IsVerbose () )      
                         Sys.VERBOSE ("Contains denied tag " + tx_tag.name + ".", this.GetDescription () );
 
-                    found = false;
-                    break;
-                }
+                        found = false;
+                        break;                        
+                    }
 
-                if (tx_tag?.name?.match (req_tag.name) && tx_tag?.value?.match (req_tag.value) )
-                {              
-                    if (Settings.IsVerbose () )      
+                    else if (tx_tag.HasValueRegex (req_tag.value) )
+                    {
+                        if (Config.IsVerbose () )      
                         Sys.VERBOSE (tx_tag.name + " matches " + this.GetDescription () );
 
-                    found = true;
-                    break;
-                }
+                        found = true;
+                        break;
+                    }
+                } 
+                                
             }
             if (found == false)
                 return false;
@@ -108,17 +101,17 @@ class Pattern
     GetRequirementsAmount () { return this.RequiredTags.length; }
     GetDescription        () { return this.Description != null ?  this.Description : this.name; }
     
-    GetInfo (entry = null, opts = {getcontent: false } )
+    GetInfo (tx = null, opts = {getcontent: false } )
     {
         const results =
         {
             Description: this.GetDescription (),
-            Content:     opts?.getcontent ? this._AnalyzeTxEntry (entry) : null
+            Content:     opts?.getcontent ? this._AnalyzeTx (tx) : null
         }
         return results;
     }
 
-    _AnalyzeTxEntry (entry = null) { return null; }    
+    _AnalyzeTx (tx = null) { return null; }    
 
 }
 
@@ -142,7 +135,7 @@ class Pattern_SPS extends Pattern
         this.WithDescription ("SILSCP-SPS")
     }
 
-    /* Override */ _AnalyzeTxEntry (entry = null)
+    /* Override */ _AnalyzeTx (entry = null)
     {
         if (entry?.GetTag ("Version") != 1)
             return JSON.parse (ZLib.inflateSync (Buffer.from 
@@ -288,17 +281,17 @@ const PATTERNS =
 
 
 
-function AnalyzeTxEntry (entry, opts = { getcontent: true } )
+function AnalyzeTx (tx, opts = { getcontent: true } )
 {
     let str = null;
     let highest_match_reqs = 0;
     let best_match = null;
     let results = { Description: "NO DATA"};
     
-    if (entry == null)
+    if (tx == null)
         return results;
 
-    const tags = entry.GetTags ();
+    const tags = tx.GetTags ();
     
     if (tags != null)
     {                
@@ -312,7 +305,7 @@ function AnalyzeTxEntry (entry, opts = { getcontent: true } )
             pattern     = PATTERNS[C];
             regs_amount = pattern.GetRequirementsAmount ();
 
-            if (pattern.Matches (null, tags) == true && regs_amount >= highest_match_reqs)
+            if (pattern.Matches (tx, tags) == true && regs_amount >= highest_match_reqs)
             {
                 const desc = pattern.GetDescription ();
 
@@ -325,7 +318,7 @@ function AnalyzeTxEntry (entry, opts = { getcontent: true } )
 
                 else if (str != null)
                 {
-                    Sys.VERBOSE ("Pattern " + desc + " may conflict with " + str + ".", entry.GetTXID () )
+                    Sys.VERBOSE ("Pattern " + desc + " may conflict with " + str + ".", tx.GetTXID () )
                     str += " / " + desc;
                 }
                 else
@@ -339,12 +332,12 @@ function AnalyzeTxEntry (entry, opts = { getcontent: true } )
     // No pattern matches 
     if (best_match == null)
     {        
-        if (entry.HasData () )
+        if (tx.HasData () )
         {
-            const ctype = entry.GetTag ("Content-Type");
+            const ctype = tx.GetTagValue ("Content-Type");
             str = ctype != null ? ctype : "Data"; 
         } 
-        if (entry.HasTransfer () ) 
+        if (tx.HasTransfer () ) 
             str = str == null ? "Transfer" : str + " + " + "transfer";
 
         results =
@@ -353,22 +346,22 @@ function AnalyzeTxEntry (entry, opts = { getcontent: true } )
         }
     }
     else
-        results = best_match.GetInfo (entry, opts);
+        results = best_match.GetInfo (tx, opts);
 
     
     return results;
 }
 
 
-function GetTXEntryDescription (entry, opts)
+function GetTXDescription (entry, opts)
 {
     if (opts == null) 
         opts = {};
 
     opts.getcontent = false;
 
-    return AnalyzeTxEntry (entry, opts)?.Description;
+    return AnalyzeTx (entry, opts)?.Description;
 }
 
 
-module.exports = { AnalyzeTxEntry, GetTXEntryDescription }
+module.exports = { AnalyzeTx, GetTXDescription }

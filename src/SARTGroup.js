@@ -8,15 +8,18 @@
 //
 
 const Sys        = require ("./System");
+const Util       = require ("./Util");
 const SARTObject = require ("./SARTObject");
+
 
 
 class SARTGroup extends SARTObject
 {
 
-
     Entries = [];
     ByID    = {};
+    ByName  = {};
+
 
     constructor (...entries)
     {
@@ -29,11 +32,26 @@ class SARTGroup extends SARTObject
 
     GetAmount       ()       { return this.Entries.length;                                                    }        
     GetByID         (id)     { return this.ByID[id];                                                          }
-    HasID           (id)     { return this.GetByID (id) != null;                                              }
+    GetByName       (name)   { return this.ByName[name];                                                      }
+    ContainsID      (id)     { return this.GetByID (id) != null;                                              }
     GetByIndex      (index)  { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
     AsArray         ()       { return this.Entries;                                                           }
     AddAllFromGroup (group)  { return this.AddAll (group.AsArray () ); }
+    toString        ()       { return "SARTGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
 
+
+    GetByNameRegex (regex, case_sensitive = true)
+    {         
+        for (const e of this.AsArray () )
+        {
+            if (e.NameMatchesRegex != null && e.NameMatchesRegex (regex, case_sensitive) )
+                return e;
+
+            else if (e.GetName != null && Util.StrCmp_Regex (regex, e.GetName (), case_sensitive) )
+                return e;
+        }                                          
+        return null;
+    }
 
     Clear ()
     {
@@ -44,6 +62,8 @@ class SARTGroup extends SARTObject
     
     Add (entry, id = null) 
     {
+        Sys.DEBUG ("Adding entry " + entry, this)
+
         if (entry == null)
             Sys.ERR_PROGRAM ("", "Transactions.Add");
 
@@ -56,11 +76,18 @@ class SARTGroup extends SARTObject
             {
                 if (this.ByID[id] != null)
                 {
-                    Sys.VERBOSE ("ID " + id + " already exists in group " + this.GetName + ", not adding it.", entry);
+                    Sys.VERBOSE ("ID " + id + " already exists in group " + this.GetName () + ", not adding it.", entry);
                     return this;
                 }
                 this.ByID[id] = entry;
             }
+
+            const name = entry.GetName ();
+
+            if (this.ByName[name] == null)
+                this.ByName[name] = name;
+            else
+                Sys.WARN ("Name collision - '" + name + "' already present in the group: " + this.ByName[name]?.toString () + " - not overwriting.");
 
             this.Entries.push (entry);
         }

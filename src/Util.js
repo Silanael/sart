@@ -37,7 +37,7 @@ function PopArg (args)
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
 function IsFlag          (arg, flags)            { return flags[arg] != null; }
 function IsFlagWithArg   (arg, flags)            { return flags[arg]?.A; }
-function IsString        (value)                 { return value instanceof String || typeof (value) == "string";}
+function IsString        (value)                 { return value instanceof String || typeof value == "string" || Object.prototype.toString.call (value) === "[object String]";}
 function IsSet           (value)                 { return value != null && value != "" && value.length > 0; }
 function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
@@ -73,7 +73,16 @@ function AppendIfNotNull (base, str, sep = " ")
 }
 
 
-
+function RequireOptional (path)
+{
+    try
+    {
+        const r = require (path);
+        return r;
+    }
+    catch (exception) {}
+    return null;
+}
 
 
 function ContainsString (str, strings, case_insensitive = true, trim = true)
@@ -91,13 +100,10 @@ function ContainsString (str, strings, case_insensitive = true, trim = true)
 
 function _StrCmp_Prep (str, compare_to, lowercase = true)
 { 
-    if (str == null || compare_to == null)
-    {
-        //Sys.ERR ("StrCmp: Invalid input: str:'" + str + "', compare_to:'" + compare_to + "'.");
-        return null;
-    }
+    if (! IsString (str) )        str        = str?.toString ();
+    if (! IsString (compare_to) ) compare_to = compare_to?.toString ();
     
-    else if (!lowercase)
+    if (!lowercase)
         return { str: str, compare_to: compare_to }
 
     else
@@ -112,6 +118,9 @@ function StrCmp (str, compare_to, lowercase = true)
     
     if (input != null)        
         return input.str === input.compare_to; // Yeah, I finally used '===' here.
+
+    else
+        return false;
 }
 
 
@@ -442,4 +451,4 @@ module.exports = {
                    IsFlag, IsFlagWithArg, GetCmdArgs, RequireArgs, RequireParam, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
-                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString };
+                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional };

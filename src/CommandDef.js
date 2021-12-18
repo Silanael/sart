@@ -120,7 +120,7 @@ class SettingCMD extends CommandDef
     {
         const value = this.Value != null ? this.Value : cmd_instance.Pop ();
 
-        if ( cmd_instance.GetMain ()?.SetGlobalSetting (this.Key, value) )
+        if ( Sys.GetMain ()?.SetGlobalSetting (this.Key, value) )
             Sys.INFO ("Global setting '" + this.Key + "' set to '" + value + "'.");
 
         else            

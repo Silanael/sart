@@ -7,19 +7,19 @@
 // Transaction-tag handling
 //
 
-const Util = require('../Util.js');
-const Sys  = require('../System.js');
+const Util       = require('../Util.js');
+const Sys        = require('../System.js');
+const SARTObject = require ("../SARTObject");
 
 
-class TXTag
+class TXTag extends SARTObject
 {
-    Name  = null;
     Value = null;
 
-    constructor (name, value) { this.Name = name; this.Value = value; }
+    constructor (name, value) { super (name); this.Name = name; this.Value = value; }
 
     toString     () { return this.Name + ":" + this.Value; }
-    GetName      () { return this.Name;  }
+    
     GetValue     () { return this.Value; }
     GetSizeBytes () { return Buffer.byteLength (this.Name) + Buffer.byteLength (this.Value); }
 
@@ -32,10 +32,21 @@ class TXTag
 
     }
 
+   
     HasValue (value, case_sensitive = true)
     {
         return Util.StrCmp (this.Value, value, !case_sensitive);
     }
+
+
+    HasValueRegex (value_regex, case_sensitive = true)
+    {
+        if (value_regex == null)
+            return this.Value == value_regex;
+
+        return Util.StrCmp_Regex (value_regex, this.Value, !case_sensitive);
+    }
+
 
 }
 

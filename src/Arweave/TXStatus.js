@@ -4,6 +4,7 @@ const State       = require ("../ProgramState");
 const Config      = require ("../Config");
 const { SETTINGS} = require ("../SETTINGS");
 const Arweave     = require ("./Arweave.js");
+const ByTXQuery   = require ("../GQL/ByTXQuery");
 
 
 
@@ -37,13 +38,16 @@ class TXStatus
         // that are contained inside bundles, yet a GQL-query is able to fetch them.
         if (txstatus != null && txstatus.status == Constants.TXSTATUS_NOTFOUND)
         {
-            Sys.DEBUG ("Arweave.GetTXStatus returned 404, trying with a GQL-query..", txid);
+            Sys.DEBUG ("Arweave.GetTXStatus returned 404"); //, trying with a GQL-query..", txid);
             
-            const query = new GQL.ByTXQuery (this);
+            // TODO
+            /*
+            const query = new ByTXQuery (Arweave);
             const res = await query.Execute (txid);
 
             if (res != null)
             {
+                const tx = Transaction.FROM
                 if (res.IsMined () )
                     txstatus = { status: Constants.TXSTATUS_OK, confirmed: {} };
                 else 
@@ -51,6 +55,7 @@ class TXStatus
             }
             else
                 txstatus = { status: Constants.TXSTATUS_NOTFOUND, confirmed: null };
+            */
         }
 
         this.SetToArweaveTXStatus (txstatus);                

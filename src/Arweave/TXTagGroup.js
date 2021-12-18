@@ -7,7 +7,7 @@
 // A group of transaction tags.
 //
 
-const SARTObject   = require ("../SARTObject");
+const SARTGroup    = require ("../SARTGroup");
 const State        = require ("../ProgramState");
 const Sys          = require ("../System");
 const Constants    = require ("../CONSTANTS");
@@ -17,11 +17,8 @@ const Util         = require ("../Util");
 const TXTag        = require ("./TXTag");
 
 
-class TXTagGroup extends SARTObject
+class TXTagGroup extends SARTGroup
 {
-
-    List           = [];
-    ByName         = {};
     NameValuePairs = {};
     Duplicates     = false;
     TotalBytes     = null;
@@ -29,20 +26,20 @@ class TXTagGroup extends SARTObject
 
     GetList          () { return this.List;           }
     GetNameValueObj  () { return this.NameValuePairs; }
-    HasDuplicates    () { return this.Duplicates || this.List?.length != Object.keys (this.ByName)?.length; }
+    HasDuplicates    () { return this.Duplicates || this.AsArray ()?.length != Object.keys (this.ByName)?.length; }
     GetTotalBytes    () { if (this.TotalBytes == null) this.Validate (); return this.TotalBytes; }
-
+    toString         () { return "TXTagGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
 
     Validate ()
     {
         if (this.HasDuplicates () )
         {
-            Sys.ERR ("TagGroup has duplicate entries.", "TXTagGroup.Validate");
+            this.OnError ("TXTagGroup has duplicate tag names.", this);
             return false;
         }
 
         let total_bytes = 0;
-        for (const t of this.List)
+        for (const t of this.AsArray () )
         {
             total_bytes += t.GetSizeBytes ();            
         }
@@ -61,32 +58,6 @@ class TXTagGroup extends SARTObject
     }
 
 
-    Add (txtag, opts = {add_duplicates: false} )
-    {
-        if (txtag == null)
-            return this.OnProgramError ("A tag failed to be added - parameter null.");
-
-        if (opts.add_duplicates == null)
-            opts.add_duplicates = false;
-
-        const tagname  = txtag.GetName ();
-        const existing = this.ByName [tagname];
-
-        if (existing != null)
-        {
-            if (!opts.add_duplicates)
-                return this.OnError ("Duplicate tag '" + tagname + "' - will not add.");
-
-            else
-                this.OnWarning ("Duplicate tag '" + tagname + "' - added, but fetching by name won't be reliable.");
-
-            this.Duplicates = true;
-        }
-
-        this.List.push (txtag);
-        this.ByName[tagname] = txtag;
-        this.NameValuePairs[tagname] = txtag.GetValue ();
-    }
 
 
     ToGQL ()
@@ -138,27 +109,15 @@ class TXTagGroup extends SARTObject
     } 
 
 
-    GetTag (tag, case_sensitive = true)
+    GetTag      (tag)                          { return this.GetByName      (tag);                   }
+    GetTagRegex (regex, case_sensitive = true) { return this.GetByNameRegex (regex, case_sensitive); }
+    HasTag      (tag)                          { return this.GetTag (tag) != null;                   }
+    
+    HasTagRegex (tag_regex, value_regex = null, case_sensitive = true)
     {
-        if (!tag)
-            return null;        
-        else
-            return this.List?.find (e => Util.StrCmp (e?.GetName (), tag, !case_sensitive) );
+        const tag_obj = this.GetTagRegex (tag_regex, case_sensitive);
+        return tag_obj != null && (value_regex == null || tag_obj.HasValueRegex (value_regex, case_sensitive) );
     }
-
-
-    GetValue (tag, case_sensitive = true)
-    {
-        return this.GetTag (tag, case_sensitive)?.GetValue ();
-    }
-
-
-    HasTag (tag, value = null, case_sensitive = true)
-    {
-        const tag_obj = this.GetTag (tag, case_sensitive);
-        return tag_obj != null && (value == null || tag_obj.HasValue (value, case_sensitive) );
-    }
-
 
 
     static FROM_QGL_EDGE (edge) 
@@ -224,8 +183,6 @@ class TXTagGroup extends SARTObject
 
         return null;
     }
-
-    toString () { return this.List.toString (); }
 
 }
 
