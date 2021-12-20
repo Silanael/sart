@@ -343,7 +343,7 @@ function OUT_OBJ (obj, args = new OutputParams () )
 
         else
         {
-            fmt_handler.OutputObjects ([obj], args);
+            fmt_handler.OutputObjects (Array.isArray (obj) ? obj : [obj], args);
             return true;
         }
     }

@@ -108,6 +108,12 @@ class SARTGroup extends SARTObject
         return true;
     }
 
+
+    Output (opts = {UseListMode: true, WantedFields: null } )
+    {
+        Sys.OUT_OBJ (this.AsArray (), opts);
+    }
+
 }
 
 

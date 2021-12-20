@@ -159,9 +159,12 @@ class SubCMD_Address extends CommandDef
                     fee_winston_total  += t.GetFee_Winston ();
                     qty_winston_total  += t.GetQTY_Winston ();
     
-                    t.Output ( {UseListMode: true, WantedFields: ["TXID", "Owner"] } );
+                    //t.Output ( {UseListMode: true, WantedFields: ["TXID", "Owner"] } );
                     //Sys.OUT_TXT (t.GetTXID () + " " + Util.GetDate (t.GetBlockTime () ) + " " + flags + " " + Analyze.GetTXDescription (t) );
                 }
+
+                cmd.Transactions.Output ( {UseListMode: true, WantedFields: ["TXID", "Owner"] } );
+
                 Sys.INFO ("---");
                 Sys.INFO ("Listed " + amount + " transactions with total of " 
                             + Arweave.WinstonToAR (qty_winston_total)      + " AR transferred, "
