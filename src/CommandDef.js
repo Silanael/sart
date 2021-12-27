@@ -1,7 +1,8 @@
-const SARTDef   = require ("./SARTDefinition");
-const Arguments = require ("./Arguments");
-const Util      = require ("./Util");
-const Sys       = require ("./System");
+const SARTDef      = require ("./SARTDefinition");
+const Arguments    = require ("./Arguments");
+const Util         = require ("./Util");
+const Sys          = require ("./System");
+const { SETTINGS } = require ("./SETTINGS");
 
 
 
@@ -10,7 +11,6 @@ const Sys       = require ("./System");
 class CommandDef extends SARTDef
 {   
 
-    Aliases         = []; 
     MinArgsAmount   = 0;
     
     ArgDefs         = new Arguments.ArgDefs ();
@@ -22,36 +22,48 @@ class CommandDef extends SARTDef
     ExecFunc        = null;
     OutFunc         = null;
     AsActiveCommand = true;
+    AsListByDefault = false;
+
+    ListFieldsSettingKey  = null;
+    EntryFieldsSettingKey = null;
     
 
-    /* Overrsidable, this implementation does nothing. */
+    /* Overridable, these implementations do nothing. */
     async OnExecute           (cmd_instance)  { if (this.ExecFunc != null) return await this.ExecFunc (cmd_instance); else return true; }
     async OnOutput            (cmd_instance)  { if (this.OutFunc  != null) return await this.OutFunc  (cmd_instance); else return true; }    
           GetCustomSubCommand (next_arg_peek) { return null; }
-
+     
 
     constructor (command_name)
     {
         super (command_name);
     }   
+    
 
+    WithArgs              (...argdefs)  { this.ArgDefs.AddAll (...argdefs); }    
+    WithWantedFiedldsArg  ()            { this.WithArgs (new ArgDef ("fields").WithHasParam ().WithAlias ("f").WithFunc (CommandDef._HandleWantedFields) ); }
+    WithMinArgsAmount     (amount)      { this.MinArgsAmount         = amount;            return this; }
+    WithMatchFunc         (func)        { this.MatchFunc             = func;              return this; }
+    WithFunc              (exec, out)   { this.ExecFunc              = exec; 
+                                          this.OutFunc               = out;               return this; }
+    WithHelpLines         (helplines)   { this.Helplines             = helplines;         return this; }
+    WithSubcommands       (subcommands) { this.Subcommands           = subcommands;       return this; }
+    WithListFieldsKey     (setting)     { this.ListFieldsSettingKey  = setting;           return this; }
+    WithEntryFieldsKey    (setting)     { this.EntryFieldsSettingKey = setting;           return this; }
+    WithAsListByDefault   ()            { this.AsListByDefault       = true;              return this; }
+    WithAsEntriesByDefault()            { this.AsListByDefault       = false;             return this; }
 
-    WithArgs              (...argdefs)    { this.ArgDefs.AddAll (...argdefs); }
-    WithAliases           (...aliases)    { this.Aliases = this.Aliases.concat (aliases); return this; }
-    WithMinArgsAmount     (amount)        { this.MinArgsAmount = amount;                  return this; }
-    WithMatchFunc         (func)          { this.MatchFunc     = func;                    return this; }
-    WithFunc              (exec, out)     { this.ExecFunc      = exec; 
-                                            this.OutFunc       = out;                     return this; }
-    WithHelpLines         (helplines)     { this.Helplines     = helplines;               return this; }
-    WithSubcommands       (subcommands)   { this.Subcommands   = subcommands;             return this; }
-   
-    GetMinArgsAmount      ()              { return this.MinArgsAmount; }
-    GetSubcommands        ()              { return this.Subcommands;   }
-    HasSubcommands        ()              { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
-    RunAsActiveCommand    ()              { return this.AsActiveCommand == true; }
-    toString              ()              { return this.GetName (); }
+    GetMinArgsAmount      ()            { return this.MinArgsAmount; }
+    GetSubcommands        ()            { return this.Subcommands;   }
+    HasSubcommands        ()            { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
+    RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }
+    toString              ()            { return this.GetName (); }
+    
+    IsOutputAsList        (cmd)         { const s = cmd.GetEffectiveSetting (SETTINGS.OutputAsList); return s != null ? s : this.AsListByDefault; }
+    GetWantedFields       (cmd)         { return cmd.GetWantedFields (); }
+    GetSelectedFields     (cmd)         { return cmd.HasWantedFields () ? cmd.GetWantedFields (cmd) : this.GetDefaultFields (cmd); }
+    GetDefaultFields      (cmd)         { return cmd.GetEffectiveSetting (this.IsOutputAsList (cmd) ? this.ListFieldsSettingKey : this.EntryFieldsSettingKey); }
 
-    GetSubcommand         (cmd)           { return }
 
     Matches (name)
     {                        
@@ -97,6 +109,10 @@ class CommandDef extends SARTDef
                     
     }
     
+    static _HandleWantedFields (param, cmd)
+    {        
+        cmd.WantedFields = param?.split (Sys.GetMain ()?.GetSetting (SETTINGS.MultiInputSeparatorChr) );
+    }
 
 }
 

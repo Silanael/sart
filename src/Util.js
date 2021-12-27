@@ -51,7 +51,8 @@ function AppendToArray   (array = [], val)       { if (array == null) array = []
 function CopyKeysToObj   (src, dest)             { if (src == null || dest == null) return; for (const e of Object.entries (src) ) { dest[e[0]] = e[1]; }  }
 async function Delay     (ms)                    { await new Promise (r => setTimeout (r, ms) ); }
 function AmountStr       (amount, sing, plur)    { return amount <= 0 || amount == null ? "no " + plur : amount == 1 ? "one " + sing : amount + " " + plur; }
-
+function GetTopStrLen    (str1, str2)            { const s1len = str1 != null ? str1.length : 0; const s2len = str2 != null ? str2.length : 0; 
+                                                   return s1len > s2len ? s1len : s2len; }
 
 function AssignIfNotNull (dest, varname, value)
 {
@@ -418,7 +419,7 @@ function GetCmdArgs (argv, cmd_pos, flags)
 
 
 module.exports = {  
-                   IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension,
+                   IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional };

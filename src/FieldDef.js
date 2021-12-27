@@ -32,6 +32,7 @@ class FieldDef extends SARTBase
         super (name);
     }
     
+    
     WithFunction        (func)           { this.GetterFunction      = func;        return this; }
     WithRequiredFetches (...fetch_names) { this.RequiredDataFetches = fetch_names; return this; }
     
@@ -41,6 +42,7 @@ class FieldDef extends SARTBase
         this.RecursiveDepth = depth;
         return this;
     }
+
 
     GetFieldName       ()                              { return this.GetName (); }
     GetPropertyName    ()                              { return this.PropertyName != null ? this.PropertyName : this.GetFieldName (); }    

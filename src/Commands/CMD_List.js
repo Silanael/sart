@@ -16,6 +16,7 @@ const TXQuery    = require ("../GQL/TXQuery");
 const TXGroup    = require ("../Arweave/TXGroup");
 const Arweave    = require ("../Arweave/Arweave");
 const Analyze    = require ("../Features/TXAnalyze");
+const SETTINGS   = require ("../SETTINGS.js").SETTINGS;
 
 
 class CMD_List extends CommandDef
@@ -40,19 +41,100 @@ class SubCMD_Address extends CommandDef
     Name          = "ADDRESS";
     MinArgsAmount = 1;
 
+
+
     constructor ()
     {
         super ();
+
         this.WithArgs 
         (
             new ArgDef ("sort")  .WithHasParam ()                               .WithFunc (SubCMD_Address._SetSort),
             new ArgDef ("amount").WithHasParam ()                               .WithFunc (SubCMD_Address._SetAmount),
             new ArgDef ("last")  .WithHasParam ().WithAlias ("latest", "newest").WithFunc (SubCMD_Address._HandleLast),                                                                                            
-            new ArgDef ("oldest").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._HandleOldest)                                                                           
-        );        
+            new ArgDef ("oldest").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._HandleOldest),            
+        );
+
+        this.WithListFieldsKey   (SETTINGS.ListAddressFields_List);
+        this.WithEntryFieldsKey  (SETTINGS.ListAddressFields_Entry);
+        this.WithAsListByDefault ();
     }
   
     
+
+    async OnExecute (cmd)
+    {
+        if (! cmd.RequireAmount (1, "Arweave-address required.") )
+            return false;
+
+        const address = cmd.Pop ();
+
+        if (! Util.IsArweaveHash     (address) && 
+            ! cmd.OnOverridableError ("'" + address + "' doesn't seem to be a valid Arweave-address. Use --force to proceed anyway.") )
+            return false;
+
+
+        // We still have argument(s), treat next as field list.
+        if (cmd.GetArgsAmount () > 0 && !cmd.HasWantedFields () )
+        {
+            const fields = cmd.Pop ();
+            Sys.DEBUG ("Treating argument '" + fields + " as fields.");
+            CommandDef._HandleWantedFields (fields, cmd);
+        }
+
+        Sys.DEBUG ("Executing with sort:" + cmd.Sort + " amount:" + cmd.First);
+
+        cmd.Query = new TXQuery (Sys.GetMain().GetArweave () );
+
+        await cmd.Query.ExecuteReqOwner 
+        ({ 
+            first: cmd.First, 
+            owner: address,  
+            sort:  cmd.Sort, 
+            id:    null
+        });
+
+        cmd.Transactions = await TXGroup.FROM_GQLQUERY (cmd.Query);
+    }
+
+
+
+    OnOutput (cmd)
+    {
+        if (cmd.Transactions != null)
+        {
+            let size_bytes_total  = 0;
+            let fee_winston_total = 0;
+            let qty_winston_total = 0;
+                    
+            const amount = cmd.Transactions.GetAmount ();
+            if (amount > 0)
+            {
+                for (const t of cmd.Transactions.AsArray () )
+                {                        
+                    size_bytes_total   += t.GetDataSize_B  ();
+                    fee_winston_total  += t.GetFee_Winston ();
+                    qty_winston_total  += t.GetQTY_Winston ();                
+                }
+                
+                cmd.Transactions.Output ( {UseListMode: this.IsOutputAsList (cmd), WantedFields: this.GetSelectedFields (cmd) } );
+
+                Sys.INFO ("---");
+                Sys.INFO ("Listed " + amount + " transactions with total of " 
+                            + Arweave.WinstonToAR (qty_winston_total)      + " AR transferred, "
+                            + Util.GetSizeStr     (size_bytes_total, true) + " of data stored and "
+                            + Arweave.WinstonToAR (fee_winston_total)      + " AR spent in transaction fees.");
+            }
+            else
+                Sys.INFO ("Address " + address + " has no transactions.");
+            
+        }
+    }
+
+
+
+
+
     static _HandleLast (param, cmd)
     {
         return SubCMD_Address._SetAmount (param, cmd) & // DON'T TOUCH!
@@ -116,66 +198,7 @@ class SubCMD_Address extends CommandDef
         }        
     }
 
-    async OnExecute (cmd)
-    {
-        if (! cmd.RequireAmount (1, "Arweave-address required.") )
-            return false;
 
-        const address = cmd.Pop ();
-
-        if (! Util.IsArweaveHash     (address) && 
-            ! cmd.OnOverridableError ("'" + address + "' doesn't seem to be a valid Arweave-address. Use --force to proceed anyway.") )
-            return false;
-
-        Sys.DEBUG ("Executing with sort:" + cmd.Sort + " amount:" + cmd.First);
-
-        cmd.Query = new TXQuery (Sys.GetMain().GetArweave () );
-
-        await cmd.Query.ExecuteReqOwner 
-        ({ 
-            first: cmd.First, 
-            owner: address,  
-            sort:  cmd.Sort, 
-            id:    null
-        });
-
-        cmd.Transactions = await TXGroup.FROM_GQLQUERY (cmd.Query);
-    }
-
-    OnOutput (cmd)
-    {
-        if (cmd.Transactions != null)
-        {
-            let size_bytes_total  = 0;
-            let fee_winston_total = 0;
-            let qty_winston_total = 0;
-                    
-            const amount = cmd.Transactions.GetAmount ();
-            if (amount > 0)
-            {
-                for (const t of cmd.Transactions.AsArray () )
-                {                        
-                    size_bytes_total   += t.GetDataSize_B  ();
-                    fee_winston_total  += t.GetFee_Winston ();
-                    qty_winston_total  += t.GetQTY_Winston ();
-    
-                    //t.Output ( {UseListMode: true, WantedFields: ["TXID", "Owner"] } );
-                    //Sys.OUT_TXT (t.GetTXID () + " " + Util.GetDate (t.GetBlockTime () ) + " " + flags + " " + Analyze.GetTXDescription (t) );
-                }
-
-                cmd.Transactions.Output ( {UseListMode: true, WantedFields: ["TXID", "Owner"] } );
-
-                Sys.INFO ("---");
-                Sys.INFO ("Listed " + amount + " transactions with total of " 
-                            + Arweave.WinstonToAR (qty_winston_total)      + " AR transferred, "
-                            + Util.GetSizeStr     (size_bytes_total, true) + " of data stored and "
-                            + Arweave.WinstonToAR (fee_winston_total)      + " AR spent in transaction fees.");
-            }
-            else
-                Sys.INFO ("Address " + address + " has no transactions.");
-            
-        }
-    }
 }
 
 

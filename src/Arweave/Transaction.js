@@ -28,27 +28,29 @@ const Field        = require ("../FieldDef");
 
 const FIELDS =
 [
-    new Field ("Type"),
-    new Field ("Network"),
-    new Field ("TXID"),
-    new Field ("Owner"),         
-    new Field ("Flags")   .WithFunction (function (t) {t.GetFlagStr (); } ),           
-    new Field ("FlagsInt").WithFunction (function (t) {t.GetFlagInt (); } ),
-    new Field ("Target"),//.WithFunction (function (t) { return t?.HasRecipient () ? t.GetRecipient () : "NONE"} ),
-    new Field ("Fee_AR"),           
-    new Field ("Fee_Winston"),        
-    new Field ("Quantity_AR"),      
-    new Field ("Quantity_Winston"), 
-    new Field ("DataSize_Bytes"),
+    new Field ("ObjectType").WithAliases ("ObjType","OType"),
+    new Field ("Network").WithAliases ("NET"),
+    new Field ("TXID").WithAliases ("ID"),
+    new Field ("Owner").WithAliases ("Address"),         
+    new Field ("Flags")   .WithFunction (function (t) {return t.GetFlagStr (); } ),           
+    new Field ("FlagsInt").WithFunction (function (t) {return t.GetFlagInt (); } ),
+    new Field ("Target").WithAliases ("Recipient", "Destination", "Dest"),
+    new Field ("Fee_AR").WithAliases ("Fee_AR"),
+    new Field ("Fee_Winston").WithAliases ("Fee", "Fee_W"),  
+    new Field ("Quantity_AR").WithAliases ("QTY_AR","TransferAmount_AR"),
+    new Field ("Quantity_Winston").WithAliases ("QTY","QTY_W","TransferAmount","TransferAmount_Winston","TransferAmount_W"), 
+    new Field ("DataSize_Bytes").WithAliases ("DataSize","DataBytes","Bytes","Size","SizeB", "Size_B"),
     new Field ("TagsTotalSizeB").WithFunction (function (t) { return t?.Tags?.GetTotalBytes (); } ),
-    new Field ("DataRoot"),         
-    new Field ("DataLocation"),             
-    new Field ("BlockID"),
-    new Field ("BlockDate"),
-    new Field ("BlockHeight"),        
-    new Field ("BlockUNIXTime"),        
+    new Field ("DataRoot").WithAliases ("DRoot"),         
+    new Field ("DataLocation").WithAliases ("DataLoc", "DLoc"),             
+    new Field ("BlockID").WithAliases ("Block"),
+    new Field ("BlockDate").WithAliases ("Date", "BDate"),
+    new Field ("BlockHeight").WithAliases ("Height", "BHeight"),
+    new Field ("BlockUNIXTime").WithAliases ("UNIXTime", "UTime"),
     new Field ("TXAnchor"),     
     new Field ("Tags").WithFunction (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
+    new Field ("ContentType").WithFunction (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
+                             .WithAliases ("Content-Type","CType","MIMEtype"),
     new Field ("State").WithRecursive (),
     new Field ("FetchedFrom").WithFunction (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
     new Field ("Warnings").WithRecursive (),
@@ -91,7 +93,7 @@ class Transaction extends SARTObject
       
     
     /** Overridable. This implementation does nothing. */
-    __OnTXFetched () {}
+    __OnTXFetched () {};               
 
 
     constructor (txid = null)

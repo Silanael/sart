@@ -10,10 +10,12 @@
 const CONSTANTS  = require ("./CONSTANTS");
 const Sys        = require ("./System.js");
 const Util       = require ("./Util.js");
-const FieldData  = require ("./FieldData");
+const FieldData  = require ("./FieldData").FieldData;
+const FieldDataG = require ("./FieldData").FieldDataGroup;
 const FieldDef   = require ("./FieldDef");
 const SARTBase   = require ("./SARTBase");
-const OutputArgs = Sys.OutputParams;
+const OutputArgs = require ("./Output").OutputParams;
+const FieldGroup = require ("./FieldGroup");
 
 
 class SARTObject extends SARTBase
@@ -25,7 +27,7 @@ class SARTObject extends SARTBase
     Warnings           = null;
 
     static FIELDS      = [];
-    static FIELDGROUPS = [];
+    static FIELDGROUPS = [FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None];
 
  
     constructor (name = null)
@@ -47,20 +49,47 @@ class SARTObject extends SARTBase
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
+
+    GetFlagInt ()
+    {
+        let flags = 0;
+        
+        if (this.HasErrors   () ) flags |= CONSTANTS.FLAGS.HASERRORS;
+        if (this.HasWarnings () ) flags |= CONSTANTS.FLAGS.HASWARNINGS;
+
+        return flags;
+    }
+
     
 
-    static GET_FIELD_DEFS (field_names = []) 
+    GetFieldDefs (field_names = []) 
     { 
+        
         if (field_names == null || field_names.length <= 0)
-            return this.FIELDS; 
+            return this.constructor.FIELDS; 
 
         else
         {
+            // Process groups
+            const final_names = [];
+
+            for (const fname of field_names)
+            {
+                const group = this.GetFieldGroup (fname);
+                if (group != null)
+                {
+                    Sys.DEBUG ("Adding fields from FieldGroup " + group + "...");
+                    final_names.push (...group.GetFieldsInGroup (this) );
+                }
+                else
+                    final_names.push (fname);
+            }
+
             const field_defs = [];
             // Include only the given set of fields.
-            for (const fname of field_names)
+            for (const fname of final_names)
             {      
-                const field = this.GET_FIELD_DEF (fname);
+                const field = this.GetFieldDef (fname);
 
                 if (field != null)
                     field_defs.push (field);
@@ -73,9 +102,9 @@ class SARTObject extends SARTBase
         
     }
 
-    static GET_FIELD_DEF (field_name, case_sensitive = false)
-    {            
-        for (const f of this.FIELDS)
+    GetFieldDef (field_name, case_sensitive = false)
+    {                    
+        for (const f of this.constructor.FIELDS)
         {            
             if (f.HasName (field_name, case_sensitive) )
                 return f;
@@ -83,6 +112,15 @@ class SARTObject extends SARTBase
         return null;
     }
 
+    GetFieldGroup (group_name, case_sensitive = false)
+    {                    
+        for (const f of this.constructor.FIELDGROUPS)
+        {            
+            if (f.HasName (group_name, case_sensitive) )
+                return f;
+        }
+        return null;
+    }
 
     GetFieldValue (field, case_sensitive = false)
     {
@@ -100,29 +138,27 @@ class SARTObject extends SARTBase
             return null;
     }
     
-    GetFlagInt ()
-    {
-        let flags = 0;
-        
-        if (this.HasErrors   () ) flags |= CONSTANTS.FLAGS.HASERRORS;
-        if (this.HasWarnings () ) flags |= CONSTANTS.FLAGS.HASWARNINGS;
-
-        return flags;
-    }
 
     GetDataForFields (fields = [])
     {
-        const field_data = [];
+        const field_data = new FieldDataG ();
 
         // Parameter omitted, include all defined fields.
         if (fields == null || fields.length <= 0)
         {
             Sys.VERBOSE ("No field-list provided - displaying all of them.");
             
-            for (const fname of this.Fields)
+            for (const fname of this.constructor.FIELDS)
             {
                 if (fname != null)
-                    field_data.push (this.GetFieldData (fname) )                    
+                {
+                    let data = this.GetFieldData (fname);
+
+                    if (data != null)
+                        field_data.Add (data)
+                    else
+                        this.OnProgramError ("GetDataForFields: GetFieldData for " + fname + " returned null!");             
+                }
                 else
                     this.OnProgramError ("Could not fetch field '" + fname + "' even though it's listed as object fields.");
             }
@@ -134,7 +170,7 @@ class SARTObject extends SARTBase
             const field = this.GetFieldData (f);
 
             if (field != null)
-                field_data.push (field);
+                field_data.Add (field);
 
             else
                 Sys.ERR ("Unrecognized field: '" + f + "'.");
@@ -182,9 +218,9 @@ class SARTObject extends SARTBase
 
 
     Output (output_args = new OutputArgs () )
-    {        
+    {                
         //Sys.OUT_OBJ (this.GetFieldsAsObject (fields), { recursive: this.GetRecursiveFields () } );         
-        Sys.OUT_OBJ (this, output_args);
+        Sys.GetMain ().OutputObjects (this, output_args);
     }
 
 }

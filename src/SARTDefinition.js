@@ -7,30 +7,24 @@
 // Base class for a definition-style classes.
 //
 
-const Util = require ("./Util");
+const Util     = require ("./Util");
+const SARTBase = require ("./SARTBase");
 
 
-class SARTDefinition
+class SARTDefinition extends SARTBase
 {
-
-    Name              = null;
+    
     Description       = null;
-    NameCaseSensitive = false;
-
+    
     constructor (name)
     {
-        this.Name = name;
+        super ();
+        this.WithName (name);        
     }
 
-    WithDescription   (description)  { this.Description = description; return this; }
-    WithCaseSensitive ()             { this.NameCaseSensitive = true;  return this; }
-
-    GetName           ()             { return this.Name; }
+    WithDescription   (description)  { this.Description = description; return this; }        
     GetDescription    ()             { return this.Description; }
-    GetID             ()             { return this.GetName (); }
     
-    HasName           (name, case_sensitive = this.NameCaseSensitive) { return Util.StrCmp (name, this.GetName (), !case_sensitive); }
-
 }
 
 module.exports = SARTDefinition;

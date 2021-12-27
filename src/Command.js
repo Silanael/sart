@@ -36,6 +36,7 @@ class CommandInstance extends SARTObject
     Config         = new Settings.Config ();
     FileOutputDest = null;
     OutputDests    = [];
+    WantedFields   = null;
 
     StartTime      = null;
     EndTime        = null;
@@ -62,6 +63,7 @@ class CommandInstance extends SARTObject
     GetCommandName       ()            { return this.CommandName;                       }
     HasSetting           (key)         { return this.Config.HasSetting (key);           }
     GetSetting           (key)         { return this.Config.GetSetting (key);           }
+    GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting (key);       }
     GetConfig            ()            { return this.Config;                            }
     GetArgsAmount        ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
     Pop                  ()            { return this.Arguments?.Pop   ();  }
@@ -70,7 +72,9 @@ class CommandInstance extends SARTObject
     Peek                 ()            { return this.Arguments?.Peek ();  }
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
-    GetFileOutputDest    ()            { return this.FileOutputDest; }
+    GetFileOutputDest    ()            { return this.FileOutputDest;       }
+    HasWantedFields      ()            { return this.WantedFields != null; }
+    GetWantedFields      ()            { return this.WantedFields;         }
 
 
     AppendConfigToGlobal ()            

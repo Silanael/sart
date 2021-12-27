@@ -20,6 +20,7 @@ const SARTBase      = require ("./SARTBase");
 
 
 
+
 // Constants
 const FIELD_RECURSIVE    = "__SART-RECURSIVE"
 const FIELD_ANSI         = "__ANSI";
@@ -238,62 +239,8 @@ const OUTPUTDESTS_STDERR = [ OUTPUTDESTS.STDERR ];
 
 
 
-class OutputParams
-{
-    WantedFields = null;
-    UseListMode  = null;
-}
-
-class OutputFormat extends SARTBase 
-{
-    FileExtension = null;
 
 
-    OutputObjects (objects = [], params = new OutputParams () )
-    {
-        if (objects == null || objects.length <= 0)
-            return ERR_PROGRAM ("OutputFormat.OutputObjects: No objects given.");
-
-        if (params == null)
-            params = new OutputParams ();
-
-        const setting_list_mode = GetMain ().GetSetting (SETTINGS.OutputAsList);
-
-        if (setting_list_mode != null)
-            params.UseListMode = setting_list_mode;
-
-            
-        const field_defs = objects?.[0] != null ? objects[0].constructor.GET_FIELD_DEFS (params?.WantedFields) : null;
-
-        if (field_defs == null)
-            return ERR_PROGRAM ("No fields could be fetched for output-objects!");
-
-    
-        this.__DoOutputFieldCaptions (field_defs);
-
-        for (const obj of objects)
-        {
-            this.__DoOutputObject (obj, obj.GetDataForFields (field_defs), params);
-        }
-    }
-
-
-    /** Overridable. This implementation does nothing. */
-    __DoOutputFieldCaptions (field_names = [],                                  ) {}
-    __DoOutputObject        (obj, field_data = [], params = new OutputParams () ) {}
-
-    
-    __Out_Line   (line)  { OUT_TXT     (line); }
-    __Out_RawTXT (txt)   { OUT_TXT_RAW (txt);  }
-    __Out_BIN    (data)  { OUT_BIN     (data); }
-}
-
-
-const OUTPUTFORMATS =
-{
-    TXT:   new OutputDest_STDOUT (),
-    STDERR: new OutputDest_STDERR (),
-}
 
 
 
@@ -329,25 +276,6 @@ function OUT_TXT_RAW (str)
 }
 
 
-function OUT_OBJ (obj, args = new OutputParams () )
-{
-    if (Main == null)
-        return ERR_PROGRAM_ONCE ("OUT_OBJ: Called before 'Main' is set!");
-
-    else
-    {
-        const fmt_handler = Main.GetActiveOutputFormat ();
-        
-        if (fmt_handler == null)
-            return ERR_PROGRAM_ONCE ("No suitable output-handler found!");
-
-        else
-        {
-            fmt_handler.OutputObjects (Array.isArray (obj) ? obj : [obj], args);
-            return true;
-        }
-    }
-} 
 
 /** Fields for 'recursive': 'depth', integer */
 /*
@@ -707,7 +635,6 @@ module.exports =
     OUT_TXT,
     OUT_TXT_RAW,
     OUT_BIN,
-    OUT_OBJ,
     SET_RECURSIVE_OUT,
     ANSI,
     ANSIRED,
@@ -740,7 +667,5 @@ module.exports =
     OUTPUTDESTS_STDOUT,
     OUTPUTDESTS_STDERR,
     SetMain,
-    GetMain,
-    OutputParams,
-    OutputFormat,
+    GetMain,    
 };

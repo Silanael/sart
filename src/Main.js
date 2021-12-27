@@ -11,6 +11,8 @@
 
 
 // Imports
+const FS            = require ("fs");
+
 const Package       = require ("../package.json");
 
 const Constants     = require ("./CONSTANTS.js");
@@ -24,12 +26,15 @@ const Sys           = require ('./System.js');
 const Config        = require ('./Config.js');
 const SETTINGS      = require ("./SETTINGS").SETTINGS;
 const Util          = require ('./Util.js');
-const Arweave       = require("./Arweave/Arweave");
+const Arweave       = require ("./Arweave/Arweave");
+const SARTGroup     = require ("./SARTGroup");
 const OutputF_TXT   = require ("./OutputFormats/OutputFormat_TXT");
 const OutputF_JSON  = require ("./OutputFormats/OutputFormat_JSON");
 const OutputF_CSV   = require ("./OutputFormats/OutputFormat_CSV");
+const Output        = require ("./Output");
+const OutputParams  = Output.OutputParams;
 
-const FS            = require ("fs");
+
 
 
 
@@ -88,8 +93,21 @@ class Main
         else
             return null;
     }
-
     
+
+    OutputObjects (objs, args = new OutputParams () )
+    {     
+        const fmt_handler = this.GetActiveOutputFormat ();
+                
+        if (fmt_handler == null)
+            return Sys.ERR_PROGRAM_ONCE ("No suitable output-handler found!");
+        
+        else
+        {
+            fmt_handler.OutputObjects (objs instanceof SARTGroup ? objs : new SARTGroup ().WithObj (objs), args);
+            return true;
+        }        
+    }
     
 
 }

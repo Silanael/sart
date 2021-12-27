@@ -7,10 +7,9 @@
 // Output writer for JSON.
 //
 
-
-const Sys = require ("../System");
-const OutputFormat = Sys.OutputFormat;
-const OutputParams = Sys.OutputParams;
+const Output       = require ("../Output");
+const OutputFormat = Output.OutputFormat;
+const OutputParams = Output.OutputParams;
 
 
 class OutputFormat_JSON extends OutputFormat

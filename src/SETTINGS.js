@@ -23,7 +23,12 @@ class Setting
     Deprecated   = false; 
     RuntimeOnly  = false;
 
-    constructor (name) { this.Name = name; }
+
+    constructor (name)
+    { 
+        this.Name = name; 
+    }
+
 
     DV               (value) { this.DefaultValue = value; return this;      }       
     RO               ()      { this.ReadOnly     = true;  return this;      }
@@ -38,14 +43,15 @@ class Setting
     CanBeCopied      ()      { return !this.RuntimeOnly && this.IsValid (); }
 
     toString         ()      { return this.Name;                            }
+
 }
 
 
 
 const SETTINGS =
 {
-    Type                    : new Setting ("Type")                     .DV ("SARTConfig").RO (),
-    Description             : new Setting ("Description")              .DV ("SART configuration/settings"),
+    ObjectType              : new Setting ("ObjectType")               .DV ("SARTConfig").RO (),
+    Description             : new Setting ("Description")              .DV ("SART configuration"),
     ConfigVersion           : new Setting ("ConfigVersion")            .DV (Constants.CONFIG_VERSION).RO (),
     AppVersion              : new Setting ("AppVersion")               .DV (Package.version).RO (),
     AppVersionCode          : new Setting ("AppVersionCode")           .DV (Package.versioncode).RO (),
@@ -75,6 +81,7 @@ const SETTINGS =
     ANSIAllowed             : new Setting ("ANSIAllowed")              .DV (true),
     CSVReplacePeriodWith    : new Setting ("CSVReplacePeriodWith")     .DV ("#!#"),
     JSONSpacing             : new Setting ("JSONSpacing")              .DV (3),
+    MultiInputSeparatorChr  : new Setting ("MultiInputSeparatorChr")   .DV (","),
     VerifyDefaults          : new Setting ("VerifyDefaults")           .DV ("SUMMARY,NOT-VERIFIED"),
     VerifyDefaults_Numeric  : new Setting ("VerifyDefaults_Numeric")   .DV ("SUMMARY,ALL"),
     ArFSEntityTryOrder      : new Setting ("ArFSEntityTryOrder")       .DV ("drive,file,folder"),
@@ -93,7 +100,8 @@ const SETTINGS =
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
 
-
+    ListAddressFields_List  : new Setting ("ListAddressFields_List")   .DV (["date","txid","flags","ctype","dest","qty_ar","fee_ar"]),
+    ListAddressFields_Entry : new Setting ("ListAddressFields_Entry")  .DV (["non-null"]),
 
 }
 Object.freeze (SETTINGS);

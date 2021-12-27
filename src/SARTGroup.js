@@ -7,13 +7,13 @@
 // A generic object container.
 //
 
-const Sys        = require ("./System");
-const Util       = require ("./Util");
-const SARTObject = require ("./SARTObject");
+const Sys      = require ("./System");
+const Util     = require ("./Util");
+const SARTBase = require ("./SARTBase");
 
 
 
-class SARTGroup extends SARTObject
+class SARTGroup extends SARTBase
 {
 
     Entries = [];
@@ -29,6 +29,8 @@ class SARTGroup extends SARTObject
             this.Add (e);
         }
     }
+
+    WithObj         (obj)    { this.Add (obj);                                                   return this; }
 
     GetAmount       ()       { return this.Entries.length;                                                    }        
     GetByID         (id)     { return this.ByID[id];                                                          }
@@ -84,11 +86,14 @@ class SARTGroup extends SARTObject
 
             const name = entry.GetName ();
 
-            if (this.ByName[name] == null)
-                this.ByName[name] = name;
-            else
-                Sys.WARN ("Name collision - '" + name + "' already present in the group: " + this.ByName[name]?.toString () + " - not overwriting.");
-
+            if (Util.IsSet (name))
+            {
+                if (this.ByName[name] == null)
+                    this.ByName[name] = entry;
+                else
+                    Sys.WARN ("Name collision - '" + name + "' already present in the group: " + this.ByName[name]?.toString () + " - not overwriting.");
+            }
+            
             this.Entries.push (entry);
         }
 
@@ -111,9 +116,27 @@ class SARTGroup extends SARTObject
 
     Output (opts = {UseListMode: true, WantedFields: null } )
     {
-        Sys.OUT_OBJ (this.AsArray (), opts);
+        Sys.GetMain ()?.OutputObjects (this, opts);
     }
 
+
+    GetFieldMaxLen (field)
+    {
+        let maxlen = 0;
+        let fdata, namelen, valuelen;
+
+        for (const o of this.AsArray () )
+        {
+            fdata = o.GetFieldData (field);            
+            namelen   = fdata?.GetFieldName  ()?.length;
+            valuelen  = fdata?.GetFieldValue ()?.toString ().length;
+            
+            if (namelen > maxlen)  maxlen = namelen;
+            if (valuelen > maxlen) maxlen = valuelen;
+        }
+
+        return maxlen;
+    }
 }
 
 

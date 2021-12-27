@@ -15,8 +15,12 @@ const Util = require ("./Util");
 class SARTBase
 {
     Name               = null;
-    Main               = null;
+    Aliases            = []; 
+    ObjectType         = null;
 
+    Main               = null;
+    NameCaseSensitive  = false;
+    
 
     constructor (name = null)
     {
@@ -25,13 +29,32 @@ class SARTBase
 
 
     WithName           (name)                                  { this.Name       = name;                                        return this; }
+    WithAliases        (...aliases)                            { this.Aliases    = this.Aliases.concat (aliases);               return this; }
+    WithObjType        (objtype)                               { this.ObjectType = objtype;                                                  }
     WithMain           (main)                                  { this.Main       = main;                                        return this; }    
     GetID              ()                                      { return this.GetName ();                                                     }
     GetName            ()                                      { return this.Name;                                                           }
-    GetMain            ()                                      { return this.Main;                                                           }
-    HasName            (name, case_sensitive = true)           { return this.Name != null && name != null && 
-                                                                             Util.StrCmp (name, this.Name, !case_sensitive);                 }        
+    GetMain            ()                                      { return this.Main;                                                           }    
     toString           ()                                      { return this.Name != null ? this.Name : "SARTBase"; }
+    WithCaseSensitive  ()                                      { this.NameCaseSensitive = true;  return this; }
+
+
+    HasName (name)
+    { 
+        if (this.Name == null || name == null)
+            return false;
+        
+        if (Util.StrCmp (name, this.Name, !this.NameCaseSensitive) )
+            return true;
+
+        for (const a of this.Aliases)
+        {
+            if (Util.StrCmp (name, a, !this.NameCaseSensitive) )
+                return true;
+        }
+        
+        return false;
+    }        
 
 
     MatchesNameRegex (name_regex, case_sensitive = true)
@@ -39,7 +62,17 @@ class SARTBase
         if (name_regex == null)
             return false;
 
-        return Util.StrCmp_Regex (name_regex, this.Name, !case_sensitive);
+
+        if (Util.StrCmp_Regex (name_regex, this.Name, !case_sensitive) )
+            return true;
+
+        for (const a of this.Aliases)
+        {
+            if (Util.StrCmp_Regex (name_regex, a, !this.NameCaseSensitive) )
+                return true;
+        }            
+
+        return false;
     }
 
 
