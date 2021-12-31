@@ -14,6 +14,7 @@ const FieldData  = require ("./FieldData").FieldData;
 const FieldDataG = require ("./FieldData").FieldDataGroup;
 const FieldDef   = require ("./FieldDef");
 const SARTBase   = require ("./SARTBase");
+const SARTGroup  = require ("./SARTGroup");
 const OutputArgs = require ("./Output").OutputParams;
 const FieldGroup = require ("./FieldGroup");
 
@@ -26,8 +27,8 @@ class SARTObject extends SARTBase
     Errors             = null;
     Warnings           = null;
 
-    static FIELDS      = [];
-    static FIELDGROUPS = [FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None];
+    static FIELDS      = new SARTGroup ();
+    static FIELDGROUPS = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None];
 
  
     constructor (name = null)
@@ -71,32 +72,38 @@ class SARTObject extends SARTBase
         else
         {
             // Process groups
-            const final_names = [];
-
+            const groups_added = [];
             for (const fname of field_names)
             {
                 const group = this.GetFieldGroup (fname);
                 if (group != null)
                 {
                     Sys.DEBUG ("Adding fields from FieldGroup " + group + "...");
-                    final_names.push (...group.GetFieldsInGroup (this) );
-                }
+                    groups_added.push (group.GetFieldsInGroup (this) );
+                }                
                 else
-                    final_names.push (fname);
+                    groups_added.push (fname);
             }
 
+            // Get the defs
             const field_defs = [];
-            // Include only the given set of fields.
-            for (const fname of final_names)
-            {      
-                const field = this.GetFieldDef (fname);
+            for (const fname of groups_added)
+            {
+                if (fname?.length > 0 && fname[0] != "-")  
+                {             
+                    const field = this.GetFieldDef (fname);
 
-                if (field != null)
-                    field_defs.push (field);
+                    if (field != null)
+                        field_defs.push (field);
 
+                    else
+                        Sys.ERR ("Unrecognized field: '" + fname + "'.");
+                }                
                 else
-                    Sys.ERR ("Unrecognized field: '" + fname + "'.");
+                    Sys.DEBUG ("Not including field '" + fname.slice (1) + " as requested with negate-prefix '-'.");
+                
             }
+
             return field_defs;
         }
         
@@ -104,7 +111,7 @@ class SARTObject extends SARTBase
 
     GetFieldDef (field_name, case_sensitive = false)
     {                    
-        for (const f of this.constructor.FIELDS)
+        for (const f of this.constructor.FIELDS?.AsArray () )
         {            
             if (f.HasName (field_name, case_sensitive) )
                 return f;
@@ -148,7 +155,7 @@ class SARTObject extends SARTBase
         {
             Sys.VERBOSE ("No field-list provided - displaying all of them.");
             
-            for (const fname of this.constructor.FIELDS)
+            for (const fname of this.constructor.FIELDS?.AsArray () )
             {
                 if (fname != null)
                 {

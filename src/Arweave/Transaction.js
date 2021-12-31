@@ -26,8 +26,8 @@ const Field        = require ("../FieldDef");
 
 
 
-const FIELDS =
-[
+const FIELDS = new SARTGroup ().With (
+
     new Field ("ObjectType").WithAliases ("ObjType","OType"),
     new Field ("Network").WithAliases ("NET"),
     new Field ("TXID").WithAliases ("ID"),
@@ -55,7 +55,7 @@ const FIELDS =
     new Field ("FetchedFrom").WithFunction (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
     new Field ("Warnings").WithRecursive (),
     new Field ("Errors").WithRecursive (),                  
-];
+);
 
 
 class Transaction extends SARTObject

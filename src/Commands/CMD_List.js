@@ -36,12 +36,11 @@ class CMD_List extends CommandDef
 }
 
 
+
 class SubCMD_Address extends CommandDef
 {
     Name          = "ADDRESS";
     MinArgsAmount = 1;
-
-
 
     constructor ()
     {

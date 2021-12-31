@@ -30,16 +30,17 @@ class SARTGroup extends SARTBase
         }
     }
 
-    WithObj         (obj)    { this.Add (obj);                                                   return this; }
+    With            (...objects) { this.AddAll (...objects);                                         return this; }
+    WithObj         (obj)        { this.Add (obj);                                                   return this; }
 
-    GetAmount       ()       { return this.Entries.length;                                                    }        
-    GetByID         (id)     { return this.ByID[id];                                                          }
-    GetByName       (name)   { return this.ByName[name];                                                      }
-    ContainsID      (id)     { return this.GetByID (id) != null;                                              }
-    GetByIndex      (index)  { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
-    AsArray         ()       { return this.Entries;                                                           }
-    AddAllFromGroup (group)  { return this.AddAll (group.AsArray () ); }
-    toString        ()       { return "SARTGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
+    GetAmount       ()           { return this.Entries.length;                                                    }        
+    GetByID         (id)         { return this.ByID[id];                                                          }
+    GetByName       (name)       { return this.ByName[name];                                                      }
+    ContainsID      (id)         { return this.GetByID (id) != null;                                              }
+    GetByIndex      (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
+    AsArray         ()           { return this.Entries;                                                           }
+    AddAllFromGroup (group)      { return this.AddAll (group.AsArray () ); }
+    toString        ()           { return "SARTGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
 
 
     GetByNameRegex (regex, case_sensitive = true)

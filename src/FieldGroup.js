@@ -45,4 +45,16 @@ class FieldGroup_Null extends FieldGroup
     GetFieldsInGroup (sart_obj) { return sart_obj.GetDataForFields ()?.GetDefsWithValueState (false); }    
 }
 
-module.exports = { FieldGroup, All: new FieldGroup_All (), None: new FieldGroup_None (), NotNull: new FieldGroup_NotNull (), Null: new FieldGroup_Null () }
+class FieldGroup_Default extends FieldGroup
+{
+    constructor      ()         { super (); this.WithName ("DEFAULT"); }
+    GetFieldsInGroup (sart_obj) { sart_obj?.GetDefaultFields (); }
+}
+
+module.exports = { FieldGroup, 
+                   All:     new FieldGroup_All     (), 
+                   None:    new FieldGroup_None    (), 
+                   NotNull: new FieldGroup_NotNull (), 
+                   Null:    new FieldGroup_Null    (),
+                   Default: new FieldGroup_Default (), 
+                 }
