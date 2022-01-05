@@ -8,6 +8,7 @@
 //
 
 const CONSTANTS    = require ("../CONSTANTS.js");
+const SETTINGS     = require ("../SETTINGS").SETTINGS;
 const State        = require ("../ProgramState.js");
 const Settings     = require ('../Config.js');
 const Util         = require ('../Util.js');
@@ -28,33 +29,33 @@ const Field        = require ("../FieldDef");
 
 const FIELDS = new SARTGroup ().With (
 
-    new Field ("ObjectType").WithAliases ("ObjType","OType"),
-    new Field ("Network").WithAliases ("NET"),
-    new Field ("TXID").WithAliases ("ID"),
-    new Field ("Owner").WithAliases ("Address"),         
-    new Field ("Flags")   .WithFunction (function (t) {return t.GetFlagStr (); } ),           
-    new Field ("FlagsInt").WithFunction (function (t) {return t.GetFlagInt (); } ),
-    new Field ("Target").WithAliases ("Recipient", "Destination", "Dest"),
-    new Field ("Fee_AR").WithAliases ("Fee_AR"),
-    new Field ("Fee_Winston").WithAliases ("Fee", "Fee_W"),  
-    new Field ("Quantity_AR").WithAliases ("QTY_AR","TransferAmount_AR"),
-    new Field ("Quantity_Winston").WithAliases ("QTY","QTY_W","TransferAmount","TransferAmount_Winston","TransferAmount_W"), 
-    new Field ("DataSize_Bytes").WithAliases ("DataSize","DataBytes","Bytes","Size","SizeB", "Size_B"),
-    new Field ("TagsTotalSizeB").WithFunction (function (t) { return t?.Tags?.GetTotalBytes (); } ),
-    new Field ("DataRoot").WithAliases ("DRoot"),         
-    new Field ("DataLocation").WithAliases ("DataLoc", "DLoc"),             
-    new Field ("BlockID").WithAliases ("Block"),
-    new Field ("BlockDate").WithAliases ("Date", "BDate"),
-    new Field ("BlockHeight").WithAliases ("Height", "BHeight"),
-    new Field ("BlockUNIXTime").WithAliases ("UNIXTime", "UTime"),
+    new Field ("ObjectType")      .WithAliases   ("ObjType","OType"),
+    new Field ("Network")         .WithAliases   ("NET"),
+    new Field ("TXID")            .WithAliases   ("ID"),
+    new Field ("Owner")           .WithAliases   ("Address"),         
+    new Field ("Flags")           .WithFunction  (function (t) {return t.GetFlagStr (); } ),           
+    new Field ("FlagsInt")        .WithFunction  (function (t) {return t.GetFlagInt (); } ),
+    new Field ("Target")          .WithAliases   ("Recipient", "Destination", "Dest"),
+    new Field ("Fee_AR")          .WithAliases   ("Fee_AR"),
+    new Field ("Fee_Winston")     .WithAliases   ("Fee", "Fee_W"),  
+    new Field ("Quantity_AR")     .WithAliases   ("QTY_AR", "TransferAmount_AR"),
+    new Field ("Quantity_Winston").WithAliases   ("QTY", "QTY_W", "TransferAmount", "TransferAmount_Winston", "TransferAmount_W"), 
+    new Field ("DataSize_Bytes")  .WithAliases   ("DataSize", "DataBytes", "Bytes", "Size", "SizeB", "Size_B"),
+    new Field ("TagsTotalSizeB")  .WithFunction  (function (t) { return t?.Tags?.GetTotalBytes (); } ),
+    new Field ("DataRoot")        .WithAliases   ("DRoot"),         
+    new Field ("DataLocation")    .WithAliases   ("DataLoc", "DLoc"),             
+    new Field ("BlockID")         .WithAliases   ("Block"),
+    new Field ("BlockTime")       .WithAliases   ("Time", "Date", "BDate", "BTime"),
+    new Field ("BlockHeight")     .WithAliases   ("Height",   "BHeight"),
+    new Field ("BlockUNIXTime")   .WithAliases   ("UNIXTime", "UTime"),
     new Field ("TXAnchor"),     
-    new Field ("Tags").WithFunction (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
-    new Field ("ContentType").WithFunction (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
-                             .WithAliases ("Content-Type","CType","MIMEtype"),
-    new Field ("State").WithRecursive (),
-    new Field ("FetchedFrom").WithFunction (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
-    new Field ("Warnings").WithRecursive (),
-    new Field ("Errors").WithRecursive (),                  
+    new Field ("Tags")            .WithFunction  (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
+    new Field ("ContentType")     .WithFunction  (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
+                                  .WithAliases   ("Content-Type","CType","MIMEtype"),
+    new Field ("State")           .WithRecursive (),
+    new Field ("FetchedFrom")     .WithFunction  (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
+    new Field ("Warnings")        .WithRecursive (),
+    new Field ("Errors")          .WithRecursive (),                  
 );
 
 
@@ -80,16 +81,16 @@ class Transaction extends SARTObject
     BlockHeight         = null;
     BlockID             = null;
     BlockUNIXTime       = null;
-    BlockDate           = null;
+    BlockTime           = null;
     TXAnchor            = null;
     Tags                = null;
     Errors              = null;
     DataFetched         = false;
     
-    static FIELDS       = FIELDS;
-
+    static FIELDS                          = FIELDS;
+    static FIELDS_DEFAULT_SETTINGKEY_LIST  = SETTINGS.ListAddressFields_List;
+    static FIELDS_DEFAULT_SETTINGKEY_ENTRY = SETTINGS.ListAddressFields_Entry;
   
-    //"Tags":           function (t) { return t?.Tags?.HasDuplicates () ? t.Tags.GetList () : t?.Tags?.GetNameValueObj () },
       
     
     /** Overridable. This implementation does nothing. */
@@ -125,10 +126,11 @@ class Transaction extends SARTObject
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
     HasTransfer              ()         { return this.Quantity_AR      > 0     || this.Quantity_Winston > 0;                          }
-    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
+    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }    
     DataLoaded               ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
     HasRecipient             ()         { return Util.IsSet (this.Target);                                                            }
     GetRecipient             ()         { return this.HasRecipient   () ? this.Target : null;                                         }
+    IsBundle                 ()         { return this.HasTag (CONSTANTS.TXTAGS.BUNDLE_FORMAT);                                        }
     HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                      }    
     GetTag                   (tag)      { return this.Tags?.GetTag   (tag);                                                           }        
     GetTagValue              (tag)      { return this.GetTag ()?.GetValue ();                                                         }        
@@ -170,6 +172,7 @@ class Transaction extends SARTObject
         
         if (this.HasData      () ) flags |= CONSTANTS.FLAGS.TX_HASDATA
         if (this.HasTransfer  () ) flags |= CONSTANTS.FLAGS.TX_HASTRANSFER;
+        if (this.IsBundle     () ) flags |= CONSTANTS.FLAGS.TX_ISBUNDLE;
 
         return flags;
     }
@@ -178,11 +181,12 @@ class Transaction extends SARTObject
     {
         const flags = this.GetFlagInt ();
 
+        const bun = (flags & CONSTANTS.FLAGS.TX_ISBUNDLE    ) != 0 ? "B" : "-";
         const dat = (flags & CONSTANTS.FLAGS.TX_HASDATA     ) != 0 ? "D" : "-";
-        const tra = (flags & CONSTANTS.FLAGS.TX_HASTRANSFER ) != 0 ? "T" : "-";
+        const tra = (flags & CONSTANTS.FLAGS.TX_HASTRANSFER ) != 0 ? "T" : "-";        
         const err = (flags & CONSTANTS.FLAGS.HASERRORS      ) != 0 ? "E" : (flags & CONSTANTS.FLAGS.HASWARNINGS) != 0 ? "W" : "-";
 
-        return dat + tra + err;
+        return bun + dat + tra + err;
     }
  
     
@@ -277,7 +281,7 @@ class Transaction extends SARTObject
             this.__SetObjectProperty ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
             this.__SetObjectProperty ("BlockHeight"        , edge.node?.block?.height     != null ? Number (edge.node.block.height)     : null);
             this.__SetObjectProperty ("BlockUNIXTime"      , edge.node?.block?.timestamp  != null ? Number (edge.node.block.timestamp)  : null);     
-            this.__SetObjectProperty ("BlockDate"          , this.GetDate ()                                                                  );     
+            this.__SetObjectProperty ("BlockTime"          , this.GetDate ()                                                                  );     
             this.__SetObjectProperty ("Tags"               , TXTagGroup.FROM_QGL_EDGE (edge)                                                  );
             
             this.__SetObjectProperty ("Fee_Winston"        , edge.node?.fee?.winston      != null ? Number (edge.node.fee.winston)      : null);

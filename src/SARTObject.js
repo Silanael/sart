@@ -30,7 +30,9 @@ class SARTObject extends SARTBase
     static FIELDS      = new SARTGroup ();
     static FIELDGROUPS = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None];
 
- 
+    static FIELDS_DEFAULT_SETTINGKEY_LIST  = null;
+    static FIELDS_DEFAULT_SETTINGKEY_ENTRY = null;
+
     constructor (name = null)
     {
         super (name);
@@ -50,6 +52,32 @@ class SARTObject extends SARTBase
     SetInvalid         ()                                      { this.Valid = false; return this;                                            }
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
+    GetDefaultFieldNames  (uselistmode)
+    {
+        return Sys.GetMain().GetSetting (uselistmode ? this.constructor.FIELDS_DEFAULT_SETTINGKEY_LIST 
+                                                     : this.constructor.FIELDS_DEFAULT_SETTINGKEY_ENTRY);
+    }
+
+    GetDefaultFieldDefs   (uselistmode)
+    {         
+        const field_names = this.GetDefaultFieldNames (uselistmode);
+        return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : new SARTGroup (); 
+    }
+
+    GetAllFieldDefs ()
+    { 
+        return this.constructor.FIELDS;
+    }
+
+    GetAllFieldNames ()
+    {
+        const names = [];
+        for (const def of this.GetAllFieldDefs () )
+        {
+            names.push (def?.GetName () );
+        }
+        return names;
+    }
 
     GetFlagInt ()
     {
@@ -63,50 +91,86 @@ class SARTObject extends SARTBase
 
     
 
-    GetFieldDefs (field_names = []) 
+    GetFieldDefs (field_names = [], uselistmode = false) 
     { 
         
         if (field_names == null || field_names.length <= 0)
-            return this.constructor.FIELDS; 
+            field_names = this.GetDefaultFieldNames (uselistmode); //return this.GetDefaultFieldDefs (uselistmode);
 
-        else
+        // A special case where only negatives are given.
+        else if (field_names.find (e => !e.startsWith ("-") ) == null)        
+            field_names = this.GetDefaultFieldNames (uselistmode)?.concat (field_names);
+        
+        // Process groups    
+        const groups_included = [];
+        for (const fname of field_names)
         {
-            // Process groups
-            const groups_added = [];
-            for (const fname of field_names)
-            {
-                const group = this.GetFieldGroup (fname);
-                if (group != null)
+            const group = this.GetFieldGroup (fname);
+            if (group != null)
+            {                
+                const fnames = group.GetFieldNames (this, uselistmode);
+
+                if (fnames == null)
+                    Sys.DEBUG ("No valid fields from fieldgroup '" + group + "'.");
+
+                else
                 {
                     Sys.DEBUG ("Adding fields from FieldGroup " + group + "...");
-                    groups_added.push (group.GetFieldsInGroup (this) );
+                    groups_included.push (...fnames);                    
                 }                
-                else
-                    groups_added.push (fname);
-            }
+            }        
+            else            
+                groups_included.push (fname);                   
+        }             
 
-            // Get the defs
-            const field_defs = [];
-            for (const fname of groups_added)
-            {
-                if (fname?.length > 0 && fname[0] != "-")  
-                {             
-                    const field = this.GetFieldDef (fname);
-
-                    if (field != null)
-                        field_defs.push (field);
-
-                    else
-                        Sys.ERR ("Unrecognized field: '" + fname + "'.");
-                }                
-                else
-                    Sys.DEBUG ("Not including field '" + fname.slice (1) + " as requested with negate-prefix '-'.");
-                
-            }
-
-            return field_defs;
+        // Get negates
+        const negates = [];
+        const no_negates = [];
+        for (const fname of groups_included)
+        {
+            if (fname != null && fname.startsWith ("-") )            
+                negates.push (fname.slice (1) );            
+            else
+                no_negates.push (fname);
         }
         
+        // Process names
+        const field_defs = new SARTGroup ();
+        for (const fname of no_negates)
+        {
+            const def = this.GetFieldDef (fname);
+
+            if (def == null)
+                this.OnError ("Field '" + fname + "' does not exist.");
+
+            else
+            {
+                let negated = false;
+                for (const neg of negates)
+                {
+                    const ndef = this.GetFieldDef (neg);
+
+                    if (ndef == null)
+                        this.OnError ("Negated field '" + neg + "' does not exist.");
+
+                    else if (def == ndef)                    
+                    {
+                        negated = true;
+                        break;
+                    }
+                        
+                }
+                if (!negated)
+                {
+                    Sys.DEBUG ("Adding field def " + def);
+                    field_defs.Add (def);
+                }
+                else
+                    Sys.DEBUG ("Adding field def " + def + " negated - not adding.");
+            }
+        }     
+
+        return field_defs;                
     }
 
     GetFieldDef (field_name, case_sensitive = false)
@@ -146,12 +210,12 @@ class SARTObject extends SARTBase
     }
     
 
-    GetDataForFields (fields = [])
+    GetDataForFields (fields = new SARTGroup () )
     {
         const field_data = new FieldDataG ();
 
         // Parameter omitted, include all defined fields.
-        if (fields == null || fields.length <= 0)
+        if (fields == null || fields.GetAmount () <= 0)
         {
             Sys.VERBOSE ("No field-list provided - displaying all of them.");
             
@@ -172,7 +236,7 @@ class SARTObject extends SARTBase
         }
 
         // Include only the given set of fields.
-        else for (const f of fields)
+        else for (const f of fields.AsArray () )
         {      
             const field = this.GetFieldData (f);
 

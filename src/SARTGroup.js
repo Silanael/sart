@@ -65,13 +65,14 @@ class SARTGroup extends SARTBase
     
     Add (entry, id = null) 
     {
-        Sys.DEBUG ("Adding entry " + entry, this)
-
+        
         if (entry == null)
-            Sys.ERR_PROGRAM ("", "Transactions.Add");
+            Sys.ERR_PROGRAM ("'entry' null.", "Transactions.Add");
 
         else 
         {
+            Sys.DEBUG ("Adding entry " + entry, this)
+            
             if (id == null && entry.GetID != null)
                 id = entry.GetID ();
 

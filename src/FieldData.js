@@ -54,13 +54,13 @@ class FieldDataGroup extends SARTGroup
 {  
     GetDefsWithValueState (get_if_value_is_not_null = false)
     {
-        const defs = [];
+        const defs = new SARTGroup ();
         if (get_if_value_is_not_null)
         {
             for (const d of this.AsArray () )
             {        
                 if (d.GetFieldValue () != null)
-                    defs.push (d?.GetFieldDef () );
+                    defs.Add (d?.GetFieldDef () );
             }
         }
         else
@@ -68,13 +68,21 @@ class FieldDataGroup extends SARTGroup
             for (const d of this.AsArray () )
             {        
                 if (d.GetFieldValue () == null)
-                    defs.push (d?.GetFieldDef () );
+                    defs.Add (d?.GetFieldDef () );
             }            
         }
         return defs;
     }
-    
-    
+   
+    GetFieldNamesWithValueState (get_if_value_is_not_null = false)
+    {
+        const names = [];
+        for (const def of this.GetDefsWithValueState (get_if_value_is_not_null)?.AsArray () )
+        {
+            names.push (def?.GetName () );
+        }
+        return names;
+    }
 }
 
 

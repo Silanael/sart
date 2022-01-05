@@ -54,8 +54,6 @@ class SubCMD_Address extends CommandDef
             new ArgDef ("oldest").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._HandleOldest),            
         );
 
-        this.WithListFieldsKey   (SETTINGS.ListAddressFields_List);
-        this.WithEntryFieldsKey  (SETTINGS.ListAddressFields_Entry);
         this.WithAsListByDefault ();
     }
   
@@ -116,7 +114,7 @@ class SubCMD_Address extends CommandDef
                     qty_winston_total  += t.GetQTY_Winston ();                
                 }
                 
-                cmd.Transactions.Output ( {UseListMode: this.IsOutputAsList (cmd), WantedFields: this.GetSelectedFields (cmd) } );
+                cmd.Transactions.Output ( {UseListMode: this.IsOutputAsList (cmd), WantedFields: this.GetWantedFields (cmd) } );
 
                 Sys.INFO ("---");
                 Sys.INFO ("Listed " + amount + " transactions with total of " 

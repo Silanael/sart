@@ -50,6 +50,19 @@ const ERROR_IDS =
     ARFS_ID_INVALID           : 5
 }
 
+const TXTAGS = 
+{
+    CONTENT_TYPE     : "Content-Type",
+    APP_NAME         : "App-Name",
+    APP_VERSION      : "App-Version",
+    PROTOCOL_NAME    : "Protocol-Name",
+    PROTOCOL_VERSION : "Protocol-Version",
+    BUNDLE_FORMAT    : "Bundle-Format",
+    BUNDLE_VERSION   : "Bundle-Version",
+    UNIX_TIME        : "Unix-Time",
+    TYPE             : "Type",
+}
+
 function IS_GQL_SORT_VALID (sort) { return GQL_VALID_SORT.includes (sort?.toUpperCase() ); }
 
 
@@ -104,6 +117,7 @@ const FLAGS =
     
     TX_HASDATA     : 4,
     TX_HASTRANSFER : 8,
+    TX_ISBUNDLE    : 16,
 
 }
 
@@ -145,4 +159,5 @@ module.exports =
     COMMAND_DEFAULT_ARGS,
     CONFIG_TX_TAGS_TOTAL_SIZE,
     FLAGS,
+    TXTAGS,
 };

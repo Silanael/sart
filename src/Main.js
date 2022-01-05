@@ -103,8 +103,8 @@ class Main
             return Sys.ERR_PROGRAM_ONCE ("No suitable output-handler found!");
         
         else
-        {
-            fmt_handler.OutputObjects (objs instanceof SARTGroup ? objs : new SARTGroup ().WithObj (objs), args);
+        {            
+            fmt_handler.OutputObjects (objs instanceof SARTGroup ? objs : new SARTGroup ().With (objs), args);
             return true;
         }        
     }

@@ -24,9 +24,6 @@ class CommandDef extends SARTDef
     AsActiveCommand = true;
     AsListByDefault = false;
 
-    ListFieldsSettingKey  = null;
-    EntryFieldsSettingKey = null;
-    
 
     /* Overridable, these implementations do nothing. */
     async OnExecute           (cmd_instance)  { if (this.ExecFunc != null) return await this.ExecFunc (cmd_instance); else return true; }
@@ -48,8 +45,6 @@ class CommandDef extends SARTDef
                                           this.OutFunc               = out;               return this; }
     WithHelpLines         (helplines)   { this.Helplines             = helplines;         return this; }
     WithSubcommands       (subcommands) { this.Subcommands           = subcommands;       return this; }
-    WithListFieldsKey     (setting)     { this.ListFieldsSettingKey  = setting;           return this; }
-    WithEntryFieldsKey    (setting)     { this.EntryFieldsSettingKey = setting;           return this; }
     WithAsListByDefault   ()            { this.AsListByDefault       = true;              return this; }
     WithAsEntriesByDefault()            { this.AsListByDefault       = false;             return this; }
 
@@ -61,9 +56,8 @@ class CommandDef extends SARTDef
     
     IsOutputAsList        (cmd)         { const s = cmd.GetEffectiveSetting (SETTINGS.OutputAsList); return s != null ? s : this.AsListByDefault; }
     GetWantedFields       (cmd)         { return cmd.GetWantedFields (); }
-    GetSelectedFields     (cmd)         { return cmd.HasWantedFields () ? cmd.GetWantedFields (cmd) : this.GetDefaultFields (cmd); }
-    GetDefaultFields      (cmd)         { return cmd.GetEffectiveSetting (this.IsOutputAsList (cmd) ? this.ListFieldsSettingKey : this.EntryFieldsSettingKey); }
-
+  
+    
 
     Matches (name)
     {                        

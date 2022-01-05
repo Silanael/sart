@@ -12,43 +12,41 @@ const SARTBase   = require ("./SARTBase");
 
 class FieldGroup extends SARTBase
 {
-    FieldsInGroup = [];
+    FieldNames = [];
 
-    GetFieldsInGroup (sart_obj)
-    {
-
-    }
+    /** Overridable */
+    GetFieldNames (sart_obj, listmode) { return this.FieldNames; }
 }
 
 
 class FieldGroup_All extends FieldGroup
 {    
-    constructor      ()         { super (); this.WithName ("ALL");     }
-    GetFieldsInGroup (sart_obj) { return sart_obj.GetFieldDefs (null); }
+    constructor   ()                   { super (); this.WithName ("ALL");     }
+    GetFieldNames (sart_obj)           { return sart_obj.GetAllFieldNames (); }
 }
 
 class FieldGroup_None extends FieldGroup
 {    
-    constructor      ()         { super (); this.WithName ("NONE");    }
-    GetFieldsInGroup (sart_obj) { return null;                         }
+    constructor   ()                   { super (); this.WithName ("NONE");    }
+    GetFieldNames (sart_obj)           { return [];                           }
 }
 
 class FieldGroup_NotNull extends FieldGroup
 {    
-    constructor      ()         { super (); this.WithName ("NOT-NULL");  }
-    GetFieldsInGroup (sart_obj) { return sart_obj.GetDataForFields ()?.GetDefsWithValueState (true); }    
+    constructor   ()                   { super (); this.WithName ("NOT-NULL").WithAliases ("NON-NULL", "NONULL");  }
+    GetFieldNames (sart_obj)           { return sart_obj.GetDataForFields ()?.GetFieldNamesWithValueState (true); }    
 }
 
 class FieldGroup_Null extends FieldGroup
 {    
-    constructor      ()         { super (); this.WithName ("NULL");  }
-    GetFieldsInGroup (sart_obj) { return sart_obj.GetDataForFields ()?.GetDefsWithValueState (false); }    
+    constructor   ()                   { super (); this.WithName ("NULL");  }
+    GetFieldNames (sart_obj)           { return sart_obj.GetDataForFields ()?.GetFieldNamesWithValueState (false); }    
 }
 
 class FieldGroup_Default extends FieldGroup
 {
-    constructor      ()         { super (); this.WithName ("DEFAULT"); }
-    GetFieldsInGroup (sart_obj) { sart_obj?.GetDefaultFields (); }
+    constructor   ()                   { super (); this.WithName ("DEFAULT").WithAliases ("DEFAULT"); }
+    GetFieldNames (sart_obj, listmode) { return sart_obj?.GetDefaultFieldNames (listmode); }
 }
 
 module.exports = { FieldGroup, 

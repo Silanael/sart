@@ -34,14 +34,14 @@ class OutputFormat_TXT extends OutputFormat
             
             
             const first_obj  = objects.GetByIndex (0);
-            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields) : null;
+            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, true) : null;
 
             if (field_defs == null)
                 return false;
 
 
             // Caption            
-            for (const f of field_defs)
+            for (const f of field_defs.AsArray () )
             {
                 fname             = f.GetName ();
                 flen              = objects.GetFieldMaxLen (fname) + 3;

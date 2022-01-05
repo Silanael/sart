@@ -38,23 +38,7 @@ class OutputFormat extends SARTBase
         if (setting_list_mode != null)
             params.UseListMode = setting_list_mode;
             
-            
-        const first_obj = objects.GetByIndex (0);
-        const field_defs = first_obj != null ? first_obj.GetFieldDefs (params?.WantedFields) : null;
-
-        if (field_defs == null)
-            return Sys.ERR_PROGRAM ("No fields could be fetched for output-objects!");
-
         this.__DoOutputObjects (objects, params);
-    
-        /*
-        this.__DoOutputFieldCaptions (field_defs, params, objects);
-
-        for (const obj of objects.AsArray () )
-        {
-            this.__DoOutputObject (obj, obj.GetDataForFields (field_defs), params, objects);
-        }
-        */
     }
 
 
