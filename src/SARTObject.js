@@ -26,6 +26,11 @@ class SARTObject extends SARTBase
 
     Errors             = null;
     Warnings           = null;
+    
+    Fields             = null;
+    FieldGroups        = null;
+
+    // ***
 
     static FIELDS      = new SARTGroup ();
     static FIELDGROUPS = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None];
@@ -33,58 +38,33 @@ class SARTObject extends SARTBase
     static FIELDS_DEFAULT_SETTINGKEY_LIST  = null;
     static FIELDS_DEFAULT_SETTINGKEY_ENTRY = null;
 
+    static GET_ALL_FIELD_DEFS () { return this.FIELDS; }
+
+
     constructor (name = null)
     {
         super (name);
-        this.Name = name;
+
+        this.Name        = name;
+        this.Fields      = this.constructor.FIELDS      != null ? this.constructor.FIELDS      : new SARTGroup ();
+        this.FieldGroups = this.constructor.FIELDGROUPS != null ? this.constructor.FIELDGROUPS : [];
     }
 
 
-    OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN, warning, src, opts)            }  
-    OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }  
-    OnOverridableError (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src, opts)}  
-    OnErrorOnce        (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }  
-    OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)            }
-    HasWarnings        ()                                      { return this.Warnings?.length > 0;                                           }
-    HasErrors          ()                                      { return this.Errors  ?.length > 0;                                           }    
-    GetRecursiveFields ()                                      { return this.RecursiveFields;                                                }
-    IsValid            ()                                      { return this.Valid == true;                                                  }
-    SetInvalid         ()                                      { this.Valid = false; return this;                                            }
+    WithField          (field_def)                             { this.Fields.Add    (   field_def ); return this;                                             }
+    WithFields         (...field_defs)                         { this.Fields.AddAll (...field_defs); return this;                                             }
+    OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN, warning, src, opts)                             }  
+    OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }  
+    OnOverridableError (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src, opts)                 }  
+    OnErrorOnce        (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }  
+    OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }
+    HasWarnings        ()                                      { return this.Warnings?.length > 0;                                                            }
+    HasErrors          ()                                      { return this.Errors  ?.length > 0;                                                            }    
+    GetRecursiveFields ()                                      { return this.RecursiveFields;                                                                 }
+    IsValid            ()                                      { return this.Valid == true;                                                                   }
+    SetInvalid         ()                                      { this.Valid = false; return this;                                                             }
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
-    GetDefaultFieldNames  (uselistmode)
-    {
-        return Sys.GetMain().GetSetting (uselistmode ? this.constructor.FIELDS_DEFAULT_SETTINGKEY_LIST 
-                                                     : this.constructor.FIELDS_DEFAULT_SETTINGKEY_ENTRY);
-    }
-
-    GetDefaultFieldDefs   (uselistmode)
-    {         
-        const field_names = this.GetDefaultFieldNames (uselistmode);
-        return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : new SARTGroup (); 
-    }
-
-    GetAllFieldDefs ()
-    { 
-        return this.constructor.FIELDS;
-    }
-
-    static GET_ALL_FIELD_DEFS ()
-    {
-        return this.FIELDS;
-    }
-
-    
-
-    GetAllFieldNames ()
-    {
-        const names = [];
-        for (const def of this.GetAllFieldDefs () )
-        {
-            names.push (def?.GetName () );
-        }
-        return names;
-    }
 
     GetFlagInt ()
     {
@@ -96,7 +76,27 @@ class SARTObject extends SARTBase
         return flags;
     }
 
+
+    GetDefaultFieldNames  (uselistmode)
+    {
+        return Sys.GetMain().GetSetting (uselistmode ? this.constructor.FIELDS_DEFAULT_SETTINGKEY_LIST 
+                                                     : this.constructor.FIELDS_DEFAULT_SETTINGKEY_ENTRY);
+    }
+
+    GetDefaultFieldDefs   (uselistmode)
+    {         
+        const field_names = this.GetDefaultFieldNames (uselistmode);
+        return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : null; 
+    }
+
+    GetAllFieldDefs ()
+    { 
+        return this.Fields != null ? this.Fields : this.constructor.FIELDS;
+    }
+
+    GetAllFieldNames () { return this.GetAllFieldDefs ()?.GetNamesAsArray (); }
     
+
 
     GetFieldDefs (field_names = [], uselistmode = false) 
     { 
@@ -108,6 +108,13 @@ class SARTObject extends SARTBase
         else if (field_names.find (e => !e.startsWith ("-") ) == null)        
             field_names = this.GetDefaultFieldNames (uselistmode)?.concat (field_names);
         
+
+        if (field_names == null)
+        {
+            Sys.DEBUG ("'field_names' null, using all fields.");
+            field_names = this.GetAllFieldNames ();
+        }
+
         // Process groups    
         const groups_included = [];
         for (const fname of field_names)
@@ -301,6 +308,29 @@ class SARTObject extends SARTBase
         //Sys.OUT_OBJ (this.GetFieldsAsObject (fields), { recursive: this.GetRecursiveFields () } );         
         Sys.GetMain ().OutputObjects (this, output_args);
     }
+
+
+    static FROM_JSOBJ (js_obj, name = null)
+    {
+        if (js_obj == null)
+            return null;
+
+        else
+        {
+            const sart_obj = new SARTObject (name);
+            for (const e of Object.entries (js_obj) )
+            {
+                const key = e[0];
+                const val = e[1];
+
+                sart_obj[key] = val;
+                sart_obj.WithField (new FieldDef (key) );
+            }
+            return sart_obj;
+        }
+    }
+
+ 
 
 }
 
