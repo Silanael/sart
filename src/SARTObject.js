@@ -69,6 +69,13 @@ class SARTObject extends SARTBase
         return this.constructor.FIELDS;
     }
 
+    static GET_ALL_FIELD_DEFS ()
+    {
+        return this.FIELDS;
+    }
+
+    
+
     GetAllFieldNames ()
     {
         const names = [];
@@ -249,6 +256,7 @@ class SARTObject extends SARTBase
 
         return field_data;
     }
+    
 
     
     __SetObjectProperty (field, value)

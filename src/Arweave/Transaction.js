@@ -31,8 +31,8 @@ const FIELDS = new SARTGroup ().With (
 
     new Field ("ObjectType")      .WithAliases   ("ObjType","OType"),
     new Field ("Network")         .WithAliases   ("NET"),
-    new Field ("TXID")            .WithAliases   ("ID"),
-    new Field ("Owner")           .WithAliases   ("Address"),         
+    new Field ("TXID")            .WithAliases   ("ID", "TransactionID", "Transaction_ID"),
+    new Field ("Owner")           .WithAliases   ("Address", "Arweave-address", "Wallet"),         
     new Field ("Flags")           .WithFunction  (function (t) {return t.GetFlagStr (); } ),           
     new Field ("FlagsInt")        .WithFunction  (function (t) {return t.GetFlagInt (); } ),
     new Field ("Target")          .WithAliases   ("Recipient", "Destination", "Dest"),
@@ -41,6 +41,8 @@ const FIELDS = new SARTGroup ().With (
     new Field ("Quantity_AR")     .WithAliases   ("QTY_AR", "TransferAmount_AR"),
     new Field ("Quantity_Winston").WithAliases   ("QTY", "QTY_W", "TransferAmount", "TransferAmount_Winston", "TransferAmount_W"), 
     new Field ("DataSize_Bytes")  .WithAliases   ("DataSize", "DataBytes", "Bytes", "Size", "SizeB", "Size_B"),
+    new Field ("Total_AR")        .WithFunction  (function (t) { return t?.GetTotalAR ();      }).WithAliases ("Total_AR, TotalAR, TotalCost_AR, TotalCostAR", "AR_Total", "ARTotal"),
+    new Field ("Total_Winston")   .WithFunction  (function (t) { return t?.GetTotalWinston (); }).WithAliases ("Total", "Total_W", "TotalW", "TotalCost", "TotalCost_W", "TotalCostW", "WinstonTotal"),      
     new Field ("TagsTotalSizeB")  .WithFunction  (function (t) { return t?.Tags?.GetTotalBytes (); } ),
     new Field ("DataRoot")        .WithAliases   ("DRoot"),         
     new Field ("DataLocation")    .WithAliases   ("DataLoc", "DLoc"),             
@@ -48,14 +50,14 @@ const FIELDS = new SARTGroup ().With (
     new Field ("BlockTime")       .WithAliases   ("Time", "Date", "BDate", "BTime"),
     new Field ("BlockHeight")     .WithAliases   ("Height",   "BHeight"),
     new Field ("BlockUNIXTime")   .WithAliases   ("UNIXTime", "UTime"),
-    new Field ("TXAnchor"),     
+    new Field ("TXAnchor")        .WithAliases   ("LastTX", "Last_TX", "TX_Last"),     
     new Field ("Tags")            .WithFunction  (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
     new Field ("ContentType")     .WithFunction  (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
-                                  .WithAliases   ("Content-Type","CType","MIMEtype"),
+                                  .WithAliases   ("Content-Type","CType","MIMEtype", "MIME"),
     new Field ("State")           .WithRecursive (),
     new Field ("FetchedFrom")     .WithFunction  (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
-    new Field ("Warnings")        .WithRecursive (),
-    new Field ("Errors")          .WithRecursive (),                  
+    new Field ("Warnings")        .WithRecursive ().WithAliases ("WARN"),
+    new Field ("Errors")          .WithRecursive ().WithAliases ("ERR"),                  
 );
 
 
@@ -120,9 +122,11 @@ class Transaction extends SARTObject
     GetBlockTime             ()         { return this.BlockUNIXTime;                                                                  }
     GetDate                  ()         { return this.BlockUNIXTime    != null ? Util.GetDate (this.BlockUNIXTime) : null;            }
     GetFee_AR                ()         { return this.Fee_AR           != null ? this.Fee_AR           : 0;                           }
-    GetQTY_AR                ()         { return this.Quantity_AR      != null ? this.Quantity_AR      : 0;                           }
+    GetQTY_AR                ()         { return this.Quantity_AR      != null ? this.Quantity_AR      : 0;                           }    
     GetFee_Winston           ()         { return this.Fee_Winston      != null ? this.Fee_Winston      : 0;                           }
     GetQTY_Winston           ()         { return this.Quantity_Winston != null ? this.Quantity_Winston : 0;                           }    
+    GetTotalAR               ()         { return this.GetFee_AR      ()        + this.GetQTY_AR      ();                              }
+    GetTotalWinston          ()         { return this.GetFee_Winston ()        + this.GetQTY_Winston ();                              }
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
     HasTransfer              ()         { return this.Quantity_AR      > 0     || this.Quantity_Winston > 0;                          }

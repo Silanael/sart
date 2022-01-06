@@ -10,6 +10,7 @@
 // Imports
 const Path      = require ('path');
 
+const CONSTANTS = require ("./CONSTANTS");
 const Package   = require ("../package.json");
 
 
@@ -157,7 +158,7 @@ function StrCmp_Wildcard (str, compare_to, lowercase = true)
 }
 
 
-function ArrayToStr (array, opts = { entry_separator: ", ", values_in_quotes: false} )
+function ArrayToStr (array, opts = CONSTANTS.UTIL_ARRAYTOSTR_DEFAULTS)
 {
     if (array == null)
         return null;

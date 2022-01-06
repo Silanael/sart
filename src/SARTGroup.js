@@ -7,9 +7,10 @@
 // A generic object container.
 //
 
-const Sys      = require ("./System");
-const Util     = require ("./Util");
-const SARTBase = require ("./SARTBase");
+const CONSTANTS = require ("./CONSTANTS");
+const Sys       = require ("./System");
+const Util      = require ("./Util");
+const SARTBase  = require ("./SARTBase");
 
 
 
@@ -139,6 +140,18 @@ class SARTGroup extends SARTBase
 
         return maxlen;
     }
+
+    GetNamesAsArray ()
+    {
+        const names = [];
+        for (const k of Object.keys (this.ByName) )
+        {
+            names.push (k);
+        }
+        return names;
+    }
+
+    GetNamesAsStr (opts = CONSTANTS.UTIL_ARRAYTOSTR_DEFAULTS) { return Util.ArrayToStr (this.GetNamesAsArray (), opts); }    
 }
 
 

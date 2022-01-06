@@ -35,6 +35,8 @@ const GQL_SORT_NEWEST_FIRST      = GQL_SORT_HEIGHT_DESCENDING;
 const GQL_SORT_DEFAULT           = GQL_SORT_HEIGHT_ASCENDING;
 const GQL_VALID_SORT             = [ GQL_SORT_HEIGHT_ASCENDING, GQL_SORT_HEIGHT_DESCENDING ];
 
+const UTIL_ARRAYTOSTR_DEFAULTS   = { entry_separator: ", ", values_in_quotes: false };
+
 function FUNC_ALWAYS_TRUE        () { return true;  }
 function FUNC_ALWAYS_FALSE       () { return false; }
 
@@ -160,4 +162,5 @@ module.exports =
     CONFIG_TX_TAGS_TOTAL_SIZE,
     FLAGS,
     TXTAGS,
+    UTIL_ARRAYTOSTR_DEFAULTS,
 };

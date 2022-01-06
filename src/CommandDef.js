@@ -11,18 +11,19 @@ const { SETTINGS } = require ("./SETTINGS");
 class CommandDef extends SARTDef
 {   
 
-    MinArgsAmount   = 0;
+    MinArgsAmount     = 0;
     
-    ArgDefs         = new Arguments.ArgDefs ();
-    Subcommands     = {};
+    ArgDefs           = new Arguments.ArgDefs ();
+    Subcommands       = {};
         
-    Helplines       = [];
-
-    MatchFunc       = null; // Should be a function (param_str).
-    ExecFunc        = null;
-    OutFunc         = null;
-    AsActiveCommand = true;
-    AsListByDefault = false;
+    Helplines         = [];
+    OutputObjectClass = null;
+    
+    MatchFunc         = null; // Should be a function (param_str).
+    ExecFunc          = null;
+    OutFunc           = null;
+    AsActiveCommand   = true;
+    AsListByDefault   = false;
 
 
     /* Overridable, these implementations do nothing. */
@@ -47,10 +48,13 @@ class CommandDef extends SARTDef
     WithSubcommands       (subcommands) { this.Subcommands           = subcommands;       return this; }
     WithAsListByDefault   ()            { this.AsListByDefault       = true;              return this; }
     WithAsEntriesByDefault()            { this.AsListByDefault       = false;             return this; }
+    WithOutputObjectClass (sart_obj_cl) { this.OutputObjectClass     = sart_obj_cl;       return this; }
 
     GetMinArgsAmount      ()            { return this.MinArgsAmount; }
     GetSubcommands        ()            { return this.Subcommands;   }
     HasSubcommands        ()            { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
+    GetOutputObjectClass  ()            { return this.OutputObjectClass; }
+    HasOutputObjectClass  ()            { return this.OutputObjectClass != null; }
     RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }
     toString              ()            { return this.GetName (); }
     
@@ -95,10 +99,20 @@ class CommandDef extends SARTDef
             Sys.INFO (l);         
         }
 
+        if (this.HasOutputObjectClass () )
+        {            
+            const fieldnames = this.GetOutputObjectClass ()?.GET_ALL_FIELD_DEFS?.GetNamesAsStr ();
+            if (fieldnames != null)
+            {
+                Sys.INFO ("");
+                Sys.INFO ("Fields: " + fieldnames);
+            }
+        }
+
         if (this.HasSubcommands () )
         {
             Sys.INFO ("");
-            Sys.INFO ("Valid subcommands: " + Util.KeysToStr (this.Subcommands) );
+            Sys.INFO ("Subcommands: " + Util.KeysToStr (this.Subcommands) );
         }
                     
     }
