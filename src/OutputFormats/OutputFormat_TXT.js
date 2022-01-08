@@ -34,7 +34,7 @@ class OutputFormat_TXT extends OutputFormat
             
             
             const first_obj  = objects.GetByIndex (0);
-            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, true) : null;
+            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, "list") : null;
 
             if (field_defs == null)
                 return false;

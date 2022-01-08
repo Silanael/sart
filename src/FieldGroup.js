@@ -15,7 +15,7 @@ class FieldGroup extends SARTBase
     FieldNames = [];
 
     /** Overridable */
-    GetFieldNames (sart_obj, listmode) { return this.FieldNames; }
+    GetFieldNames (sart_obj, mode) { return this.FieldNames; }
 }
 
 
@@ -45,8 +45,8 @@ class FieldGroup_Null extends FieldGroup
 
 class FieldGroup_Default extends FieldGroup
 {
-    constructor   ()                   { super (); this.WithName ("DEFAULT").WithAliases ("DEFAULT"); }
-    GetFieldNames (sart_obj, listmode) { return sart_obj?.GetDefaultFieldNames (listmode); }
+    constructor   ()               { super (); this.WithName ("DEFAULT").WithAliases ("DEFAULT"); }
+    GetFieldNames (sart_obj, mode) { return sart_obj?.GetEffectiveFieldNames (mode); }
 }
 
 module.exports = { FieldGroup, 

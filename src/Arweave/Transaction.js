@@ -89,10 +89,9 @@ class Transaction extends SARTObject
     Errors              = null;
     DataFetched         = false;
     
-    static FIELDS                          = FIELDS;
-    static FIELDS_DEFAULT_SETTINGKEY_LIST  = SETTINGS.ListAddressFields_List;
-    static FIELDS_DEFAULT_SETTINGKEY_ENTRY = SETTINGS.ListAddressFields_Entry;
-  
+    static FIELDS                  = FIELDS;
+    static FIELDS_DEFAULTS         = { list: ["time","txid","flags","ctype","dest","qty_ar","fee_ar"], entry: null};
+    static FIELDS_SETTINGKEYS      = { list: "Fields_Transaction_List", entry: "Fields_Transaction_Entry"};
       
     
     /** Overridable. This implementation does nothing. */
