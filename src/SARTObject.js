@@ -32,23 +32,25 @@ class SARTObject extends SARTBase
 
     // ***
 
-    static FIELDS                  = new SARTGroup ();
-    static FIELDGROUPS             = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None];
-    static FIELDS_DEFAULTS         = { list: null, entry: null};
-    static FIELDS_SETTINGKEYS      = { list: null, entry: null};
+    static FIELDS              = new SARTGroup ();
+    static FIELDGROUPS         = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None, FieldGroup.Table, FieldGroup.Entry];
+    static FIELDS_DEFAULTS     = SARTObject._FIELDS_CREATEOBJ (null, null);
+    static FIELDS_SETTINGKEYS  = SARTObject._FIELDS_CREATEOBJ (null, null);
     
-    static GET_ALL_FIELD_DEFS           ()     { return this.FIELDS; }
-    static GET_ALL_FIELDNAMES           ()     { return this.FIELDS?.GetNamesAsArray (); }
-    static GET_SETTING_FIELDNAMES       (mode) { return this.FIELDS_SETTINGKEYS[mode] != null ? Sys.GetMain().GetSetting (this.FIELDS_SETTINGKEYS[mode]) : null; }    
-    static GET_DEFAULT_FIELDNAMES       (mode) { return this.FIELDS_DEFAULTS[mode]; }
-    static GET_EFFECTIVE_FIELDNAMES     (mode)
+    static _FIELDS_CREATEOBJ (separate, table) { return { [CONSTANTS.LISTMODE_TABLE]: table, [CONSTANTS.LISTMODE_SEPARATE]: separate}; }
+
+    static GET_ALL_FIELD_DEFS           ()         { return this.FIELDS; }
+    static GET_ALL_FIELDNAMES           ()         { return this.FIELDS?.GetNamesAsArray (); }
+    static GET_SETTING_FIELDNAMES       (listmode) { return this.FIELDS_SETTINGKEYS[listmode] != null ? Sys.GetMain().GetSetting (this.FIELDS_SETTINGKEYS[listmode]) : null; }    
+    static GET_DEFAULT_FIELDNAMES       (listmode) { return this.FIELDS_DEFAULTS[listmode]; }
+    static GET_EFFECTIVE_FIELDNAMES     (listmode)
     { 
-        const s = this.GET_SETTING_FIELDNAMES (mode);
+        const s = this.GET_SETTING_FIELDNAMES (listmode);
         if (s != null)
             return s;
         else
         {
-            const d = this.GET_DEFAULT_FIELDNAMES (mode);
+            const d = this.GET_DEFAULT_FIELDNAMES (listmode);
             return d != null ? d : this.GET_ALL_FIELDNAMES ();
         }
     }
@@ -89,10 +91,10 @@ class SARTObject extends SARTBase
     }
 
 
-    GetEffectiveFieldNames (mode) { return this.constructor.GET_EFFECTIVE_FIELDNAMES (mode); }    
-    GetEffectiveFieldDefs  (mode)
+    GetEffectiveFieldNames (listmode) { return this.constructor.GET_EFFECTIVE_FIELDNAMES (listmode); }    
+    GetEffectiveFieldDefs  (listmode)
     {         
-        const field_names = this.GetDefaultFieldNames (mode);
+        const field_names = this.GetDefaultFieldNames (listmode);
         return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : null; 
     }
 
@@ -101,15 +103,15 @@ class SARTObject extends SARTBase
     
 
 
-    GetFieldDefs (field_names = [], mode = "entry") 
+    GetFieldDefs (field_names = [], listmode = CONSTANTS.LISTMODE_ENTRIES) 
     { 
         
         if (field_names == null || field_names.length <= 0)
-            field_names = this.GetEffectiveFieldNames (mode);
+            field_names = this.GetEffectiveFieldNames (listmode);
 
         // A special case where only positives and/or negatives are given.
         else if (field_names.find (e => !e.startsWith ("-") && !e.startsWith ("+") ) == null)        
-            field_names = this.GetEffectiveFieldNames (mode)?.concat (field_names);
+            field_names = this.GetEffectiveFieldNames (listmode)?.concat (field_names);
         
 
         if (field_names == null)
@@ -125,7 +127,7 @@ class SARTObject extends SARTBase
             const group = this.GetFieldGroup (fname);
             if (group != null)
             {                
-                const fnames = group.GetFieldNames (this, mode);
+                const fnames = group.GetFieldNames (this, listmode);
 
                 if (fnames == null)
                     Sys.DEBUG ("No valid fields from fieldgroup '" + group + "'.");
@@ -139,7 +141,7 @@ class SARTObject extends SARTBase
             else            
                 groups_included.push (fname);                   
         }     
-                
+
 
         // Get negates
         const negates = [];

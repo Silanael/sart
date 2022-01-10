@@ -83,13 +83,14 @@ class TXQuery extends Query
                 node
                 {              
                   id,
-                  owner    { address },
-                  block    { id,height,timestamp },
-                  tags     { name, value },
-                  fee      { ar, winston },
-                  quantity { ar, winston },
-                  data     { size, type },
-                  recipient
+                  owner     { address },
+                  recipient                  
+                  block     { id, height, timestamp },
+                  tags      { name, value },
+                  fee       { ar, winston },
+                  quantity  { ar, winston },
+                  data      { size, type },
+                  bundledIn { id }
                 }
               }
             }

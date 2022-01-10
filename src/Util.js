@@ -238,7 +238,6 @@ function KeysToStr (obj, opts = { entry_separator: ", "} )
 }
 
 
-
 function ObjToJSON (obj)
 {
     if (obj != null)
@@ -359,7 +358,13 @@ function GetSizeStr (bytes_amount, human_readable = false, max_chars = null)
     }
 }
 
-
+function GetShortArweaveHash (hash)
+{
+    if (IsArweaveHash (hash) )
+        return hash.slice (0, 5) + ".." + hash.slice (-5);    
+    else
+        return null;
+}
 
 
 function GetDate (unixtime = null, date_time_spacer_chr = ' ', utc = false)
@@ -422,5 +427,5 @@ function GetCmdArgs (argv, cmd_pos, flags)
 module.exports = {  
                    IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
-                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, 
+                   StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional };

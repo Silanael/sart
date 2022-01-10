@@ -116,11 +116,16 @@ class SubCMD_Address extends CommandDef
                 
                 cmd.Transactions.Output ( {UseListMode: this.IsOutputAsList (cmd), WantedFields: this.GetWantedFields (cmd) } );
 
-                Sys.INFO ("---");
-                Sys.INFO ("Listed " + amount + " transactions with total of " 
-                            + Arweave.WinstonToAR (qty_winston_total)      + " AR transferred, "
-                            + Util.GetSizeStr     (size_bytes_total, true) + " of data stored and "
-                            + Arweave.WinstonToAR (fee_winston_total)      + " AR spent in transaction fees.");
+                if (amount >= 1)
+                {
+                    Sys.INFO ("");
+                                    
+                    Sys.INFO ("Listed " + (amount > 1 ? amount + " transactions" : "one transaction") + " with total of " 
+                            + Arweave.WinstonToAR      (qty_winston_total)      + " AR transferred, "
+                            + Sys.GetMain().GetSizeStr (size_bytes_total, true) + " (" + size_bytes_total + "B) of data stored and "
+                            + Arweave.WinstonToAR      (fee_winston_total)      + " AR spent in transaction fees"
+                            + " with total of " + Arweave.WinstonToAR (fee_winston_total + qty_winston_total) + " AR used.");
+                }
             }
             else
                 Sys.INFO ("Address " + address + " has no transactions.");

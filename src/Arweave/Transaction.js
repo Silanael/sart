@@ -33,9 +33,13 @@ const FIELDS = new SARTGroup ().With (
     new Field ("Network")         .WithAliases   ("NET"),
     new Field ("TXID")            .WithAliases   ("ID", "TransactionID", "Transaction_ID"),
     new Field ("Owner")           .WithAliases   ("Address", "Arweave-address", "Wallet"),         
-    new Field ("Flags")           .WithFunction  (function (t) {return t.GetFlagStr (); } ),           
-    new Field ("FlagsInt")        .WithFunction  (function (t) {return t.GetFlagInt (); } ),
-    new Field ("Target")          .WithAliases   ("Recipient", "Destination", "Dest"),
+    new Field ("OwnerShort")      .WithAliases   ("OwnerS", "AddressShort", "AddrShort", "AddressS", "AddrS", "WalletShort", "WalletS")
+                                  .WithFunction  (function (t) { return Util.GetShortArweaveHash (t?.GetOwner () ) }),
+    new Field ("Flags")           .WithFunction  (function (t) { return t.GetFlagStr (); } ),           
+    new Field ("FlagsInt")        .WithFunction  (function (t) { return t.GetFlagInt (); } ),
+    new Field ("Target")          .WithAliases   ("Recipient", "Destination", "Dest", "Recv"),
+    new Field ("TargetShort")     .WithAliases   ("RecipientShort", "DestinationShort", "DestShort", "RecvShort", "RecvS", "DestS")
+                                  .WithFunction  (function (t) { return Util.GetShortArweaveHash (t?.GetRecipient () ) }),
     new Field ("Fee_AR")          .WithAliases   ("Fee_AR"),
     new Field ("Fee_Winston")     .WithAliases   ("Fee", "Fee_W"),  
     new Field ("Quantity_AR")     .WithAliases   ("QTY_AR", "TransferAmount_AR"),
@@ -47,18 +51,22 @@ const FIELDS = new SARTGroup ().With (
     new Field ("DataRoot")        .WithAliases   ("DRoot"),         
     new Field ("DataLocation")    .WithAliases   ("DataLoc", "DLoc"),             
     new Field ("BlockID")         .WithAliases   ("Block"),
-    new Field ("BlockTime")       .WithAliases   ("Time", "Date", "BDate", "BTime"),
-    new Field ("BlockHeight")     .WithAliases   ("Height",   "BHeight"),
+    new Field ("BlockTime")       .WithAliases   ("Time", "Date", "BDate", "BTime", "BlockT", "BlockD"),
+    new Field ("BlockHeight")     .WithAliases   ("Height",   "BHeight", "BlockH"),
     new Field ("BlockUNIXTime")   .WithAliases   ("UNIXTime", "UTime"),
     new Field ("TXAnchor")        .WithAliases   ("LastTX", "Last_TX", "TX_Last"),     
     new Field ("Tags")            .WithFunction  (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
     new Field ("ContentType")     .WithFunction  (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
                                   .WithAliases   ("Content-Type","CType","MIMEtype", "MIME"),
+    new Field ("IsInBundle")      .WithAliases   ("Bundled", "IsBundled"),     
+    new Field ("BundleTXID")      .WithAliases   ("Bundle", "InBundle"),     
     new Field ("State")           .WithRecursive (),
     new Field ("FetchedFrom")     .WithFunction  (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
     new Field ("Warnings")        .WithRecursive ().WithAliases ("WARN"),
     new Field ("Errors")          .WithRecursive ().WithAliases ("ERR"),                  
 );
+
+
 
 
 class Transaction extends SARTObject
@@ -85,13 +93,14 @@ class Transaction extends SARTObject
     BlockUNIXTime       = null;
     BlockTime           = null;
     TXAnchor            = null;
-    Tags                = null;
-    Errors              = null;
+    Tags                = null;    
     DataFetched         = false;
+    IsLogical           = null;
+    BundleTXID          = null;
     
     static FIELDS                  = FIELDS;
-    static FIELDS_DEFAULTS         = { list: ["time","txid","flags","ctype","dest","qty_ar","fee_ar"], entry: null};
-    static FIELDS_SETTINGKEYS      = { list: "Fields_Transaction_List", entry: "Fields_Transaction_Entry"};
+    static FIELDS_DEFAULTS         = SARTObject._FIELDS_CREATEOBJ (null, ["time","txid","flags","ctype","DestShort","qty_ar","fee_ar"]);
+    static FIELDS_SETTINGKEYS      = SARTObject._FIELDS_CREATEOBJ ("Fields_Transaction_Table", "Fields_Transaction_Entries");
       
     
     /** Overridable. This implementation does nothing. */
@@ -134,6 +143,8 @@ class Transaction extends SARTObject
     HasRecipient             ()         { return Util.IsSet (this.Target);                                                            }
     GetRecipient             ()         { return this.HasRecipient   () ? this.Target : null;                                         }
     IsBundle                 ()         { return this.HasTag (CONSTANTS.TXTAGS.BUNDLE_FORMAT);                                        }
+    IsInBundle               ()         { return this.IsLogical;                                                                      }
+    GetBundleTXID            ()         { return this.BundleTXID;                                                                     }
     HasTag                   (tag, val) { return this.Tags?.HasTag   (tag, val);                                                      }    
     GetTag                   (tag)      { return this.Tags?.GetTag   (tag);                                                           }        
     GetTagValue              (tag)      { return this.GetTag ()?.GetValue ();                                                         }        
@@ -176,6 +187,7 @@ class Transaction extends SARTObject
         if (this.HasData      () ) flags |= CONSTANTS.FLAGS.TX_HASDATA
         if (this.HasTransfer  () ) flags |= CONSTANTS.FLAGS.TX_HASTRANSFER;
         if (this.IsBundle     () ) flags |= CONSTANTS.FLAGS.TX_ISBUNDLE;
+        if (this.IsInBundle   () ) flags |= CONSTANTS.FLAGS.TX_ISLOGICAL;
 
         return flags;
     }
@@ -183,13 +195,15 @@ class Transaction extends SARTObject
     GetFlagStr ()
     {
         const flags = this.GetFlagInt ();
+        const islog = this.IsInBundle ();
 
         const bun = (flags & CONSTANTS.FLAGS.TX_ISBUNDLE    ) != 0 ? "B" : "-";
+        const log = islog == true ? "L" : islog == false ? "-" : "?";
         const dat = (flags & CONSTANTS.FLAGS.TX_HASDATA     ) != 0 ? "D" : "-";
         const tra = (flags & CONSTANTS.FLAGS.TX_HASTRANSFER ) != 0 ? "T" : "-";        
         const err = (flags & CONSTANTS.FLAGS.HASERRORS      ) != 0 ? "E" : (flags & CONSTANTS.FLAGS.HASWARNINGS) != 0 ? "W" : "-";
 
-        return bun + dat + tra + err;
+        return tra + bun + dat + log + err;
     }
  
     
@@ -292,6 +306,9 @@ class Transaction extends SARTObject
             this.__SetObjectProperty ("Quantity_Winston"   , edge.node?.quantity?.winston != null ? Number (edge.node.quantity.winston) : null);
             this.__SetObjectProperty ("Quantity_AR"        , edge.node?.quantity?.ar      != null ? Number (edge.node.quantity.ar)      : null);
             this.__SetObjectProperty ("DataSize_Bytes"     , edge.node?.data?.size        != null ? Number (edge.node.data.size)        : null);
+            this.__SetObjectProperty ("BundleTXID"         , edge.node?.bundledIn?.id     != null ? edge.node.bundledIn.id              : null);
+
+            this.IsLogical = this.BundleTXID != null;
 
             this.Validate ();
             this.__OnTXFetched ();

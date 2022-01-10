@@ -7,6 +7,7 @@
 // Output writer for plaintext.
 //
 
+const CONSTANTS    = require ("../CONSTANTS");
 const Output       = require ("../Output");
 const FieldData    = require ("../FieldData").FieldData;
 const OutputFormat = Output.OutputFormat;
@@ -34,7 +35,7 @@ class OutputFormat_TXT extends OutputFormat
             
             
             const first_obj  = objects.GetByIndex (0);
-            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, "list") : null;
+            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, CONSTANTS.LISTMODE_TABLE) : null;
 
             if (field_defs == null)
                 return false;

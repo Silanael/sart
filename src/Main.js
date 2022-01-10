@@ -81,6 +81,7 @@ class Main
     GetOutputDests        ()           { return Sys.OUTPUTDESTS_STDOUT; }
     GetOutputFormat       (fmt_name)   { return this.OutputFormats[fmt_name?.toUpperCase () ]; }
     GetActiveOutputFormat ()           { return this.GetOutputFormat (this.GetSetting (SETTINGS.OutputFormat) ); }
+    GetSizeStr            (bytes, hr)  { return Util.GetSizeStr (bytes, hr, hr ? this.GetSetting (SETTINGS.SizeDigits) : null); }
 
     GetSetting (key)
     {                

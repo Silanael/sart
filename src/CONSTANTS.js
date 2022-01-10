@@ -21,6 +21,9 @@ const CONFIG_TX_TAGS_TOTAL_SIZE = 2048;
 const COMMAND_DEFAULT           = "console"
 const COMMAND_DEFAULT_ARGS      = [];
 
+const LISTMODE_TABLE            = "tbl";
+const LISTMODE_SEPARATE         = "sep";
+
 const TXSTATUS_OK               = 200;
 const TXSTATUS_PENDING          = 202;
 const TXSTATUS_NOTFOUND         = 404;
@@ -120,6 +123,7 @@ const FLAGS =
     TX_HASDATA     : 4,
     TX_HASTRANSFER : 8,
     TX_ISBUNDLE    : 16,
+    TX_ISLOGICAL   : 32,
 
 }
 
@@ -163,4 +167,6 @@ module.exports =
     FLAGS,
     TXTAGS,
     UTIL_ARRAYTOSTR_DEFAULTS,
+    LISTMODE_TABLE,
+    LISTMODE_SEPARATE,
 };

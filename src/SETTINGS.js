@@ -100,8 +100,8 @@ const SETTINGS =
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
 
-    Fields_Transaction_List : new Setting ("Fields_Transaction_List")  .DV (null),
-    Fields_Transaction_Entry: new Setting ("Fields_Transaction_Entry") .DV (null),
+    Fields_Transaction_Table  : new Setting ("Fields_Transaction_Table")   .DV (null),
+    Fields_Transaction_Entries: new Setting ("Fields_Transaction_Entries") .DV (null),
 
 }
 Object.freeze (SETTINGS);

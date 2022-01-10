@@ -7,6 +7,7 @@
 // A group of fields.
 //
 
+const CONSTANTS  = require ("./CONSTANTS");
 const SARTBase   = require ("./SARTBase");
 
 
@@ -49,10 +50,24 @@ class FieldGroup_Default extends FieldGroup
     GetFieldNames (sart_obj, mode) { return sart_obj?.GetEffectiveFieldNames (mode); }
 }
 
+class FieldGroup_TableMode extends FieldGroup
+{
+    constructor   ()               { super (); this.WithName ("Table").WithAliases ("AsTable", "As_Table", "AsList", "As_List"); }
+    GetFieldNames (sart_obj, mode) { return sart_obj?.GetEffectiveFieldNames (CONSTANTS.LISTMODE_TABLE); }
+}
+
+class FieldGroup_SeparateMode extends FieldGroup
+{
+    constructor   ()               { super (); this.WithName ("Separate").WithAliases ("Sep", "AsSeparate", "AsSep", "As_Sep", "As_Separate"); }
+    GetFieldNames (sart_obj, mode) { return sart_obj?.GetEffectiveFieldNames (CONSTANTS.LISTMODE_SEPARATE); }
+}
+
 module.exports = { FieldGroup, 
-                   All:     new FieldGroup_All     (), 
-                   None:    new FieldGroup_None    (), 
-                   NotNull: new FieldGroup_NotNull (), 
-                   Null:    new FieldGroup_Null    (),
-                   Default: new FieldGroup_Default (), 
+                   All:      new FieldGroup_All          (), 
+                   None:     new FieldGroup_None         (), 
+                   NotNull:  new FieldGroup_NotNull      (), 
+                   Null:     new FieldGroup_Null         (),
+                   Default:  new FieldGroup_Default      (),
+                   Table:    new FieldGroup_TableMode    (),
+                   Separate: new FieldGroup_SeparateMode ()
                  }
