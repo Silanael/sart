@@ -316,9 +316,12 @@ class SARTObject extends SARTBase
         const all_fetches        = this.GET_ALL_AVAILABLE_FETCHES ()?.AsArray ();
         const fetches_amount     = all_fetches?.length;
         const field_array        = field_def_group.AsArray ();
-        const fetch_weight_sums  = new Array (fetches_amount).fill (0);
-        const fetchdefs          = [];
+        const fetch_weight_sums  = [];
         
+        for (const c of all_fetches)
+        {
+            fetch_weight_sums.push ( {def: c, weight: 0} );
+        }
 
         let fields_with_fetches = 0;
         let index, fieldweight  = 1;
@@ -333,7 +336,7 @@ class SARTObject extends SARTBase
                 for (index = 0; index < fetches_amount; ++index)
                 {                            
                     if (field.UsesFetch (all_fetches[index]) )
-                        fetch_weight_sums[index] += fieldweight;                        
+                        fetch_weight_sums[index].weight += fieldweight;                        
                 }                
                 fieldweight *= 2;
                 ++fields_with_fetches;
@@ -354,12 +357,11 @@ class SARTObject extends SARTBase
         {
             Sys.DEBUG ("Fields with fetches: " + fields_with_fetches +" - Target OR'ed value: " + target_weight);
             Sys.DEBUG ("Sums of weights:")
-            let v = 0, s;
-            for (let c = 0; c < fetches_amount; ++c)
-            {
-                s = fetch_weight_sums [c];
-                Sys.DEBUG ("Fetch '" + all_fetches[c] + "': " + s);
-                v |= s;
+            let v = 0;
+            for (const c of fetch_weight_sums)
+            {                
+                Sys.DEBUG ("- Fetch '" + c.def.GetName () + "': " + c.weight);
+                v |= c.weight;
             }
 
             if (v == target_weight)
@@ -372,21 +374,77 @@ class SARTObject extends SARTBase
             }
         }
         
-        // Find the minimum, most preferrable combination of fetches that gets all the fields we want
-        let remaining = [].push (all_fetches);
-        let sequence  = [];
-        let index = 0;
-        while (remaining.length > 0)
-        {
-            sequence.push (remaining.shift () );
+        // Find the minimum, most preferrable combination of fetches that gets all the fields we want.
+        // Start from the first fetch (they should be ordered by highest to lowest priority).    
 
-        }
-
+        const result = SARTObject.__RECURSIVE_FIND (0, target_weight, [], [].concat (fetch_weight_sums));
+        console.log (result);
         process.exit ();
 
         return fetchdefs;
     }    
     
+    static __RECURSIVE_FIND (start_value, target_value, sequence, remaining)
+    {
+
+        if (Sys.IsDebug () )
+            Sys.DEBUG ("Starting search with base sequence " + (sequence.length > 0 ? sequence : "empty") + ", base value " + start_value + ", target value " 
+                       + target_value + " and remaining " + remaining + ".");
+
+        if (start_value == target_value)
+            return sequence;
+
+        else
+        {            
+            const len = remaining.length;
+            let   weight;
+            let   test_value;
+
+            for (let c = 0; c < len; ++c)
+            {
+                weight     = remaining[c].weight;
+                test_value = start_value | weight;
+                
+                if (Sys.IsDebug () )                                       
+                    Sys.DEBUG ("Trying " + (sequence.length > 0 ? sequence : "") + remaining[c].def.GetName () 
+                               + " - total weight " + start_value + " | " + weight + " = " + test_value);
+                    
+
+                // Exact match if this fetch-def is added.
+                if (test_value == target_value)
+                {
+                    sequence.push (remaining[c].def);
+
+                    if (Sys.IsDebug () )
+                        Sys.DEBUG ("Found a viable combination of fetches - " + sequence + " - resulting in desired target value " + target_value);
+                    
+                    return sequence;
+                }
+            }
+
+            if (Sys.IsDebug () )
+                Sys.DEBUG ("Starting with base sequence of " + sequence + " (base value " + start_value 
+                           + "), adding one fetch from " + remaining + " was not sufficient.");
+
+            // No match when adding just one fetch.
+            let ret, value, arr;            
+            for (let c = 0; c < len; ++c)
+            {
+                value = start_value | remaining[c].weight;                
+                arr = [].concat (remaining);
+                arr.splice (c, 1);
+                console.log ("Old: "+ remaining + " new:" + arr);
+                ret = SARTObject.__RECURSIVE_FIND (value, target_value, sequence.concat (remaining[c].def), arr);
+
+                if (ret != null)
+                    return ret;
+            }
+
+            // No match with any combination of the remaining fetches
+            return null;
+        }
+    }
+
     __SetObjectProperty (field, value)
     {
         if (field == null)                   
