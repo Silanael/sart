@@ -71,6 +71,16 @@ function AppendIfNotNull (base, str, sep = " ")
         return Append (base, str, sep);    
 }
 
+function AppendToArrayNoDupes (items = [], array = [])
+{    
+    for (const i of items)
+    {
+        if (!array.includes (i) )
+            array.push (i);
+    }
+    
+    return array;
+}
 
 function RequireOptional (path)
 {
@@ -425,7 +435,7 @@ function GetCmdArgs (argv, cmd_pos, flags)
 
 
 module.exports = {  
-                   IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen,
+                   IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen, AppendToArrayNoDupes,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional };

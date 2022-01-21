@@ -58,7 +58,7 @@ class CommandDef extends SARTDef
     RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }
     toString              ()            { return this.GetName (); }
     
-    IsOutputAsList        (cmd)         { const s = cmd.GetEffectiveSetting (SETTINGS.OutputAsList); return s != null ? s : this.AsListByDefault; }
+    IsOutputAsTable       (cmd)         { const s = cmd.GetEffectiveSetting (SETTINGS.OutputAsTable); return s != null ? s : this.AsListByDefault; }
     GetWantedFields       (cmd)         { return cmd.GetWantedFields (); }
   
     

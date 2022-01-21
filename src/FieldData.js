@@ -16,12 +16,13 @@ const SARTGroup  = require ("./SARTGroup");
 
 class FieldData extends SARTBase
 {    
-    FieldObject = null;
-    FieldDef    = null;
-    FieldValue  = null;
+    FieldObject    = null;
+    FieldDef       = null;
+    FieldValue     = null;
+    FieldTextValue = null;
 
 
-    constructor (def, obj, value)
+    constructor (def, obj, value, textvalue)
     {        
         super ();
 
@@ -33,18 +34,20 @@ class FieldData extends SARTBase
 
         this.WithName (def.GetFieldName () );
         
-        this.FieldDef    = def;
-        this.FieldObject = obj;        
-        this.FieldValue  = value;
+        this.FieldDef       = def;
+        this.FieldObject    = obj;        
+        this.FieldValue     = value;
+        this.FieldTextValue = textvalue;
         
     }
     
-    GetFieldName   () { return this.GetName ();  }
-    GetFieldValue  () { return this.FieldValue;  }
-    GetFieldDef    () { return this.FieldDef;    }
-    GetStrTopWidth () { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
+    GetFieldName       () { return this.GetName ();      }
+    GetFieldValue      () { return this.FieldValue;      }
+    GetFieldTextValue  () { return this.FieldTextValue;  }
+    GetFieldDef        () { return this.FieldDef;        }
+    GetStrTopWidth     () { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
 
-    toString       () { "FieldData '" + this.FieldName + "'"; }
+    toString           () { "FieldData '" + this.FieldName + "'"; }
 
     
 }

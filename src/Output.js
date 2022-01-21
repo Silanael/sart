@@ -7,10 +7,9 @@
 // Base classes for data output.
 //
 
-const Sys       = require ("./System");
-const SARTBase  = require ("./SARTBase");
-const SARTGroup = require ("./SARTGroup");
-const SETTINGS  = require ("./SETTINGS").SETTINGS;
+const CONSTANTS  = require ("./CONSTANTS");
+const Sys        = require ("./System");
+const SETTINGS   = require ("./SETTINGS").SETTINGS;
 
 
 class OutputParams
@@ -20,12 +19,12 @@ class OutputParams
 }
 
 
-class OutputFormat extends SARTBase 
+class OutputFormat
 {
     FileExtension = null;
 
 
-    OutputObjects (objects = new SARTGroup, params = new OutputParams () )
+    OutputObjects (objects = new SARTGroup (), params = new OutputParams () )
     {
         if (objects == null || objects.length <= 0)
             return ERR_PROGRAM ("OutputFormat.OutputObjects: No objects given.");
@@ -33,24 +32,36 @@ class OutputFormat extends SARTBase
         if (params == null)
             params = new OutputParams ();
 
-        const setting_list_mode = Sys.GetMain ().GetSetting (SETTINGS.OutputAsList);
+        const setting_list_mode = Sys.GetMain ().GetSetting (SETTINGS.OutputAsTable);
 
         if (setting_list_mode != null)
             params.UseListMode = setting_list_mode;
             
-        this.__DoOutputObjects (objects, params);
+        const field_defs = OutputFormat.GET_FIELD_DEFS (objects, params);
+
+        if (field_defs != null)
+            this.__DoOutputObjects (objects, params, field_defs);        
+        else
+            Sys.INFO ("No data.");
     }
 
 
-    /** Overridable. This implementation does nothing. */
-    __DoOutputFieldCaptions (field_names     = [], params, objec                                            ) {}
-    __DoOutputObject        (obj, field_data = [], params = new OutputParams (), objects = new SARTGroup () ) {}
-    __DoOutputObjects       (objects, params = new OutputParams ()                                          ) {}
+    static GET_FIELD_DEFS (objects, params)
+    {
+        const first_obj  = objects.GetByIndex != null ? objects.GetByIndex (0) : objects;
+        return first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, params.UseListMode ? CONSTANTS.LISTMODE_TABLE 
+                                                                                                   : CONSTANTS.LISTMODE_SEPARATE) : null;
+    }
+
+    /** Overridable. Logic of actually writing the output goes here. This implementation does nothing. */    
+    __DoOutputObjects (objects, params = new OutputParams (), field_defs                                          ) {}
 
     
+    /** Call these from __DoOutputObjects to output data into the active OutputDests. */
     __Out_Line   (line)  { Sys.OUT_TXT     (line); }
     __Out_RawTXT (txt)   { Sys.OUT_TXT_RAW (txt);  }
     __Out_BIN    (data)  { Sys.OUT_BIN     (data); }
+
 }
 
 

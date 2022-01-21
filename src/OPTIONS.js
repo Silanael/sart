@@ -82,8 +82,8 @@ const OPTIONS = new Args.ArgDefs
     new Option ("--verbose-stderr"  ).WithInvoke ("--stderr", "--verbose"),
     new Option ("--debug-stderr"    ).WithInvoke ("--stderr", "--debug"),
     new Option ("--no-ansi"         ).WithSetting (SETTINGS.ANSIAllowed, false),  
-    new Option ("-a"                ).WithSetting (SETTINGS.DisplayAll,  true ).WithAlias ("-a"),    
-    new Option ("-r"                ).WithSetting (SETTINGS.Recursive,   true ).WithAlias ("-r"),        
+    new Option ("--display-all"     ).WithSetting (SETTINGS.DisplayAll,  true ).WithAlias ("-a"),    
+    new Option ("--recursive"       ).WithSetting (SETTINGS.Recursive,   true ).WithAlias ("-r"),        
     new Option ("--host"            ).WithSetting (SETTINGS.ArweaveHost),
     new Option ("--port"            ).WithSetting (SETTINGS.ArweavePort), 
     new Option ("--proto"           ).WithSetting (SETTINGS.ArweaveProto),
@@ -102,8 +102,8 @@ const OPTIONS = new Args.ArgDefs
     new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
     new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON),
     new Option ("--output-file"     ).WithSetting (SETTINGS.OutputFilename),
-    new Option ("--list"            ).WithSetting (SETTINGS.OutputAsList, true),
-    new Option ("--entries"         ).WithSetting (SETTINGS.OutputAsList, false),
+    new Option ("--table"           ).WithSetting (SETTINGS.OutputAsTable, true).WithAliases ("-t", "--tbl"),
+    new Option ("--separate"        ).WithSetting (SETTINGS.OutputAsTable, false).WithAliases ("-s", "--sep"),
     
 );
 Object.freeze (OPTIONS);

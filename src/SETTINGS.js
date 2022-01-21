@@ -73,7 +73,7 @@ const SETTINGS =
     OutputFilename          : new Setting ("OutputFilename")           .DV (null).NOCONF (),
     OutputFormat            : new Setting ("OutputFormat")             .DV (OUTPUTFORMATS.TXT),
     OutputFileDest          : new Setting ("OutputFileDest")           .DV (null).NOCONF (),    
-    OutputAsList            : new Setting ("OutputAsList")             .DV (null), // null = auto.
+    OutputAsTable           : new Setting ("OutputAsTable")            .DV (null), // null = auto.
     OutputFields            : new Setting ("OutputFields")             .DV (null).NOCONF (),    
     OutputFieldsCaseSens    : new Setting ("OutputFieldsCaseSens")     .DV (false),
     SizeDigits              : new Setting ("SizeDigits")               .DV (5),

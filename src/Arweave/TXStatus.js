@@ -18,13 +18,31 @@ class TXStatus
 
 
     IsFetched        () { return this.Status != null; }
-    GetStatus        () { return this.Status != null ? this.Status : "UNKNOWN"; };
-    GetStatusFull    () { return this.Status == null ? "STATUS NOT QUERIED"
-                                                     : this.Status + (this.IsConfirmed () ? 
-                                                     " (" + this.Confirmations + " con., block " + this.MinedAtBlock + ")" : ""); };
+    GetStatus        (str_if_not_present = null) { return this.Status != null ? this.Status : str_if_not_present; };
     GetStatusCode    () { return this.StatusCode    };
     GetConfirmations () { return this.Confirmations };
 
+    GetStatusDescription    (str_if_not_present = null)
+    { 
+
+        if (this.IsFetched () )
+        {
+            if (this.IsConfirmed () )
+                return "Successfully mined with " + this.Confirmations + " confirmations.";
+
+            else if (this.IsMined () )
+                return "Mined, but amount of confirmations (" + this.Confirmations + ") still low.";
+
+            else if (this.IsPending () )
+                return "The transaction is still waiting to be mined.";
+
+            else if (this.IsFailed () )
+                return "Unable to retrieve transaction status - it may have failed."
+        }
+        else
+            return str_if_not_present != null ? str_if_not_present : "Status not fetched.";
+
+    }
 
     async UpdateFromTXID (txid) 
     {
@@ -33,7 +51,7 @@ class TXStatus
         
         this.TXID = txid;
         let txstatus = await Arweave.GetTXStatus (txid);
-        
+
         // Currently (2021-11-18), the gateway doesn't return TX-status for transactions
         // that are contained inside bundles, yet a GQL-query is able to fetch them.
         if (txstatus != null && txstatus.status == Constants.TXSTATUS_NOTFOUND)
@@ -72,7 +90,8 @@ class TXStatus
             this.Status        = Arweave.GetTXStatusStr (this.StatusCode, this.Confirmations);
         }
 
-        else {
+        else 
+        {
             this.Status        = null;
             this.StatusCode    = null;
             this.Confirmations = null;

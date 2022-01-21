@@ -10,6 +10,8 @@
 const CONSTANTS    = require ("../CONSTANTS");
 const Output       = require ("../Output");
 const FieldData    = require ("../FieldData").FieldData;
+const SARTObject   = require ("../SARTObject");
+const SARTGroup    = require ("../SARTGroup");
 const OutputFormat = Output.OutputFormat;
 const OutputParams = Output.OutputParams;
 
@@ -18,7 +20,7 @@ const OutputParams = Output.OutputParams;
 class OutputFormat_TXT extends OutputFormat
 {
 
-    __DoOutputObjects (objects, params = new OutputParams ())
+    __DoOutputObjects (objects, params = new OutputParams (), field_defs)
     {        
         if (params.UseListMode == true)
         {
@@ -33,13 +35,6 @@ class OutputFormat_TXT extends OutputFormat
             let   total_width_chrs = 0;
             const field_lens = {};
             
-            
-            const first_obj  = objects.GetByIndex (0);
-            const field_defs = first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, CONSTANTS.LISTMODE_TABLE) : null;
-
-            if (field_defs == null)
-                return false;
-
 
             // Caption            
             for (const f of field_defs.AsArray () )
@@ -75,46 +70,80 @@ class OutputFormat_TXT extends OutputFormat
             this.__Out_Line (str_separator);
                        
         }
+
+        // Separate entries
         else
-        {
-            this.__Out_Line ("foo");
-        }
+            this.__OutputObjects (objects, 0, field_defs, params);
+  
     }
 
-
-    __DoOutputObject (obj, field_data = new FieldData (), params = new OutputParams (), objects)
+    __OutputObj (obj, indent = 0, field_defs = null, params, longest_field_name = null)
     {
-        if (params.UseListMode == true)
-        {
-            let str_line = "";
-            let field_len;            
-            let fval_str;
 
-            for (const f of field_data.AsArray () )
-            {        
-                fval_str  = f.GetFieldValue ()?.toString ();   
-                field_len = objects.GetFieldMaxLen (f.GetFieldName () ) + 1;
-                
-                str_line += fval_str != null ? fval_str.padEnd (field_len) : " ".repeat (field_len);
+        // Get field defs from the first object
+        if (field_defs == null)
+            field_defs = OutputFormat.GET_FIELD_DEFS (obj, params);
+
+        // No fields given for the sub-obj
+        if (field_defs == null)
+            return;
+            
+        if (longest_field_name == null)
+            longest_field_name = field_defs.GetNameMaxLen ();
+
+
+        const field_data         = obj.GetDataForFields (field_defs);  
+        const value_start_offset = indent + longest_field_name + 2;
+
+
+        for (const f of field_data.AsArray () )
+        {        
+            if (f != null)
+            {                 
+                if (f instanceof SARTObject)
+                    this.__OutputObj     (f, value_start_offset, null, params, null);
+
+                else if (f instanceof SARTGroup)
+                    this.__OutputObjects (f, value_start_offset, null, params);
+
+                else
+                {
+                    this.__Out_Line 
+                    (
+                        " ".repeat (indent) 
+                        + f.GetFieldName()?.padEnd (longest_field_name, " ") 
+                        + " ".repeat (2) 
+                        + f.GetFieldTextValue ()
+                    );
+                }                
             }
-            this.__Out_Line (str_line);
-        }
-        else
-        {
-            this.__Out_Line ("foo");
-        }
+        }                            
     }
 
+    __OutputObjects (objects, indent = 0, field_defs = null, params)
+    {        
+        // Get field defs from the first object
+        if (field_defs == null)
+            field_defs = OutputFormat.GET_FIELD_DEFS (objects, params);
 
-    __DoOutputFieldCaptions (field_defs = [], params, objects) 
-    {
-        let str_caption = "";
-        for (const f of field_defs)
+        // No data for sub-obj
+        if (field_defs == null)
+            return;
+
+        // Find longest length of field name
+        const longest_field_name = field_defs.GetNameMaxLen ();        
+                
+        const len = objects.GetAmount ();
+        let pos = 0;
+        for (const obj of objects.AsArray () )
         {
-            str_caption += f.GetName () + " ";
-        }
-        this.__Out_Line (str_caption);
+            this.__OutputObj (obj, indent, field_defs, params, longest_field_name);
+            ++pos;
+            if (pos < len)
+                this.__Out_Line ("***");
+        }                
     }
+ 
 }
 
 module.exports = OutputFormat_TXT;

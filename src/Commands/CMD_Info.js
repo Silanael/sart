@@ -19,6 +19,7 @@ const ArFS_DEF       = require ('../ArFS/CONST_ARFS.js');
 const ArFSEntity     = require ("../ArFS/ArFSEntity");
 const Transaction    = require ("../Arweave/Transaction.js");
 const CommandDef     = require ("../CommandDef").CommandDef;
+const SARTObject = require('../SARTObject');
 
 
 class CMD_Info extends CommandDef
@@ -108,6 +109,8 @@ class SubCMD_TX extends CommandDef
 
     OnOutput (cmd)
     {
+        console.log (Transaction.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (Transaction.FIELDS) );
+        process.exit (0);
         cmd.Transaction?.Output ();
     }    
 }

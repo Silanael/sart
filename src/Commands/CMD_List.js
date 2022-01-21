@@ -114,7 +114,7 @@ class SubCMD_Address extends CommandDef
                     qty_winston_total  += t.GetQTY_Winston ();                
                 }
                 
-                cmd.Transactions.Output ( {UseListMode: this.IsOutputAsList (cmd), WantedFields: this.GetWantedFields (cmd) } );
+                cmd.Transactions.Output ( {UseListMode: this.IsOutputAsTable (cmd), WantedFields: this.GetWantedFields (cmd) } );
 
                 if (amount >= 1)
                 {

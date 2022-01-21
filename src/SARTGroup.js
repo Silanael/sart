@@ -130,12 +130,26 @@ class SARTGroup extends SARTBase
 
         for (const o of this.AsArray () )
         {
-            fdata = o.GetFieldData (field);            
+            fdata     = o.GetFieldData (field);            
             namelen   = fdata?.GetFieldName  ()?.length;
             valuelen  = fdata?.GetFieldValue ()?.toString ().length;
             
-            if (namelen > maxlen)  maxlen = namelen;
+            if (namelen  > maxlen)  maxlen = namelen;
             if (valuelen > maxlen) maxlen = valuelen;
+        }
+
+        return maxlen;
+    }
+
+    GetNameMaxLen ()
+    {
+        let maxlen = 0;
+        let namelen;        
+
+        for (const o of this.AsArray () )
+        {                        
+            namelen = o?.GetName()?.length;                        
+            if (namelen > maxlen)  maxlen = namelen;            
         }
 
         return maxlen;

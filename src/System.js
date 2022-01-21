@@ -667,5 +667,8 @@ module.exports =
     OUTPUTDESTS_STDOUT,
     OUTPUTDESTS_STDERR,
     SetMain,
-    GetMain,    
+    GetMain,
+    IsDebug,
+    IsMsg,
+    IsVerbose   
 };

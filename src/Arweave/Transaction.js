@@ -22,49 +22,167 @@ const SARTGroup    = require ("../SARTGroup");
 const ByTXQuery    = require ("../GQL/ByTXQuery");
 const Concurrent   = require ("../Concurrent");
 const Field        = require ("../FieldDef");
+const FetchDef     = require ("../FetchDef");
+const FieldList    = require ("../FieldList");
 
 
+const FETCH_GQL    = new FetchDef ("GraphQL", function (t) { t.FetchViaGQL        (); } );
+const FETCH_GET    = new FetchDef ("GET",     function (t) { t.FetchViaGet        (); } );
+const FETCH_STATUS = new FetchDef ("Status",  function (t) { t.UpdateAndGetStatus (); } );    
 
 
-
-const FIELDS = new SARTGroup ().With (
-
-    new Field ("ObjectType")      .WithAliases   ("ObjType","OType"),
-    new Field ("Network")         .WithAliases   ("NET"),
-    new Field ("TXID")            .WithAliases   ("ID", "TransactionID", "Transaction_ID"),
-    new Field ("Owner")           .WithAliases   ("Address", "Arweave-address", "Wallet"),         
-    new Field ("OwnerShort")      .WithAliases   ("OwnerS", "AddressShort", "AddrShort", "AddressS", "AddrS", "WalletShort", "WalletS")
-                                  .WithFunction  (function (t) { return Util.GetShortArweaveHash (t?.GetOwner () ) }),
-    new Field ("Flags")           .WithFunction  (function (t) { return t.GetFlagStr (); } ),           
-    new Field ("FlagsInt")        .WithFunction  (function (t) { return t.GetFlagInt (); } ),
-    new Field ("Target")          .WithAliases   ("Recipient", "Destination", "Dest", "Recv"),
-    new Field ("TargetShort")     .WithAliases   ("RecipientShort", "DestinationShort", "DestShort", "RecvShort", "RecvS", "DestS")
-                                  .WithFunction  (function (t) { return Util.GetShortArweaveHash (t?.GetRecipient () ) }),
-    new Field ("Fee_AR")          .WithAliases   ("Fee_AR"),
-    new Field ("Fee_Winston")     .WithAliases   ("Fee", "Fee_W"),  
-    new Field ("Quantity_AR")     .WithAliases   ("QTY_AR", "TransferAmount_AR"),
-    new Field ("Quantity_Winston").WithAliases   ("QTY", "QTY_W", "TransferAmount", "TransferAmount_Winston", "TransferAmount_W"), 
-    new Field ("DataSize_Bytes")  .WithAliases   ("DataSize", "DataBytes", "Bytes", "Size", "SizeB", "Size_B"),
-    new Field ("Total_AR")        .WithFunction  (function (t) { return t?.GetTotalAR ();      }).WithAliases ("Total_AR, TotalAR, TotalCost_AR, TotalCostAR", "AR_Total", "ARTotal"),
-    new Field ("Total_Winston")   .WithFunction  (function (t) { return t?.GetTotalWinston (); }).WithAliases ("Total", "Total_W", "TotalW", "TotalCost", "TotalCost_W", "TotalCostW", "WinstonTotal"),      
-    new Field ("TagsTotalSizeB")  .WithFunction  (function (t) { return t?.Tags?.GetTotalBytes (); } ),
-    new Field ("DataRoot")        .WithAliases   ("DRoot"),         
-    new Field ("DataLocation")    .WithAliases   ("DataLoc", "DLoc"),             
-    new Field ("BlockID")         .WithAliases   ("Block"),
-    new Field ("BlockTime")       .WithAliases   ("Time", "Date", "BDate", "BTime", "BlockT", "BlockD"),
-    new Field ("BlockHeight")     .WithAliases   ("Height",   "BHeight", "BlockH"),
-    new Field ("BlockUNIXTime")   .WithAliases   ("UNIXTime", "UTime"),
-    new Field ("TXAnchor")        .WithAliases   ("LastTX", "Last_TX", "TX_Last"),     
-    new Field ("Tags")            .WithFunction  (function (t) { return t?.Tags?.AsArray (); } ).WithRecursive (),                
-    new Field ("ContentType")     .WithFunction  (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
-                                  .WithAliases   ("Content-Type","CType","MIMEtype", "MIME"),
-    new Field ("IsInBundle")      .WithAliases   ("Bundled", "IsBundled"),     
-    new Field ("BundleTXID")      .WithAliases   ("Bundle", "InBundle"),     
-    new Field ("State")           .WithRecursive (),
-    new Field ("FetchedFrom")     .WithFunction  (function (t) { return t?.GenerateFetchInfo () } ).WithRecursive (),                                        
-    new Field ("Warnings")        .WithRecursive ().WithAliases ("WARN"),
-    new Field ("Errors")          .WithRecursive ().WithAliases ("ERR"),                  
+const FETCHDEFS = new SARTGroup ().With
+(
+    FETCH_GET,
+    FETCH_GQL,
+    FETCH_STATUS,        
 );
+
+
+
+
+const FIELDS = new FieldList ().With 
+(
+
+    new Field ("ObjectType")      
+        .WithAliases ("ObjType","OType"),
+
+    new Field ("Network")         
+        .WithAliases ("NET"),
+
+    new Field ("TXID")            
+        .WithAliases ("ID", "TransactionID", "Transaction_ID"),
+
+    new Field ("Owner")           
+        .WithAliases ("Address", "Arweave-address", "Wallet")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),         
+
+    new Field ("OwnerShort")      
+        .WithAliases ("OwnerS", "AddressShort", "AddrShort", "AddressS", "AddrS", "WalletShort", "WalletS")
+        .WithFunction (function (t) { return Util.GetShortArweaveHash (t?.GetOwner () ) } )
+        .WithInheritFetch ("Owner"),
+
+    new Field ("Flags")           
+        .WithFunction  (function (t) { return t.GetFlagStr (); } )
+        .WithFetch (FETCH_GQL),    
+
+    new Field ("FlagsInt")        
+        .WithFunction  (function (t) { return t.GetFlagInt (); } )
+        .WithInheritFetch ("Flags"),
+
+    new Field ("Target")          
+        .WithAliases   ("Recipient", "Destination", "Dest", "Recv")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("TargetShort")     
+        .WithAliases   ("RecipientShort", "DestinationShort", "DestShort", "RecvShort", "RecvS", "DestS")
+        .WithFunction  (function (t) { return Util.GetShortArweaveHash (t?.GetRecipient () ) })
+        .WithInheritFetch ("Target"),        
+
+    new Field ("Fee_AR")          
+        .WithAliases   ("Fee_AR")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("Fee_Winston")     
+        .WithAliases ("Fee", "Fee_W")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),  
+
+    new Field ("Quantity_AR")     
+        .WithAliases   ("QTY_AR", "TransferAmount_AR")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("Quantity_Winston")
+        .WithAliases ("QTY", "QTY_W", "TransferAmount", "TransferAmount_Winston", "TransferAmount_W")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL), 
+
+    new Field ("DataSize_Bytes")  
+        .WithAliases   ("DataSize", "DataBytes", "Bytes", "Size", "SizeB", "Size_B")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("Total_AR")        
+        .WithFunction  (function (t) { return t?.GetTotalAR (); } )
+        .WithAliases ("Total_AR, TotalAR, TotalCost_AR, TotalCostAR", "AR_Total", "ARTotal")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("Total_Winston")   
+        .WithFunction  (function (t) { return t?.GetTotalWinston (); } )
+        .WithAliases ("Total", "Total_W", "TotalW", "TotalCost", "TotalCost_W", "TotalCostW", "WinstonTotal")
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("TagsTotalSizeB")  
+        .WithFunction  (function (t) { return t?.Tags?.GetTotalBytes (); } )
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("DataRoot")        
+        .WithAliases ("DRoot")
+        .WithFetch   (FETCH_GET),
+
+    new Field ("DataLocation")    
+        .WithAliases ("DataLoc", "DLoc")
+        .WithFetch   (FETCH_GET),
+
+    new Field ("BlockID")         
+        .WithAliases ("Block")
+        .WithFetch   (FETCH_GQL),
+
+    new Field ("BlockTime")       
+        .WithAliases ("Time", "Date", "BDate", "BTime", "BlockT", "BlockD")
+        .WithFetch   (FETCH_GQL),
+
+    new Field ("BlockHeight")     
+        .WithAliases ("Height",   "BHeight", "BlockH")
+        .WithFetch   (FETCH_GQL),
+
+    new Field ("BlockUNIXTime")   
+        .WithAliases ("UNIXTime", "UTime")
+        .WithFetch   (FETCH_GQL),
+
+    new Field ("TXAnchor")        
+        .WithAliases ("LastTX", "Last_TX", "TX_Last")
+        .WithFetch   (FETCH_GQL),
+
+    new Field ("Tags")            
+        .WithFunction  (function (t) { return t?.Tags?.AsArray (); } )
+        .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
+
+    new Field ("ContentType")     
+        .WithFunction     (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
+        .WithAliases      ("Content-Type","CType","MIMEtype", "MIME")
+        .WithInheritFetch ("Tags"),
+
+    new Field ("IsInBundle")      
+        .WithAliases   ("Bundled", "IsBundled").WithFunction ( function (t) { return t.IsInBundle (); } )
+        .WithFetch   (FETCH_GQL),
+
+    new Field ("BundleTXID")      
+        .WithAliases   ("Bundle", "InBundle")
+        .WithInheritFetch ("IsInBundle"),
+
+    new Field ("Status")         
+        .WithFunction  (function (t) { return t?.GetStatusDesc     (); } )
+        .WithFetch (FETCH_STATUS),
+
+    new Field ("StatusStr")       
+        .WithFunction  (function (t) { return t?.GetStatusStr      (); } )
+        .WithInheritFetch ("Status"),
+
+    new Field ("StatusCode")      
+        .WithFunction  (function (t) { return t?.GetStatusCode     (); } )
+        .WithInheritFetch ("Status"),
+
+    new Field ("Confirmations")   
+        .WithFunction  (function (t) { return t?.GetStatusConfirms (); } )
+        .WithInheritFetch ("Status"),
+    
+    new Field ("Warnings")       
+        .WithAliases ("WARN")
+        .WithNullDisplayValue ("NONE"),
+
+    new Field ("Errors")        
+        .WithAliases ("ERR")
+        .WithNullDisplayValue ("NONE"),                  
+      
+)
 
 
 
@@ -101,7 +219,7 @@ class Transaction extends SARTObject
     static FIELDS                  = FIELDS;
     static FIELDS_DEFAULTS         = SARTObject._FIELDS_CREATEOBJ (null, ["time","txid","flags","ctype","DestShort","qty_ar","fee_ar"]);
     static FIELDS_SETTINGKEYS      = SARTObject._FIELDS_CREATEOBJ ("Fields_Transaction_Table", "Fields_Transaction_Entries");
-      
+    static FETCHDEFS               = FETCHDEFS;
     
     /** Overridable. This implementation does nothing. */
     __OnTXFetched () {};               
@@ -136,6 +254,10 @@ class Transaction extends SARTObject
     GetTotalAR               ()         { return this.GetFee_AR      ()        + this.GetQTY_AR      ();                              }
     GetTotalWinston          ()         { return this.GetFee_Winston ()        + this.GetQTY_Winston ();                              }
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
+    GetStatusStr             ()         { return this.State?.GetStatus ();                                                            }    
+    GetStatusDesc            ()         { return this.State?.GetStatusDescription ();                                                 }    
+    GetStatusConfirms        ()         { return this.State?.GetConfirmations ();                                                     }        
+    GetStatusCode            ()         { return this.State?.GetStatusCode ();                                                        }    
     HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
     HasTransfer              ()         { return this.Quantity_AR      > 0     || this.Quantity_Winston > 0;                          }
     HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }    
@@ -152,11 +274,11 @@ class Transaction extends SARTObject
     GetTagsAsArray           ()         { return this.Tags != null ? this.Tags.AsArray () : [];                                       }        
     IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                                }        
     IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                                }            
-    IsMined                  ()         { return this.Status?.IsMined       ()                                                        }
-    IsPending                ()         { return this.Status?.IsPending     ()                                                        }
-    IsFailed                 ()         { return this.Status?.IsFailed      ()                                                        }
-    IsConfirmed              ()         { return this.Status?.IsConfirmed   ()                                                        }
-    GetStatus                ()         { return this.State;                                                                          }
+    IsMined                  ()         { return this.State?.IsMined       ()                                                         }
+    IsPending                ()         { return this.State?.IsPending     ()                                                         }
+    IsFailed                 ()         { return this.State?.IsFailed      ()                                                         }
+    IsConfirmed              ()         { return this.State?.IsConfirmed   ()                                                         }
+    GetState                 ()         { return this.State;                                                                          }
     async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); this.DataLoaded = true;return this.State; }
 
 
@@ -424,5 +546,5 @@ class Transaction extends SARTObject
 
 
    
-
+FIELDS.WithSetClassToAll (Transaction);
 module.exports = Transaction;

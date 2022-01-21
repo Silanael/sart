@@ -17,6 +17,7 @@ const SARTBase   = require ("./SARTBase");
 const SARTGroup  = require ("./SARTGroup");
 const OutputArgs = require ("./Output").OutputParams;
 const FieldGroup = require ("./FieldGroup");
+const FieldList  = require ("./FieldList");
 
 
 class SARTObject extends SARTBase
@@ -30,13 +31,19 @@ class SARTObject extends SARTBase
     Fields             = null;
     FieldGroups        = null;
 
+    Value              = null;
+
     // ***
 
-    static FIELDS              = new SARTGroup ();
-    static FIELDGROUPS         = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None, FieldGroup.Table, FieldGroup.Entry];
+    static FIELDS              = new FieldList ();
+    static FIELDGROUPS         = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None, FieldGroup.Separate, FieldGroup.Table];
     static FIELDS_DEFAULTS     = SARTObject._FIELDS_CREATEOBJ (null, null);
     static FIELDS_SETTINGKEYS  = SARTObject._FIELDS_CREATEOBJ (null, null);
     
+    // The entries should be ordered from most to least preferrable.
+    static FETCHDEFS           = new SARTGroup ();
+
+
     static _FIELDS_CREATEOBJ (separate, table) { return { [CONSTANTS.LISTMODE_TABLE]: table, [CONSTANTS.LISTMODE_SEPARATE]: separate}; }
 
     static GET_ALL_FIELD_DEFS           ()         { return this.FIELDS; }
@@ -54,19 +61,28 @@ class SARTObject extends SARTBase
             return d != null ? d : this.GET_ALL_FIELDNAMES ();
         }
     }
+    static GET_ALL_AVAILABLE_FETCHES () { return this.FETCHDEFS; }
 
-    constructor (name = null)
+
+
+
+
+
+    constructor (name = null, value = null)
     {
         super (name);
 
         this.Name        = name;
+        this.Value       = value;
+
         this.Fields      = this.constructor.FIELDS      != null ? this.constructor.FIELDS      : new SARTGroup ();
-        this.FieldGroups = this.constructor.FIELDGROUPS != null ? this.constructor.FIELDGROUPS : [];
+        this.Value       = value;
     }
 
 
     WithField          (field_def)                             { this.Fields.Add    (   field_def ); return this;                                             }
     WithFields         (...field_defs)                         { this.Fields.AddAll (...field_defs); return this;                                             }
+    WithValue          (value)                                 { this.SetValue (value);              return this;                                             }    
     OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN, warning, src, opts)                             }  
     OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }  
     OnOverridableError (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src, opts)                 }  
@@ -77,6 +93,8 @@ class SARTObject extends SARTBase
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                                 }
     IsValid            ()                                      { return this.Valid == true;                                                                   }
     SetInvalid         ()                                      { this.Valid = false; return this;                                                             }
+    GetValue           ()                                      { return this.Value;                                                                           }
+    SetValue           (value)                                 { this.Value = value;                                                                          }    
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
 
@@ -98,12 +116,12 @@ class SARTObject extends SARTBase
         return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : null; 
     }
 
-    GetAllFieldDefs  () {  return this.constructor.GET_ALL_FIELD_DEFS (); }
-    GetAllFieldNames () { return this.GetAllFieldDefs ()?.GetNamesAsArray (); }
-    
+    GetAllFieldDefs  () { return this.constructor.GET_ALL_FIELD_DEFS ();        }
+    GetAllFieldNames () { return this.GetAllFieldDefs ()?.GetNamesAsArray ();   }
+    GetAllFetches    () { return this.constructor.GET_ALL_AVAILABLE_FETCHES (); }
 
 
-    GetFieldDefs (field_names = [], listmode = CONSTANTS.LISTMODE_ENTRIES) 
+    GetFieldDefs (field_names = [], listmode = CONSTANTS.LISTMODE_SEPARATE) 
     { 
         
         if (field_names == null || field_names.length <= 0)
@@ -123,7 +141,7 @@ class SARTObject extends SARTBase
         // Process groups    
         const groups_included = [];
         for (const fname of field_names)
-        {
+        {            
             const group = this.GetFieldGroup (fname);
             if (group != null)
             {                
@@ -229,7 +247,7 @@ class SARTObject extends SARTBase
         const def = field instanceof FieldDef ? field: this.GetFieldDef (field);
 
         if (def != null)
-            return new FieldData (def, this, def.GetFieldValue (this) );
+            return new FieldData (def, this, def.GetFieldValue (this), def.GetFieldTextValue (this) );
         else
             return null;
     }
@@ -276,6 +294,98 @@ class SARTObject extends SARTBase
     }
     
 
+    static GET_ALL_UNIQUE_FETCHES_FOR_FIELDDEFS (field_def_group = new SARTGroup () )
+    {
+        const fetchdefs = [];
+
+        for (const f of field_def_group.AsArray () )
+        {            
+            if (f != null)
+                Util.AppendToArrayNoDupes (f.GetFetches_AnyOf (field_def_group), fetchdefs);
+            else
+                Sys.ERR_PROGRAM ("Null field included in the parameters.", "GetRequiredFetchesForFieldDefs");
+        }
+
+        return fetchdefs;
+    }
+
+    static GET_MINIMUM_FETCHES_FOR_FIELDDEFS (field_def_group = new SARTGroup () )
+    {
+        const max_field_amount  = Math.log2 (Number.MAX_SAFE_INTEGER); // Each field has an increased weight in power-of-two.
+        
+        const all_fetches        = this.GET_ALL_AVAILABLE_FETCHES ()?.AsArray ();
+        const fetches_amount     = all_fetches?.length;
+        const field_array        = field_def_group.AsArray ();
+        const fetch_weight_sums  = new Array (fetches_amount).fill (0);
+        const fetchdefs          = [];
+        
+
+        let fields_with_fetches = 0;
+        let index, fieldweight  = 1;
+        for (const field of field_array)
+        {            
+            // Only include fields that require fetching.
+            if (field.RequiresFetches () )
+            {
+                if (Sys.IsDebug () )
+                    Sys.DEBUG ("Field " + field.GetName () + " weight " + fieldweight + " fetches: " + field.GetFetches_AnyOf () );
+
+                for (index = 0; index < fetches_amount; ++index)
+                {                            
+                    if (field.UsesFetch (all_fetches[index]) )
+                        fetch_weight_sums[index] += fieldweight;                        
+                }                
+                fieldweight *= 2;
+                ++fields_with_fetches;
+            }
+        }
+
+        const target_weight = fieldweight - 1;
+    
+        // TODO: Make a BigInt-variant.
+        if (fields_with_fetches >= max_field_amount)
+        {
+            Sys.ERR_ONCE ("Field amount exceeded maximum of " + field_amount + " - using all available fetches.");
+            return this.GET_ALL_UNIQUE_FETCHES_FOR_FIELDDEFS (field_def_group);
+        }
+
+        // Debug output
+        if (Sys.IsDebug () )
+        {
+            Sys.DEBUG ("Fields with fetches: " + fields_with_fetches +" - Target OR'ed value: " + target_weight);
+            Sys.DEBUG ("Sums of weights:")
+            let v = 0, s;
+            for (let c = 0; c < fetches_amount; ++c)
+            {
+                s = fetch_weight_sums [c];
+                Sys.DEBUG ("Fetch '" + all_fetches[c] + "': " + s);
+                v |= s;
+            }
+
+            if (v == target_weight)
+                Sys.DEBUG ("All fetch-weights OR'ed with one another results in " + v + " which equals the target sum - all good.");
+
+            else
+            {
+                Sys.ERR_PROGRAM ("The sum of fetch-weights " + v + " does NOT equal the target sum of " + target_weight + " - something went wrong!");
+                return this.GET_ALL_UNIQUE_FETCHES_FOR_FIELDDEFS (field_def_group);
+            }
+        }
+        
+        // Find the minimum, most preferrable combination of fetches that gets all the fields we want
+        let remaining = [].push (all_fetches);
+        let sequence  = [];
+        let index = 0;
+        while (remaining.length > 0)
+        {
+            sequence.push (remaining.shift () );
+
+        }
+
+        process.exit ();
+
+        return fetchdefs;
+    }    
     
     __SetObjectProperty (field, value)
     {
