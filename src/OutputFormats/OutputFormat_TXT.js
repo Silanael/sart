@@ -8,12 +8,12 @@
 //
 
 const CONSTANTS    = require ("../CONSTANTS");
-const Output       = require ("../Output");
 const FieldData    = require ("../FieldData").FieldData;
 const SARTObject   = require ("../SARTObject");
 const SARTGroup    = require ("../SARTGroup");
-const OutputFormat = Output.OutputFormat;
-const OutputParams = Output.OutputParams;
+const OutputFormat = require ("../OutputFormat");
+const OutputParams = require ("../OutputParams");
+const Sys          = require ("../System");
 
 
 
@@ -21,8 +21,14 @@ class OutputFormat_TXT extends OutputFormat
 {
 
     __DoOutputObjects (objects, params = new OutputParams (), field_defs)
-    {        
-        if (params.UseListMode == true)
+    {             
+
+        const color = params.GetColor ();
+     
+        if (color != null)
+            this.__Out_ANSICode (color);
+
+        if (params.GetListMode () == CONSTANTS.LISTMODE_TABLE)
         {
             let   str_line      = "| ";            
             let   str_caption   = "| ";
@@ -75,6 +81,10 @@ class OutputFormat_TXT extends OutputFormat
         else
             this.__OutputObjects (objects, 0, field_defs, params);
   
+
+        if (color != null)
+            Sys.RESET_ANSI ();
+
     }
 
     __OutputObj (obj, indent = 0, field_defs = null, params, longest_field_name = null)

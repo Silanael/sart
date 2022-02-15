@@ -1,10 +1,11 @@
+const CONSTANTS    = require ("./CONSTANTS");
 const SARTDef      = require ("./SARTDefinition");
 const Arguments    = require ("./Arguments");
 const Util         = require ("./Util");
 const Sys          = require ("./System");
 const { SETTINGS } = require ("./SETTINGS");
-
-
+const ArgDef       = Arguments.ArgDef;
+const OutputParams = require ("./OutputParams");
 
 
 
@@ -13,7 +14,7 @@ class CommandDef extends SARTDef
 
     MinArgsAmount     = 0;
     
-    ArgDefs           = new Arguments.ArgDefs ();
+    ValidArgs         = new Arguments.ArgDefs ();
     Subcommands       = {};
         
     Helplines         = [];
@@ -38,8 +39,7 @@ class CommandDef extends SARTDef
     }   
     
 
-    WithArgs              (...argdefs)  { this.ArgDefs.AddAll (...argdefs); }    
-    WithWantedFiedldsArg  ()            { this.WithArgs (new ArgDef ("fields").WithHasParam ().WithAlias ("f").WithFunc (CommandDef._HandleWantedFields) ); }
+    WithArgs              (...argdefs)  { this.ValidArgs.AddAll (...argdefs); }        
     WithMinArgsAmount     (amount)      { this.MinArgsAmount         = amount;            return this; }
     WithMatchFunc         (func)        { this.MatchFunc             = func;              return this; }
     WithFunc              (exec, out)   { this.ExecFunc              = exec; 
@@ -58,7 +58,6 @@ class CommandDef extends SARTDef
     RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }
     toString              ()            { return this.GetName (); }
     
-    IsOutputAsTable       (cmd)         { const s = cmd.GetEffectiveSetting (SETTINGS.OutputAsTable); return s != null ? s : this.AsListByDefault; }
     GetWantedFields       (cmd)         { return cmd.GetWantedFields (); }
   
     
@@ -120,9 +119,19 @@ class CommandDef extends SARTDef
     static _HandleWantedFields (param, cmd)
     {        
         cmd.WantedFields = param?.split (Sys.GetMain ()?.GetSetting (SETTINGS.MultiInputSeparatorChr) );
+        return true;
     }
 
 }
+
+
+const ARGDEF_FIELDS = new ArgDef ("fields")
+                        .WithHasParam ()
+                        .WithAlias ("f")
+                        .WithFunc (CommandDef._HandleWantedFields);
+
+
+
 
 
 class MessageCMD extends CommandDef { constructor (name, msg) { super (name); this.Message = msg;} OnOutput (c) { Sys.INFO (this.Message); } }
@@ -152,7 +161,41 @@ class SettingCMD extends CommandDef
     }
 }
 
+class FieldCMD extends CommandDef
+{
+
+    OutputObject = null;
+    OutputParams = null;
+
+    constructor ()
+    {
+        super ();
+        this.WithArgs (ARGDEF_FIELDS);
+    }
+
+    SetOutputObject (obj)
+    {
+        this.OutputObject = obj;
+    }
+
+    OnOutput (cmd)
+    {   
+        if (this.OutputObject != null)
+        {
+            const outputparams = this.OutputParams != null ? this.OutputParams : new OutputParams ();
+            outputparams.WithCMD (cmd);
+            outputparams.WithFields (this.GetWantedFields (cmd) );
+            outputparams.WithListMode (cmd.GetListMode () );
+
+            this.OutputObject.Output (outputparams);
+        }
+        else
+            this.OnError ("No data.");
+        
+    }
+
+}
 
 
-module.exports = { CommandDef, MessageCMD, SettingCMD };
+module.exports = { CommandDef, MessageCMD, SettingCMD, FieldCMD };
 

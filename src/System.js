@@ -26,6 +26,12 @@ const FIELD_RECURSIVE    = "__SART-RECURSIVE"
 const FIELD_ANSI         = "__ANSI";
 const FIELD_VALUE_SPACER = 2;
 
+const ANSI_ESCAPE        = "\033[";
+const ANSICODE_CLEAR     = 0;
+const ANSICODE_UNDERLINE = 4;
+const ANSICODE_BLINK_ON  = 5;
+const ANSICODE_BLINK_off = 25;
+
 const ANSI_RED       = "\033[31m";
 const ANSI_YELLOW    = "\033[33m";
 const ANSI_ERROR     = ANSI_RED;
@@ -64,6 +70,8 @@ function ANSIERROR          (msg = null)             { return ANSI (ANSI_ERROR  
 function ANSIWARNING        (msg = null)             { return ANSI (ANSI_WARNING, msg)  };
 function ANSIPENDING        (msg = null)             { return ANSI (ANSI_PENDING, msg)  };
 function ANSICLEAR          (msg = null)             { return ANSI (ANSI_CLEAR  , msg)  };
+function ANSICODE           (ansicode)               { return ANSI_ESCAPE + ansicode  + "m" };
+function ANSISETCOLOR       (ansicolor)              { return ANSI_ESCAPE + ansicolor + "m" };
 
 function ANSI (code, msg = null)
 { 
@@ -132,10 +140,16 @@ function ErrorHandler (error)
 
 class OutputDest
 {    
-    Start        ()     {}    
-    OutputLine   (str)  {}
-    OutputBinary (data) {}    
-    Done         ()     {}
+    Start          ()         {}    
+    OutputLine     (str)      {}
+    OutputBinary   (data)     {}    
+    Done           ()         {}
+
+    OutputANSICode (ansicode) 
+    {
+        if (IsANSIAllowed () ) 
+            this.OutputBinary (ANSICODE (ansicode) );
+    }    
 }
 
 class OutputDest_STDOUT extends OutputDest
@@ -157,10 +171,12 @@ class OutputDest_STDERR extends OutputDest
     {
         console.error (str); 
     }
+
     OutputBinary (data)
     {
         process.stderr.write (data);
     }   
+
 }
 
 
@@ -215,6 +231,8 @@ class OutputDest_File extends OutputDest
 
         this.OutputStream.write (data);        
     }   
+
+    OutputANSI (ansi) { }
 
     Done ()
     {
@@ -275,6 +293,22 @@ function OUT_TXT_RAW (str)
     }    
 }
 
+// Data output. Non-silenceable.
+function OUT_ANSI (ansicode)
+{
+    for (const d of Main.GetOutputDests () )
+    {
+        d?.OutputANSICode (ansicode);        
+    }
+}
+
+function RESET_ANSI ()
+{
+    for (const d of Main.GetOutputDests () )
+    {
+        d?.OutputANSICode (ANSICODE_CLEAR);
+    }
+}
 
 
 /** Fields for 'recursive': 'depth', integer */
@@ -635,6 +669,8 @@ module.exports =
     OUT_TXT,
     OUT_TXT_RAW,
     OUT_BIN,
+    OUT_ANSI,
+    RESET_ANSI,
     SET_RECURSIVE_OUT,
     ANSI,
     ANSIRED,
@@ -642,6 +678,8 @@ module.exports =
     ANSIERROR,
     ANSIWARNING,
     ANSIPENDING,
+    ANSICODE,
+    ANSISETCOLOR,
     ANSICLEAR,
     INFO,
     VERBOSE,

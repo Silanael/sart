@@ -7,22 +7,23 @@
 // Command 'list'
 //
 
-const Sys        = require ("../System");
-const Util       = require ("../Util");
-const Constants  = require ("../CONSTANTS");
-const ArgDef     = require ("../Arguments").ArgDef;
-const CommandDef = require ("../CommandDef").CommandDef;
-const TXQuery    = require ("../GQL/TXQuery");
-const TXGroup    = require ("../Arweave/TXGroup");
-const Arweave    = require ("../Arweave/Arweave");
-const Analyze    = require ("../Features/TXAnalyze");
-const SETTINGS   = require ("../SETTINGS.js").SETTINGS;
+const Sys          = require ("../System");
+const Util         = require ("../Util");
+const Constants    = require ("../CONSTANTS");
+const ArgDef       = require ("../Arguments").ArgDef;
+const CommandDef   = require ("../CommandDef").CommandDef;
+const TXQuery      = require ("../GQL/TXQuery");
+const TXGroup      = require ("../Arweave/TXGroup");
+const Arweave      = require ("../Arweave/Arweave");
+const Analyze      = require ("../Features/TXAnalyze");
+const SETTINGS     = require ("../SETTINGS.js").SETTINGS;
+const OutputParams = require ("../OutputParams");
 
 
 class CMD_List extends CommandDef
 {
-    Name          = "LIST";
-    MinArgsAmount = 1;
+    Name              = "LIST";
+    MinArgsAmount     = 1;    
 
     Subcommands =
     {
@@ -39,8 +40,9 @@ class CMD_List extends CommandDef
 
 class SubCMD_Address extends CommandDef
 {
-    Name          = "ADDRESS";
-    MinArgsAmount = 1;
+    Name            = "ADDRESS";
+    MinArgsAmount   = 1;
+    AsListByDefault = true;
 
     constructor ()
     {
@@ -113,8 +115,8 @@ class SubCMD_Address extends CommandDef
                     fee_winston_total  += t.GetFee_Winston ();
                     qty_winston_total  += t.GetQTY_Winston ();                
                 }
-                
-                cmd.Transactions.Output ( {UseListMode: this.IsOutputAsTable (cmd), WantedFields: this.GetWantedFields (cmd) } );
+                                
+                cmd.Transactions.Output (new OutputParams ().WithCMD (cmd) );
 
                 if (amount >= 1)
                 {

@@ -8,18 +8,21 @@
 //
 
 // Imports
-const Package        = require ('../../package.json');
-const State          = require ("../ProgramState.js");
-const Sys            = require ('../System.js');
-const Constants      = require ("../CONSTANTS");
-const Settings       = require ('../Config.js');
-const Util           = require ('../Util.js');
-const Arweave        = require ('../Arweave/Arweave.js');
-const ArFS_DEF       = require ('../ArFS/CONST_ARFS.js');
-const ArFSEntity     = require ("../ArFS/ArFSEntity");
-const Transaction    = require ("../Arweave/Transaction.js");
-const CommandDef     = require ("../CommandDef").CommandDef;
-const SARTObject = require('../SARTObject');
+const Package         = require ('../../package.json');
+const State           = require ("../ProgramState.js");
+const Sys             = require ('../System.js');
+const Constants       = require ("../CONSTANTS");
+const Settings        = require ('../Config.js');
+const Util            = require ('../Util.js');
+const Arweave         = require ('../Arweave/Arweave.js');
+const ArFS_DEF        = require ('../ArFS/CONST_ARFS.js');
+const ArFSEntity      = require ("../ArFS/ArFSEntity");
+const Transaction     = require ("../Arweave/Transaction.js");
+const CommandDef      = require ("../CommandDef").CommandDef;
+const FieldCMD        = require ("../CommandDef").FieldCMD;
+const SARTObject      = require ('../SARTObject');
+const OutputParams    = require ("../OutputParams");
+
 
 
 class CMD_Info extends CommandDef
@@ -29,16 +32,17 @@ class CMD_Info extends CommandDef
 
     Subcommands = 
     {
-        TX      : new SubCMD_TX,
-        ARFS    : new SubCMD_ARFS,
+        TX      : new SubCMD_TX (),
+        ARFS    : new SubCMD_ARFS (),
         DRIVE   : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_DRIVE);  },
         FILE    : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FILE);   },
         FOLDER  : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
         CONFIG  : null, //function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
         SART    : new CommandDef ("SART").WithFunc (null, Handler_SART),
-        AUTHOR  : new CommandDef ("AUTHOR").WithFunc (null, Handler_Author),
+        AUTHOR  : new SubCMD_Author ()
     };
 
+  
     GetCustomSubCommand (next_arg_peek)
     {
         if (next_arg_peek == null)
@@ -85,11 +89,13 @@ class CMD_Info extends CommandDef
 
 
 
-class SubCMD_TX extends CommandDef
+class SubCMD_TX extends FieldCMD
 {
+
     MinArgsAmount = 1;
     Name          = "TX";
-        
+    
+
     async OnExecute (cmd)
     {
         if ( ! cmd.RequireAmount (1, "Transaction ID (TXID) required.") )
@@ -109,7 +115,8 @@ class SubCMD_TX extends CommandDef
 
     OnOutput (cmd)
     {
-        console.log (Transaction.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (Transaction.FIELDS) );
+        console.log (cmd.WantedFields );
+        //console.log (Transaction.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (Transaction.FIELDS) );
         process.exit (0);
         cmd.Transaction?.Output ();
     }    
@@ -117,11 +124,12 @@ class SubCMD_TX extends CommandDef
 
 
 
-class SubCMD_ARFS extends CommandDef 
+class SubCMD_ARFS extends FieldCMD 
 {
 
     Name          = "ARFS";
     MinArgsAmount = 1;
+
 
 
     async OnExecute (cmd, entity_type = null)
@@ -157,11 +165,15 @@ class SubCMD_ARFS extends CommandDef
 
 
 
-async function Handler_Author ()
+class SubCMD_Author extends FieldCMD 
 {
-    const info =
-    {
-        "__ANSI":          "\033[31m",
+
+    Name          = "AUTHOR";
+    MinArgsAmount = 0;
+
+    OutputObject = SARTObject.FROM_JSOBJ 
+    ({
+        //"__ANSI":          "\033[31m",
         Name:              "Silanael",
         Description:       "A weary, darkened, shattered soul using its fractured shards to engrave"
                            + "\n                 what remains of it into this world. "
@@ -181,9 +193,14 @@ async function Handler_Author ()
         KOII:              "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
         Twitter:           "https://www.twitter.com/silanael",        
         "The Question":    "If you could have anything in the world, what would it be?"      
-    }
+    });
 
-    Sys.OUT_OBJ (info);
+    OutputParams = new OutputParams ().WithColor (31);
+
+
+    async OnExecute (cmd) { return true; }
+
+    
 }
 
 

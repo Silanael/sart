@@ -15,7 +15,7 @@ const FieldDataG = require ("./FieldData").FieldDataGroup;
 const FieldDef   = require ("./FieldDef");
 const SARTBase   = require ("./SARTBase");
 const SARTGroup  = require ("./SARTGroup");
-const OutputArgs = require ("./Output").OutputParams;
+const OutputArgs = require ("./OutputParams");
 const FieldGroup = require ("./FieldGroup");
 const FieldList  = require ("./FieldList");
 
@@ -116,9 +116,10 @@ class SARTObject extends SARTBase
         return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : null; 
     }
 
-    GetAllFieldDefs  () { return this.constructor.GET_ALL_FIELD_DEFS ();        }
-    GetAllFieldNames () { return this.GetAllFieldDefs ()?.GetNamesAsArray ();   }
-    GetAllFetches    () { return this.constructor.GET_ALL_AVAILABLE_FETCHES (); }
+    GetAllFieldDefs   ()                              { return this.constructor.GET_ALL_FIELD_DEFS ();                         }
+    GetAllFieldNames  ()                              { return this.GetAllFieldDefs ()?.GetNamesAsArray ();                    }
+    GetAllFetches     ()                              { return this.constructor.GET_ALL_AVAILABLE_FETCHES ();                  }
+    GetMinimumFetches (fielddefs = new SARTGroup () ) { return this.constructor.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (fielddefs); }
 
 
     GetFieldDefs (field_names = [], listmode = CONSTANTS.LISTMODE_SEPARATE) 
@@ -377,11 +378,15 @@ class SARTObject extends SARTBase
         // Find the minimum, most preferrable combination of fetches that gets all the fields we want.
         // Start from the first fetch (they should be ordered by highest to lowest priority).    
 
-        const result = SARTObject.__RECURSIVE_FIND (0, target_weight, [], [].concat (fetch_weight_sums));
-        console.log (result);
-        process.exit ();
+        const fetches = SARTObject.__RECURSIVE_FIND (0, target_weight, [], [].concat (fetch_weight_sums));
 
-        return fetchdefs;
+        if (fetches == null)
+        {
+            this.OnProgramError ("Failed to find a working combination of fetches for desired fields - using all.", this, {once: true} );
+            fetches = this.GetAllFetches ()?.AsArray ();
+        }
+
+        return fetches;
     }    
     
     static __RECURSIVE_FIND (start_value, target_value, sequence, remaining)
@@ -433,7 +438,7 @@ class SARTObject extends SARTBase
                 value = start_value | remaining[c].weight;                
                 arr = [].concat (remaining);
                 arr.splice (c, 1);
-                console.log ("Old: "+ remaining + " new:" + arr);
+                
                 ret = SARTObject.__RECURSIVE_FIND (value, target_value, sequence.concat (remaining[c].def), arr);
 
                 if (ret != null)
@@ -468,7 +473,27 @@ class SARTObject extends SARTBase
     }
 
 
+    async FetchFields (fields = new SARTGroup () )
+    {        
+        await this.Fetch (this.GetMinimumFetches (fields) );
+    }
 
+    async FetchAll ()
+    {
+        Sys.DEBUG ("Invoking all fetches.", this);
+        await this.Fetch (this.GetAllFetches ()?.AsArray () );        
+    }
+
+    async Fetch (fetches = null)
+    {
+        if (fetches == null)
+        {
+            Sys.ERR_PROGRAM ("Fetches not provided - using all.")
+            fetches = this.GetAllFetches ()?.AsArray ();
+        }
+        Sys.DEBUG ("Awaiting for fetches, amount: " + fetches?.length);
+        await Promise.all (fetches);        
+    }
 
     __OnError (field, errfunc, error, src, opts)
     {

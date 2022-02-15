@@ -33,8 +33,8 @@ const FETCH_STATUS = new FetchDef ("Status",  function (t) { t.UpdateAndGetStatu
 
 const FETCHDEFS = new SARTGroup ().With
 (
+    FETCH_GQL,    
     FETCH_GET,
-    FETCH_GQL,
     FETCH_STATUS,        
 );
 

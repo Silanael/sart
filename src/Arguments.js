@@ -188,10 +188,10 @@ class Args
     {
         if (this._Argv == null || argdefs == null || handler == null)
         {
-            Sys.ERR_PROGRAM (this._Argv    == null ? "'argv'"    : null +
-                                   argdefs == null ? "'argdefs'" : null +
-                                   handler == null ? "'handler'" : null +
-                                   + " null!", "Args");
+            Sys.ERR_PROGRAM ( (this._Argv    == null ? "'argv' "    : "") +
+                              (      argdefs == null ? "'argdefs' " : "") +
+                              (      handler == null ? "'handler' " : "") +
+                               " null!", "Args");
             return false;
         }
 

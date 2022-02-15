@@ -7,10 +7,8 @@
 // Output writer for CSV.
 //
 
-const Output       = require ("../Output");
-const OutputFormat = Output.OutputFormat;
-const OutputParams = Output.OutputParams;
-
+const OutputFormat = require ("../OutputFormat");
+const OutputParams = require ("../OutputParams");
 
 class OutputFormat_CSV extends OutputFormat
 {

@@ -63,7 +63,8 @@ class CommandInstance extends SARTObject
     GetCommandName       ()            { return this.CommandName;                       }
     HasSetting           (key)         { return this.Config.HasSetting (key);           }
     GetSetting           (key)         { return this.Config.GetSetting (key);           }
-    GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting (key);       }
+    GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting   (key);     }
+    GetEffectiveSettingOr(key, val)    { return Sys.GetMain ()?.GetSettingOr (key, val);}
     GetConfig            ()            { return this.Config;                            }
     GetArgsAmount        ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
     Pop                  ()            { return this.Arguments?.Pop   ();  }
@@ -75,6 +76,8 @@ class CommandInstance extends SARTObject
     GetFileOutputDest    ()            { return this.FileOutputDest;       }
     HasWantedFields      ()            { return this.WantedFields != null; }
     GetWantedFields      ()            { return this.WantedFields;         }
+    GetEffectiveFields   (defaults)    { return this.HasWantedFields () ? this.GetWantedFields : defaults; }
+    IsOutputAsTable      ()            { return this.GetEffectiveSettingOr (SETTINGS.OutputAsTable, this.CDef.AsListByDefault); }
 
 
     AppendConfigToGlobal ()            
@@ -173,9 +176,9 @@ class CommandInstance extends SARTObject
             Sys.VERBOSE ("Processing command's arguments (" + this.GetArgsAmount () + ")...");         
 
             // Rest are arguments
-            if (! args.ProcessArgs (this.CDef.ArgDefs, this) )
+            if (! args.ProcessArgs (this.CDef.ValidArgs, this) )
             {
-                Sys.DEBUG ("Processing command's ArgDefs returned false. Aborting the command execution sequence.");
+                Sys.DEBUG ("Processing command's ValidArgs returned false. Aborting the command execution sequence.");
                 return false;
             }
 
@@ -191,6 +194,7 @@ class CommandInstance extends SARTObject
                 this.OutputDests = [ Sys.OUTPUTDEST_STDOUT ]; // TODO move.
 
 
+            
             Sys.VERBOSE ("Executing command '" + this.CDef + "'...");         
                         
             if (!this.CDef.RunAsActiveCommand () )

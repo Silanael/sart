@@ -31,8 +31,8 @@ const SARTGroup     = require ("./SARTGroup");
 const OutputF_TXT   = require ("./OutputFormats/OutputFormat_TXT");
 const OutputF_JSON  = require ("./OutputFormats/OutputFormat_JSON");
 const OutputF_CSV   = require ("./OutputFormats/OutputFormat_CSV");
-const Output        = require ("./Output");
-const OutputParams  = Output.OutputParams;
+const OutputFormat  = require ("./OutputFormat");
+const OutputParams  = require ("./OutputParams");
 
 
 
@@ -95,6 +95,11 @@ class Main
             return null;
     }
     
+    GetSettingOr (key, value_if_null)
+    {
+        const value = this.GetSetting (key);
+        return value != null ? value : value_if_null;
+    }
 
     OutputObjects (objs, args = new OutputParams () )
     {     

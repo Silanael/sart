@@ -7,11 +7,11 @@
 // A generic object container.
 //
 
-const CONSTANTS = require ("./CONSTANTS");
-const Sys       = require ("./System");
-const Util      = require ("./Util");
-const SARTBase  = require ("./SARTBase");
-
+const CONSTANTS    = require ("./CONSTANTS");
+const Sys          = require ("./System");
+const Util         = require ("./Util");
+const SARTBase     = require ("./SARTBase");
+const OutputParams = require ("./OutputParams");
 
 
 class SARTGroup extends SARTBase
@@ -117,7 +117,7 @@ class SARTGroup extends SARTBase
     }
 
 
-    Output (opts = {UseListMode: true, WantedFields: null } )
+    Output (opts = new OutputParams () )
     {
         Sys.GetMain ()?.OutputObjects (this, opts);
     }

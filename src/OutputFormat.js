@@ -4,19 +4,14 @@
 //
 // Option.js - 2021-12-20_01
 //
-// Base classes for data output.
+// Base class for output formats.
 //
 
-const CONSTANTS  = require ("./CONSTANTS");
-const Sys        = require ("./System");
-const SETTINGS   = require ("./SETTINGS").SETTINGS;
+const CONSTANTS    = require ("./CONSTANTS");
+const Sys          = require ("./System");
+const SETTINGS     = require ("./SETTINGS").SETTINGS;
+const OutputParams = require ("./OutputParams");
 
-
-class OutputParams
-{
-    WantedFields = null;
-    UseListMode  = null;
-}
 
 
 class OutputFormat
@@ -32,11 +27,6 @@ class OutputFormat
         if (params == null)
             params = new OutputParams ();
 
-        const setting_list_mode = Sys.GetMain ().GetSetting (SETTINGS.OutputAsTable);
-
-        if (setting_list_mode != null)
-            params.UseListMode = setting_list_mode;
-            
         const field_defs = OutputFormat.GET_FIELD_DEFS (objects, params);
 
         if (field_defs != null)
@@ -49,8 +39,7 @@ class OutputFormat
     static GET_FIELD_DEFS (objects, params)
     {
         const first_obj  = objects.GetByIndex != null ? objects.GetByIndex (0) : objects;
-        return first_obj != null ? first_obj.GetFieldDefs (params.WantedFields, params.UseListMode ? CONSTANTS.LISTMODE_TABLE 
-                                                                                                   : CONSTANTS.LISTMODE_SEPARATE) : null;
+        return first_obj != null ? first_obj.GetFieldDefs (params.GetFields (), params.GetListMode () ) : null;
     }
 
     /** Overridable. Logic of actually writing the output goes here. This implementation does nothing. */    
@@ -58,11 +47,13 @@ class OutputFormat
 
     
     /** Call these from __DoOutputObjects to output data into the active OutputDests. */
-    __Out_Line   (line)  { Sys.OUT_TXT     (line); }
-    __Out_RawTXT (txt)   { Sys.OUT_TXT_RAW (txt);  }
-    __Out_BIN    (data)  { Sys.OUT_BIN     (data); }
+    __Out_Line      (line)  { Sys.OUT_TXT     (line); }
+    __Out_RawTXT    (txt)   { Sys.OUT_TXT_RAW (txt);  }
+    __Out_BIN       (data)  { Sys.OUT_BIN     (data); }
+    __Out_ANSICode  (ansi)  { Sys.OUT_ANSI    (ansi); }
+    __ResetANSI      ()     { Sys.RESET_ANSI  ();     }
 
 }
 
 
-module.exports = { OutputFormat, OutputParams }
+module.exports = OutputFormat;

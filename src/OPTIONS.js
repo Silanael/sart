@@ -98,11 +98,12 @@ const OPTIONS = new Args.ArgDefs
     new Option ("--config"          ).WithUnderWork (),
     new Option ("--min-block"       ).WithSetting (SETTINGS.QueryMinBlockHeight),
     new Option ("--max-block"       ).WithSetting (SETTINGS.QueryMaxBlockHeight),
+    new Option ("--fields"          ).WithSetting (SETTINGS.OutputFields).WithAlias ("-F"),
     new Option ("--format"          ).WithSetting (SETTINGS.OutputFormat),
     new Option ("--csv"             ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.CSV), 
     new Option ("--json"            ).WithSetting (SETTINGS.OutputFormat, OUTPUTFORMATS.JSON),
     new Option ("--output-file"     ).WithSetting (SETTINGS.OutputFilename),
-    new Option ("--table"           ).WithSetting (SETTINGS.OutputAsTable, true).WithAliases ("-t", "--tbl"),
+    new Option ("--table"           ).WithSetting (SETTINGS.OutputAsTable, true ).WithAliases ("-t", "--tbl"),
     new Option ("--separate"        ).WithSetting (SETTINGS.OutputAsTable, false).WithAliases ("-s", "--sep"),
     
 );
