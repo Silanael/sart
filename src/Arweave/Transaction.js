@@ -26,9 +26,9 @@ const FetchDef     = require ("../FetchDef");
 const FieldList    = require ("../FieldList");
 
 
-const FETCH_GQL    = new FetchDef ("GraphQL", function (t) { t.FetchViaGQL        (); } );
-const FETCH_GET    = new FetchDef ("GET",     function (t) { t.FetchViaGet        (); } );
-const FETCH_STATUS = new FetchDef ("Status",  function (t) { t.UpdateAndGetStatus (); } );    
+const FETCH_GQL    = new FetchDef ("GraphQL", async function (t) { await t.FetchViaGQL        (); } );
+const FETCH_GET    = new FetchDef ("GET",     async function (t) { await t.FetchViaGet        (); } );
+const FETCH_STATUS = new FetchDef ("Status",  async function (t) { await t.UpdateAndGetStatus (); } );    
 
 
 const FETCHDEFS = new SARTGroup ().With
@@ -351,6 +351,8 @@ class Transaction extends SARTObject
 
         if (this.IsValid () && txid != null)
         {       
+            Sys.DEBUG ("Fetching data...", this);
+
             const data = opts?.as_string ? await Arweave.GetTxStrData (txid) 
                                          : await Arweave.GetTxData    (txid);
 
@@ -488,6 +490,8 @@ class Transaction extends SARTObject
 
     async FetchViaGet (txid = null)
     {
+        Sys.DEBUG ("Fetching transaction information via HTTP GET...", this);
+
         if (this.ArweaveTX != null)
         {
             Sys.DEBUG ("Already fetched via get.", this.GetTXID () );
@@ -516,9 +520,12 @@ class Transaction extends SARTObject
 
     async FetchViaGQL (txid = null)
     {
+
+        Sys.DEBUG ("Fetching transaction information via GraphQL...", this);
+
         if (this.GQL_Edge != null)
         {
-            Sys.DEBUG ("Already fetched via GQL.", this.GetTXID () );
+            Sys.DEBUG ("Already fetched via GraphQL.", this.GetTXID () );
             return true;
         }
 

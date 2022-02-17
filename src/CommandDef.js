@@ -6,7 +6,7 @@ const Sys          = require ("./System");
 const { SETTINGS } = require ("./SETTINGS");
 const ArgDef       = Arguments.ArgDef;
 const OutputParams = require ("./OutputParams");
-
+const FieldGroup   = require ("./FieldGroup");
 
 
 class CommandDef extends SARTDef
@@ -24,7 +24,9 @@ class CommandDef extends SARTDef
     ExecFunc          = null;
     OutFunc           = null;
     AsActiveCommand   = true;
-    AsListByDefault   = false;
+    
+    DefaultListMode   = CONSTANTS.LISTMODE_SEPARATE;
+    FieldObjectClass  = null;
 
 
     /* Overridable, these implementations do nothing. */
@@ -48,7 +50,7 @@ class CommandDef extends SARTDef
     WithSubcommands       (subcommands) { this.Subcommands           = subcommands;       return this; }
     WithAsListByDefault   ()            { this.AsListByDefault       = true;              return this; }
     WithAsEntriesByDefault()            { this.AsListByDefault       = false;             return this; }
-    WithOutputObjectClass (sart_obj_cl) { this.OutputObjectClass     = sart_obj_cl;       return this; }
+    WithOutputObjectClass (sart_obj_cl) { this.OutputObjectClass     = sart_obj_cl;       return this; }    
 
     GetMinArgsAmount      ()            { return this.MinArgsAmount; }
     GetSubcommands        ()            { return this.Subcommands;   }
@@ -58,8 +60,10 @@ class CommandDef extends SARTDef
     RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }
     toString              ()            { return this.GetName (); }
     
-    GetWantedFields       (cmd)         { return cmd.GetWantedFields (); }
+    GetEffectiveListMode  (cmd)         { return cmd.HasListMode ()     ? cmd.GetListMode     () : this.DefaultListMode; }
+    GetEffectiveFields    (cmd)         { return cmd.HasWantedFields () ? cmd.GetWantedFields () : this.GetDefaultFields (this.GetEffectiveListMode (cmd) ); }
   
+    GetDefaultFields      (listmode)    { return this.FieldObjectClass != null ? this.FieldObjectClass.GET_DEFAULT_FIELDNAMES (listmode) : [FieldGroup.All.Name]; }
     
 
     Matches (name)
@@ -164,33 +168,29 @@ class SettingCMD extends CommandDef
 class FieldCMD extends CommandDef
 {
 
-    OutputObject = null;
-    OutputParams = null;
-
     constructor ()
     {
         super ();
         this.WithArgs (ARGDEF_FIELDS);
     }
 
-    SetOutputObject (obj)
-    {
-        this.OutputObject = obj;
-    }
 
     OnOutput (cmd)
     {   
-        if (this.OutputObject != null)
-        {
-            const outputparams = this.OutputParams != null ? this.OutputParams : new OutputParams ();
-            outputparams.WithCMD (cmd);
-            outputparams.WithFields (this.GetWantedFields (cmd) );
-            outputparams.WithListMode (cmd.GetListMode () );
+        const output_obj = cmd.GetOutputObject ();
 
-            this.OutputObject.Output (outputparams);
+        if (output_obj != null)
+        {
+            const outputparams = cmd.HasOutputParams () ? cmd.GetOutputParams () : new OutputParams ();
+            
+            outputparams.WithCMD      (cmd                           );
+            outputparams.WithFields   (this.GetEffectiveFields (cmd) );
+            outputparams.WithListMode (cmd .GetListMode        ()    );
+
+            output_obj.Output (outputparams);
         }
         else
-            this.OnError ("No data.");
+            cmd.OnError ("No data to output.");
         
     }
 

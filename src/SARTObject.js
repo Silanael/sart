@@ -307,7 +307,7 @@ class SARTObject extends SARTBase
                 Sys.ERR_PROGRAM ("Null field included in the parameters.", "GetRequiredFetchesForFieldDefs");
         }
 
-        return fetchdefs;
+        return new SARTGroup (...fetchdefs);
     }
 
     static GET_MINIMUM_FETCHES_FOR_FIELDDEFS (field_def_group = new SARTGroup () )
@@ -386,7 +386,7 @@ class SARTObject extends SARTBase
             fetches = this.GetAllFetches ()?.AsArray ();
         }
 
-        return fetches;
+        return new SARTGroup (...fetches);
     }    
     
     static __RECURSIVE_FIND (start_value, target_value, sequence, remaining)
@@ -478,21 +478,54 @@ class SARTObject extends SARTBase
         await this.Fetch (this.GetMinimumFetches (fields) );
     }
 
+
+    async FetchFieldsWithNames (field_names = [], listmode)
+    {        
+        if (listmode == null)
+            return this.OnProgramError ("'listmode' null.", "FetchFieldsWithNames");
+
+        await this.Fetch (this.GetMinimumFetches (this.GetFieldDefs (field_names)) );
+    }
+
+
+
+    async FetchFieldsForCMD (cmd)
+    {
+        await this.FetchFieldsWithNames (cmd.GetEffectiveFields (), cmd.GetEffectiveListMode () );   
+    }
+
+
     async FetchAll ()
     {
         Sys.DEBUG ("Invoking all fetches.", this);
-        await this.Fetch (this.GetAllFetches ()?.AsArray () );        
+        await this.Fetch (this.GetAllFetches () );        
     }
 
-    async Fetch (fetches = null)
+    async Fetch (fetch_group = null)
     {
-        if (fetches == null)
+        if (fetch_group == null)
         {
             Sys.ERR_PROGRAM ("Fetches not provided - using all.")
-            fetches = this.GetAllFetches ()?.AsArray ();
+            fetch_group = this.GetAllFetches ();
         }
-        Sys.DEBUG ("Awaiting for fetches, amount: " + fetches?.length);
-        await Promise.all (fetches);        
+        
+
+        const fetchfuncs = [];
+        for (const f of fetch_group.AsArray () )
+        { 
+            const promise = f.FetchFunc (this);
+            fetchfuncs.push (promise); 
+            Sys.DEBUG ("Queuing fetch '" + f + "'.", this);
+        }
+
+        if (fetchfuncs.length > 0)
+        {
+            Sys.DEBUG ("Awaiting for " + Util.AmountStr (fetchfuncs.length, "fetch.", "fetches."), this);
+            await Promise.all (fetchfuncs); 
+        }
+        else
+            Sys.DEBUG ("No fetches to be performed.", this);      
+            
     }
 
     __OnError (field, errfunc, error, src, opts)

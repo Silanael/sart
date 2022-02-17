@@ -8,6 +8,7 @@
 //
 
 // Imports
+const CONSTANTS       = require ("../CONSTANTS");
 const Package         = require ('../../package.json');
 const State           = require ("../ProgramState.js");
 const Sys             = require ('../System.js');
@@ -39,7 +40,7 @@ class CMD_Info extends CommandDef
         FOLDER  : null, //async function (args) { return await Handler_ArFS (args, null, ArFS_DEF.ENTITYTYPE_FOLDER); },
         CONFIG  : null, //function (args) { Sys.OUT_OBJ (State.Config, {recursive_fields: Settings.RECURSIVE_FIELDS }); },
         SART    : new CommandDef ("SART").WithFunc (null, Handler_SART),
-        AUTHOR  : new SubCMD_Author ()
+        AUTHOR  : new SubCMD_Author ()    
     };
 
   
@@ -92,9 +93,11 @@ class CMD_Info extends CommandDef
 class SubCMD_TX extends FieldCMD
 {
 
-    MinArgsAmount = 1;
-    Name          = "TX";
-    
+    MinArgsAmount    = 1;
+    Name             = "TX";
+    FieldObjectClass = Transaction;
+    DefaultListMode  = CONSTANTS.LISTMODE_SEPARATE;
+
 
     async OnExecute (cmd)
     {
@@ -106,20 +109,15 @@ class SubCMD_TX extends FieldCMD
             
         if (!Util.IsArweaveHash (txid) )            
             return cmd.OnProgramError ("Not a valid transaction ID: " + txid);
-                     
-        cmd.Transaction = new Transaction (txid);
+        
+        const tx = new Transaction (txid);
+        cmd.SetOutputObject (tx);
 
-        await cmd.Transaction.FetchAll ();
+        await tx.FetchFieldsForCMD (cmd);
+        
         return true;  
     }
-
-    OnOutput (cmd)
-    {
-        console.log (cmd.WantedFields );
-        //console.log (Transaction.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (Transaction.FIELDS) );
-        process.exit (0);
-        cmd.Transaction?.Output ();
-    }    
+  
 }
 
 
@@ -195,10 +193,13 @@ class SubCMD_Author extends FieldCMD
         "The Question":    "If you could have anything in the world, what would it be?"      
     });
 
-    OutputParams = new OutputParams ().WithColor (31);
-
-
-    async OnExecute (cmd) { return true; }
+    
+    async OnExecute (cmd)
+    { 
+        cmd.SetOutputObject (this.OutputObject);
+        cmd.AddOutputParams ().WithColor (31); 
+        return true; 
+    }
 
     
 }

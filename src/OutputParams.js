@@ -35,8 +35,7 @@ class OutputParams
 
     GetListMode ()
     {
-        return this.ListMode != null ? this.ListMode
-                                     : this.Command != null ? this.Command.IsOutputAsTable () ? CONSTANTS.LISTMODE_TABLE : CONSTANTS.LISTMODE_SEPARATE
+        return this.ListMode != null ? this.ListMode                                  
                                      : Sys.GetMain ().GetSetting (SETTINGS.OutputAsTable) ? CONSTANTS.LISTMODE_TABLE
                                                                                           : CONSTANTS.LISTMODE_SEPARATE;        
     }

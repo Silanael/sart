@@ -12,13 +12,12 @@ const Util           = require ("./Util");
 const Constants      = require ("./CONSTANTS");
 const State          = require ("./ProgramState");
 const Settings       = require ("./Config");
-const Arguments           = require ("./Arguments");
+const Arguments      = require ("./Arguments");
 const SARTObject     = require ("./SARTObject");
 const COMMANDS       = require ("./COMMANDS");
 const OPTIONS        = require ("./OPTIONS");
 const SETTINGS       = require ("./SETTINGS").SETTINGS;
-
-
+const OutputParams   = require ("./OutputParams");
 
 
 
@@ -33,10 +32,15 @@ class CommandInstance extends SARTObject
     CommandName    = null;    
     Arguments      = null;
 
+    OutputObject   = null;
+    OutputParams   = null;
+
     Config         = new Settings.Config ();
     FileOutputDest = null;
     OutputDests    = [];
+
     WantedFields   = null;
+    WantedListMode = null;
 
     StartTime      = null;
     EndTime        = null;
@@ -73,13 +77,21 @@ class CommandInstance extends SARTObject
     Peek                 ()            { return this.Arguments?.Peek ();  }
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
-    GetFileOutputDest    ()            { return this.FileOutputDest;       }
-    HasWantedFields      ()            { return this.WantedFields != null; }
-    GetWantedFields      ()            { return this.WantedFields;         }
-    GetEffectiveFields   (defaults)    { return this.HasWantedFields () ? this.GetWantedFields : defaults; }
-    IsOutputAsTable      ()            { return this.GetEffectiveSettingOr (SETTINGS.OutputAsTable, this.CDef.AsListByDefault); }
+    GetFileOutputDest    ()            { return this.FileOutputDest;         }
+    HasWantedFields      ()            { return this.WantedFields != null;   }
+    GetWantedFields      ()            { return this.WantedFields;           }    
+    HasListMode          ()            { return this.WantedListMode != null; }
+    GetListMode          ()            { return this.WantedListMode;         }
+    HasOutputParams      ()            { return this.OutputParams != null;   }
+    GetOutputParams      ()            { return this.OutputParams;           }
+    AddOutputParams      ()            { this.OutputParams = new OutputParams ().WithCMD (this); return this.OutputParams; }
+    SetOutputObject      (sobj)        { this.OutputObject = sobj; }
+    GetOutputObject      ()            { return this.OutputObject; }
 
+    GetEffectiveListMode ()            { return this.CDef.GetEffectiveListMode (this); }
+    GetEffectiveFields   ()            { return this.CDef.GetEffectiveFields   (this); }
 
+    
     AppendConfigToGlobal ()            
     { 
         if (! Sys.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )

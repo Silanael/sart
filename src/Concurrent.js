@@ -50,7 +50,7 @@ class Fetch extends SARTObject
 
     IsRunning      () { return this.Running;  }
     IsFinished     () { return this.Finished; }
-    toString       () { return "Fetch #" + this.ID + (this.Name != null ? "[" + this.Name + "]" : ""); }
+    toString       () { return "Fetch #" + this.ID + (this.Name != null ? " [" + this.Name + "]" : ""); }
     GetReturnValue () { if (this.IsFinished () ) return this.Value; else Sys.ERR_PROGRAM ("GetReturnValue: Fetch " + this + " not yet finished!"); return null; }
 
 

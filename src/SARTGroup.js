@@ -63,6 +63,21 @@ class SARTGroup extends SARTBase
         this.ByID    = {};
     }
 
+    Contains (entry)
+    {
+        if (entry != null)
+        {
+            const id   = entry.GetID   ();
+            const name = entry.GetName ();
+
+            return this.Entries.includes (entry) || (id != null && this.ByID[id] != null) || (Util.IsSet (name) && this.ByName[name] != null);
+        }
+        else
+        {
+            Sys.ERR_PROGRAM (this.toString + ".Contains () was given a null parameter.");
+            return false;
+        }
+    }
     
     Add (entry, id = null) 
     {
@@ -70,32 +85,21 @@ class SARTGroup extends SARTBase
         if (entry == null)
             Sys.ERR_PROGRAM ("'entry' null.", "Transactions.Add");
 
+        if (id == null && entry.GetID != null)
+            id = entry.GetID ();
+
+
+        if (this.Contains (entry) )
+            Sys.ERR_PROGRAM ("'" + entry.toString () + "' already contained in group '" + this.toString () + "' or duplicate name and/or ID present.");
+
         else 
         {
-            Sys.DEBUG ("Adding entry " + entry, this)
+            Sys.DEBUG ("Adding entry " + entry, this.toString () )
             
-            if (id == null && entry.GetID != null)
-                id = entry.GetID ();
-
-            if (id != null) 
-            {
-                if (this.ByID[id] != null)
-                {
-                    Sys.VERBOSE ("ID " + id + " already exists in group " + this.GetName () + ", not adding it.", entry);
-                    return this;
-                }
-                this.ByID[id] = entry;
-            }
-
             const name = entry.GetName ();
-
-            if (Util.IsSet (name))
-            {
-                if (this.ByName[name] == null)
-                    this.ByName[name] = entry;
-                else
-                    Sys.WARN ("Name collision - '" + name + "' already present in the group: " + this.ByName[name]?.toString () + " - not overwriting.");
-            }
+            
+            if (id != null)         { this.ByID  [id]   = entry; }
+            if (Util.IsSet (name) ) { this.ByName[name] = entry; }
             
             this.Entries.push (entry);
         }
