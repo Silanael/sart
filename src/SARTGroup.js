@@ -35,8 +35,7 @@ class SARTGroup extends SARTBase
     WithObj         (obj)        { this.Add (obj);                                                   return this; }
 
     GetAmount       ()           { return this.Entries.length;                                                    }        
-    GetByID         (id)         { return this.ByID[id];                                                          }
-    GetByName       (name)       { return this.ByName[name];                                                      }
+    GetByID         (id)         { return this.ByID[id];                                                          }    
     ContainsID      (id)         { return this.GetByID (id) != null;                                              }
     GetByIndex      (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
     AsArray         ()           { return this.Entries;                                                           }
@@ -44,6 +43,23 @@ class SARTGroup extends SARTBase
     toString        ()           { return "SARTGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
 
 
+    GetByName (name, case_sensitive = false)
+    { 
+        if (!case_sensitive)
+            return this.ByName[name];
+
+        else
+        {
+            for (const e of this.Entries)
+            {
+                if (Util.StrCmp (e.GetName (), name, !case_sensitive) )
+                    return e;
+            }
+        }
+        return null;
+    }
+
+    
     GetByNameRegex (regex, case_sensitive = true)
     {         
         for (const e of this.AsArray () )

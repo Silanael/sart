@@ -339,19 +339,14 @@ class Transaction extends SARTObject
         return this; 
     }
 
-    async FetchAll ()
-    {
-        await Promise.all ([ this.FetchViaGet (), this.FetchViaGQL (), this.UpdateAndGetStatus () ]);        
-    }
-
-    
+  
     async FetchData (opts = { as_string: false } )
     {
         const txid = this.GetTXID ();
 
         if (this.IsValid () && txid != null)
         {       
-            Sys.DEBUG ("Fetching data...", this);
+            Sys.VERBOSE ("Fetching transaction data...", this);
 
             const data = opts?.as_string ? await Arweave.GetTxStrData (txid) 
                                          : await Arweave.GetTxData    (txid);
@@ -487,10 +482,9 @@ class Transaction extends SARTObject
 
 
     
-
     async FetchViaGet (txid = null)
     {
-        Sys.DEBUG ("Fetching transaction information via HTTP GET...", this);
+        Sys.VERBOSE ("Fetching transaction info via HTTP GET..", this);
 
         if (this.ArweaveTX != null)
         {
@@ -521,7 +515,7 @@ class Transaction extends SARTObject
     async FetchViaGQL (txid = null)
     {
 
-        Sys.DEBUG ("Fetching transaction information via GraphQL...", this);
+        Sys.VERBOSE ("Fetching transaction info via GraphQL..", this);
 
         if (this.GQL_Edge != null)
         {

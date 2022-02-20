@@ -73,6 +73,9 @@ class Fetch extends SARTObject
             return false;
         }
 
+        const cmd = Sys.GetMain ().GetActiveCommand ();
+        if (cmd != null)
+            cmd.__OnFetchExecuted (this);
 
         // If this returns true, a free slot was available
         // and the fetch was done.

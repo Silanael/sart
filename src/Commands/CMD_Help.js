@@ -11,6 +11,7 @@
 const Util       = require ("../Util");
 const Sys        = require ("../System");
 const CommandDef = require ("../CommandDef").CommandDef;
+const SARTObject = require("../SARTObject");
 
 
 
@@ -38,25 +39,11 @@ class CMD_Help extends CommandDef
         // Requested command present.
         if (cmd_req != null)
         {            
-            const handler = Sys.GetMain ().GetCommandDef (cmd_req);
+            const handler = Sys.GetMain ().GetCommandDef (cmd_req, cmd.GetArgs () );
     
             if (handler != null)
-            {
-                if (handler.DisplayHelp != null)
-                    handler.DisplayHelp ();
-                    
-                else
-                    Sys.ERR ("No help available for '" + cmd_req + "'.", this);
-    
-                // Display subcommands at the end of the handler help-message.
-                if (handler.SUBCOMMANDS != null)
-                {
-                    Sys.INFO ("");
-                    //let str = "SUBCOMMANDS:";
-                    //Object.keys (handler.SUBCOMMANDS).forEach (k => str += " " + k);
-                    Sys.INFO ("SUBCOMMANDS: " + Util.KeysToStr (handler.SUBCOMMANDS) );
-                }
-            }
+                this.DisplayHelpForCommandHandler (handler);
+
             else
                 Sys.ERR ("Command '" + cmd_req + "' not recognized.", this);
         } 
@@ -142,6 +129,34 @@ class CMD_Help extends CommandDef
             Sys.INFO ("(Use README to get a more detailed usage instructions)");
         }        
     }
+
+
+    DisplayHelpForCommandHandler (handler)
+    {
+        if (handler == null)
+            return Sys.ERR_PROGRAM ("'handler' null.", "CMD_Help.DisplayHelpForCommandHandler");
+
+        const help_data = [];
+
+        help_data.Description = handler.GetDescription ();
+        help_data.Usage       = handler.Helplines;
+
+        if (handler.HasOutputObjectClass () )
+        {        
+            help_data.OutputClass = handler.GetOutputObjectClass ();                
+            help_data.Fields      = help_data.OutputClass.GET_ALL_FIELDNAMES_STR        ();
+            help_data.Fetches     = help_data.OutputClass.GET_ALL_AVAILABLE_FETCHES_STR ();
+            
+        }
+    
+        if (handler.HasSubcommands () )
+            help_data.Subcommands = Util.KeysToStr (handler.GetSubcommands () ); 
+
+
+        SARTObject.FROM_JSOBJ (help_data)?.Output ();
+             
+    }
+
 }
 
 

@@ -93,11 +93,16 @@ class CMD_Info extends CommandDef
 class SubCMD_TX extends FieldCMD
 {
 
-    MinArgsAmount    = 1;
-    Name             = "TX";
-    FieldObjectClass = Transaction;
-    DefaultListMode  = CONSTANTS.LISTMODE_SEPARATE;
+    MinArgsAmount     = 1;
+    Name              = "TX";
+    OutputObjectClass = Transaction;
+    DefaultListMode   = CONSTANTS.LISTMODE_SEPARATE;
 
+    Helplines =
+    [
+      "foo",
+      "bar"
+    ];
 
     async OnExecute (cmd)
     {

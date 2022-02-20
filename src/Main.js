@@ -71,17 +71,18 @@ class Main
         await Command.RunCommand (this, args);
     }
 
-    GetCommandDef         (cmd_name)   { return Command.GetCommandDef (cmd_name); }
-    GetGlobalConfig       ()           { return ProgramState.GlobalConfig;   }
-    SetGlobalSetting      (key, value) { return ProgramState.GlobalConfig.SetSetting (key, value); }
-    ExitConsole           ()           { ProgramState.ConsoleActive = false; }
-    GetArweave            ()           { return Arweave; }
-    GetFileOutputDest     ()           { return ProgramState.ActiveCommandInst?.GetFileOutputDest (); }  
+    GetCommandDef         (cmd_name, args)   { return Command.GetCommandDef (cmd_name, null, args); }
+    GetGlobalConfig       ()                 { return ProgramState.GlobalConfig;   }
+    SetGlobalSetting      (key, value)       { return ProgramState.GlobalConfig.SetSetting (key, value); }
+    ExitConsole           ()                 { ProgramState.ConsoleActive = false; }
+    GetArweave            ()                 { return Arweave; }
+    GetFileOutputDest     ()                 { return ProgramState.ActiveCommandInst?.GetFileOutputDest (); }  
     //GetOutputDests        ()           { return Util.Or (ProgramState.ActiveCommandInst?.GetOutputDests (), Sys.OUTPUTDESTS_STDOUT ); }
-    GetOutputDests        ()           { return Sys.OUTPUTDESTS_STDOUT; }
-    GetOutputFormat       (fmt_name)   { return this.OutputFormats[fmt_name?.toUpperCase () ]; }
-    GetActiveOutputFormat ()           { return this.GetOutputFormat (this.GetSetting (SETTINGS.OutputFormat) ); }
-    GetSizeStr            (bytes, hr)  { return Util.GetSizeStr (bytes, hr, hr ? this.GetSetting (SETTINGS.SizeDigits) : null); }
+    GetOutputDests        ()                 { return Sys.OUTPUTDESTS_STDOUT; }
+    GetOutputFormat       (fmt_name)         { return this.OutputFormats[fmt_name?.toUpperCase () ]; }
+    GetActiveOutputFormat ()                 { return this.GetOutputFormat (this.GetSetting (SETTINGS.OutputFormat) ); }
+    GetSizeStr            (bytes, hr)        { return Util.GetSizeStr (bytes, hr, hr ? this.GetSetting (SETTINGS.SizeDigits) : null); }
+    GetActiveCommand      ()                 { return this.State.ActiveCommandInst; }
 
     GetSetting (key)
     {                

@@ -27,16 +27,14 @@ class SARTObject extends SARTBase
 
     Errors             = null;
     Warnings           = null;
-    
-    Fields             = null;
-    FieldGroups        = null;
 
     Value              = null;
 
     // ***
 
-    static FIELDS              = new FieldList ();
-    static FIELDGROUPS         = [FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, FieldGroup.None, FieldGroup.Separate, FieldGroup.Table];
+    static FIELDS              = new SARTGroup ();
+    static FIELDGROUPS         = new SARTGroup ().With (FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, 
+                                                        FieldGroup.None, FieldGroup.Separate, FieldGroup.Table);
     static FIELDS_DEFAULTS     = SARTObject._FIELDS_CREATEOBJ (null, null);
     static FIELDS_SETTINGKEYS  = SARTObject._FIELDS_CREATEOBJ (null, null);
     
@@ -47,7 +45,9 @@ class SARTObject extends SARTBase
     static _FIELDS_CREATEOBJ (separate, table) { return { [CONSTANTS.LISTMODE_TABLE]: table, [CONSTANTS.LISTMODE_SEPARATE]: separate}; }
 
     static GET_ALL_FIELD_DEFS           ()         { return this.FIELDS; }
+    static GET_ALL_FIELD_GROUPS         ()         { return this.FIELDGROUPS; }
     static GET_ALL_FIELDNAMES           ()         { return this.FIELDS?.GetNamesAsArray (); }
+    static GET_ALL_FIELDNAMES_STR       ()         { return this.FIELDS?.GetNamesAsStr   (); }
     static GET_SETTING_FIELDNAMES       (listmode) { return this.FIELDS_SETTINGKEYS[listmode] != null ? Sys.GetMain().GetSetting (this.FIELDS_SETTINGKEYS[listmode]) : null; }    
     static GET_DEFAULT_FIELDNAMES       (listmode) { return this.FIELDS_DEFAULTS[listmode]; }
     static GET_EFFECTIVE_FIELDNAMES     (listmode)
@@ -61,8 +61,10 @@ class SARTObject extends SARTBase
             return d != null ? d : this.GET_ALL_FIELDNAMES ();
         }
     }
-    static GET_ALL_AVAILABLE_FETCHES () { return this.FETCHDEFS; }
-
+    static GET_ALL_AVAILABLE_FETCHES     () { return this.FETCHDEFS; }
+    static GET_ALL_AVAILABLE_FETCHES_STR () { return this.GET_ALL_AVAILABLE_FETCHES ()?.GetNamesAsStr (); }
+    static GET_FIELD_DEF   (field_name, case_sensitive = false) { return this.GET_ALL_FIELD_DEFS   ()?.GetByName (field_name, case_sensitive); }
+    static GET_FIELD_GROUP (field_name, case_sensitive = false) { return this.GET_ALL_FIELD_GROUPS ()?.GetByName (field_name, case_sensitive); }
 
 
 
@@ -74,14 +76,9 @@ class SARTObject extends SARTBase
 
         this.Name        = name;
         this.Value       = value;
-
-        this.Fields      = this.constructor.FIELDS      != null ? this.constructor.FIELDS      : new SARTGroup ();
-        this.Value       = value;
     }
 
 
-    WithField          (field_def)                             { this.Fields.Add    (   field_def ); return this;                                             }
-    WithFields         (...field_defs)                         { this.Fields.AddAll (...field_defs); return this;                                             }
     WithValue          (value)                                 { this.SetValue (value);              return this;                                             }    
     OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN, warning, src, opts)                             }  
     OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }  
@@ -117,14 +114,14 @@ class SARTObject extends SARTBase
     }
 
     GetAllFieldDefs   ()                              { return this.constructor.GET_ALL_FIELD_DEFS ();                         }
-    GetAllFieldNames  ()                              { return this.GetAllFieldDefs ()?.GetNamesAsArray ();                    }
+    GetAllFieldNames  ()                              { return this.constructor.GET_ALL_FIELDNAMES ();                         }
     GetAllFetches     ()                              { return this.constructor.GET_ALL_AVAILABLE_FETCHES ();                  }
     GetMinimumFetches (fielddefs = new SARTGroup () ) { return this.constructor.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (fielddefs); }
 
 
     GetFieldDefs (field_names = [], listmode = CONSTANTS.LISTMODE_SEPARATE) 
     { 
-        
+ 
         if (field_names == null || field_names.length <= 0)
             field_names = this.GetEffectiveFieldNames (listmode);
 
@@ -138,6 +135,14 @@ class SARTObject extends SARTBase
             Sys.DEBUG ("'field_names' null, using all fields.");
             field_names = this.GetAllFieldNames ();
         }
+
+        if (field_names == null)
+        {
+            this.OnProgramError ("No fields present in the object!", "GetFieldDefs");
+            return null;
+        }
+
+        
 
         // Process groups    
         const groups_included = [];
@@ -217,26 +222,9 @@ class SARTObject extends SARTBase
         return field_defs;                
     }
 
-    GetFieldDef (field_name, case_sensitive = false)
-    {                    
-        for (const f of this.constructor.FIELDS?.AsArray () )
-        {            
-            if (f.HasName (field_name, case_sensitive) )
-                return f;
-        }
-        return null;
-    }
-
-    GetFieldGroup (group_name, case_sensitive = false)
-    {                    
-        for (const f of this.constructor.FIELDGROUPS)
-        {            
-            if (f.HasName (group_name, case_sensitive) )
-                return f;
-        }
-        return null;
-    }
-
+    GetFieldDef   (field_name, case_sensitive = false) { return this.GET_FIELD_DEF   (field_name, case_sensitive); }
+    GetFieldGroup (group_name, case_sensitive = false) { return this.GET_FIELD_GROUP (group_name, case_sensitive); }
+    
     GetFieldValue (field, case_sensitive = false)
     {
         return this.GetFieldDef (field, case_sensitive)?.GetFieldValue (this);
@@ -509,6 +497,13 @@ class SARTObject extends SARTBase
             fetch_group = this.GetAllFetches ();
         }
         
+        if (fetch_group.GetAmount () <= 0)
+        {
+            Sys.VERBOSE ("No fetches required for the chosen field(s).", this);
+            return;
+        }
+
+        Sys.VERBOSE ("Executing fetches: " + fetch_group.GetNamesAsArray (), this);
 
         const fetchfuncs = [];
         for (const f of fetch_group.AsArray () )
@@ -559,9 +554,12 @@ class SARTObject extends SARTBase
             {
                 const key = e[0];
                 const val = e[1];
+                const objkey = "Field_" + key;
 
-                sart_obj[key] = val;
-                sart_obj.WithField (new FieldDef (key) );
+                console.log (sart_obj);
+                
+                sart_obj[objkey] = val;                
+                sart_obj.WithField (new FieldDef (key, objkey) );
             }
             return sart_obj;
         }

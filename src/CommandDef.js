@@ -16,17 +16,17 @@ class CommandDef extends SARTDef
     
     ValidArgs         = new Arguments.ArgDefs ();
     Subcommands       = {};
-        
-    Helplines         = [];
+    
     OutputObjectClass = null;
+    DefaultListMode   = CONSTANTS.LISTMODE_SEPARATE;    
     
     MatchFunc         = null; // Should be a function (param_str).
     ExecFunc          = null;
     OutFunc           = null;
     AsActiveCommand   = true;
+
+    Helplines         = [];
     
-    DefaultListMode   = CONSTANTS.LISTMODE_SEPARATE;
-    FieldObjectClass  = null;
 
 
     /* Overridable, these implementations do nothing. */
@@ -63,8 +63,11 @@ class CommandDef extends SARTDef
     GetEffectiveListMode  (cmd)         { return cmd.HasListMode ()     ? cmd.GetListMode     () : this.DefaultListMode; }
     GetEffectiveFields    (cmd)         { return cmd.HasWantedFields () ? cmd.GetWantedFields () : this.GetDefaultFields (this.GetEffectiveListMode (cmd) ); }
   
-    GetDefaultFields      (listmode)    { return this.FieldObjectClass != null ? this.FieldObjectClass.GET_DEFAULT_FIELDNAMES (listmode) : [FieldGroup.All.Name]; }
-    
+    GetDefaultFields      (listmode)    { return this.HasOutputObjectClass () ? this.GetOutputObjectClass ().GET_DEFAULT_FIELDNAMES (listmode) : [FieldGroup.All.Name]; }
+    GetAvailableFetches   ()            { return this.HasOutputObjectClass () != null && this.GetOutputObjectClass ().GET_ALL_AVAILABLE_FETCHES != null ? 
+                                                 this.GetOutputObjectClass ().GET_ALL_AVAILABLE_FETCHES () : null; }
+    GetAvailableFetchesStr()            { return this.GetAvailableFetches ()?.GetNamesAsStr (); }
+
 
     Matches (name)
     {                        
@@ -103,13 +106,24 @@ class CommandDef extends SARTDef
         }
 
         if (this.HasOutputObjectClass () )
-        {            
-            const fieldnames = this.GetOutputObjectClass ()?.GET_ALL_FIELD_DEFS?.GetNamesAsStr ();
+        {        
+            const objclass = this.GetOutputObjectClass ();    
+            
+            const fieldnames = objclass.GET_ALL_FIELDNAMES_STR ();
+            const fetchnames = objclass.GET_ALL_AVAILABLE_FETCHES_STR ();
+
             if (fieldnames != null)
             {
                 Sys.INFO ("");
                 Sys.INFO ("Fields: " + fieldnames);
             }
+
+            if (fetchnames != null)
+            {
+                Sys.INFO ("");
+                Sys.INFO ("Available fetches: " + fetchnames);
+            }
+
         }
 
         if (this.HasSubcommands () )

@@ -70,6 +70,7 @@ class CommandInstance extends SARTObject
     GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting   (key);     }
     GetEffectiveSettingOr(key, val)    { return Sys.GetMain ()?.GetSettingOr (key, val);}
     GetConfig            ()            { return this.Config;                            }
+    GetArgs              ()            { return this.Arguments;                         }
     GetArgsAmount        ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
     Pop                  ()            { return this.Arguments?.Pop   ();  }
     PopLC                ()            { return this.Arguments?.PopLC ();  }
@@ -91,7 +92,9 @@ class CommandInstance extends SARTObject
     GetEffectiveListMode ()            { return this.CDef.GetEffectiveListMode (this); }
     GetEffectiveFields   ()            { return this.CDef.GetEffectiveFields   (this); }
 
+    __OnFetchExecuted    (fetch)       { ++this.Fetches; }
     
+
     AppendConfigToGlobal ()            
     { 
         if (! Sys.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
