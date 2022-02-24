@@ -32,6 +32,8 @@ class FieldDef extends SARTBase
     FetchInheritFrom    = null;  // Field name
     Class               = null;
 
+    DefaultValue        = null;
+
     constructor (name, sartobj_class)
     {
         super (name);
@@ -39,6 +41,7 @@ class FieldDef extends SARTBase
     }
     
     
+    WithDefaultValue     (val)            { this.DefaultValue        = val;                                                                return this; }
     WithFunction         (func)           { this.GetterFunction      = func;                                                               return this; }    
     WithNullDisplayValue (str)            { this.NullDisplayValue    = str;                                                                return this; }
     WithFetch            (fetchdef)       { if (! this.FetchRequired_AnyOf.includes (fetchdef) ) this.FetchRequired_AnyOf.push (fetchdef); return this; }
@@ -49,6 +52,7 @@ class FieldDef extends SARTBase
                                                                                  : this.FetchRequired_AnyOf;                                            }        
     UsesFetch            (fetchdef)       { return this.GetFetches_AnyOf ()?.includes (fetchdef);                                                       }
     RequiresFetches      ()               { return this.GetFetches_AnyOf ()?.length > 0; }
+    
 
     WithRecursive (depth = 1)
     {
@@ -76,6 +80,8 @@ class FieldDef extends SARTBase
             return this.Recursive ? value.GetInfo != null ? value.GetInfo () : value 
                                   : value.toString (); 
                         
+        else
+            return this.DefaultValue;
     }
 
     /** Returns the value if not null, NullDisplayValue otherwise. */
@@ -85,14 +91,7 @@ class FieldDef extends SARTBase
         return val != null ? val : this.NullDisplayValue;
     }
     
-    GetRequiredFetches ()
-    {
-        const fetches = [].concat (this.Fetches_AllOf);
-        for (const f of this.Fetches_AnyOf)
-        {
-
-        }
-    }
+  
 
 }
 

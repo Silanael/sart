@@ -28,7 +28,7 @@ class TXStatus
         if (this.IsFetched () )
         {
             if (this.IsConfirmed () )
-                return "Successfully mined with " + this.Confirmations + " confirmations.";
+                return "Mined with " + this.Confirmations + " confirmations.";
 
             else if (this.IsMined () )
                 return "Mined, but amount of confirmations (" + this.Confirmations + ") still low.";

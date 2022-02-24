@@ -23,6 +23,8 @@ const CommandDef      = require ("../CommandDef").CommandDef;
 const FieldCMD        = require ("../CommandDef").FieldCMD;
 const SARTObject      = require ('../SARTObject');
 const OutputParams    = require ("../OutputParams");
+const SARTGroup       = require ("../SARTGroup");
+const Field           = require ("../FieldDef");
 
 
 
@@ -134,7 +136,6 @@ class SubCMD_ARFS extends FieldCMD
     MinArgsAmount = 1;
 
 
-
     async OnExecute (cmd, entity_type = null)
     {
         if (entity_type == null)
@@ -166,7 +167,33 @@ class SubCMD_ARFS extends FieldCMD
 
 
 
-
+class OutputObj_Author extends SARTObject
+{
+  
+    static FIELDS = new SARTGroup ().With 
+    (    
+        new Field ("Name")            .WithDefaultValue ("Silanael"),
+        new Field ("Description")     .WithDefaultValue ("A weary, darkened, shattered soul using its fractured shards to engrave"
+                                                         + "\n                 what remains of it into this world. "
+                                                         + "\n                 A creator and a destroyer. A powerful ally and an enemy to be reckoned with. "
+                                                         + "\n                 A pragmatic idealist. A dark ambassador. A ghost imprisoned in the past.. "
+                                                         + "\n                 A fighter longing for a moment of rest.."),
+        new Field ("Properties")      .WithDefaultValue ("MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, stalker, ex-drifter"),
+        new Field ("Age")             .WithFunction     (Util.GetAge),
+        new Field ("Website")         .WithDefaultValue ("www.silanael.com (silanael.x in the future)"), 
+        new Field ("E-mail")          .WithDefaultValue ("sila@silanael.com"), 
+        new Field ("PGP-fingerprint") .WithDefaultValue ("FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE"),
+        new Field ("Arweave")         .WithDefaultValue ("zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4"),
+        new Field ("ArFS")            .WithDefaultValue ("a44482fd-592e-45fa-a08a-e526c31b87f1"),
+        new Field ("GitHub")          .WithDefaultValue ("https://github.com/Silanael"),
+        new Field ("DockerHub")       .WithDefaultValue ("https://hub.docker.com/u/silanael"),
+        new Field ("DeviantArt")      .WithDefaultValue ("https://www.deviantart.com/silanael"),
+        new Field ("KOII")            .WithDefaultValue ("https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE"),
+        new Field ("Twitter")         .WithDefaultValue ("https://www.twitter.com/silanael"),
+        new Field ("The Question")    .WithDefaultValue ("If you could have anything in the world, what would it be?")
+    
+    );
+}
 
 class SubCMD_Author extends FieldCMD 
 {
@@ -174,30 +201,7 @@ class SubCMD_Author extends FieldCMD
     Name          = "AUTHOR";
     MinArgsAmount = 0;
 
-    OutputObject = SARTObject.FROM_JSOBJ 
-    ({
-        //"__ANSI":          "\033[31m",
-        Name:              "Silanael",
-        Description:       "A weary, darkened, shattered soul using its fractured shards to engrave"
-                           + "\n                 what remains of it into this world. "
-                           + "\n                 A creator and a destroyer. A powerful ally and an enemy to be reckoned with. "
-                           + "\n                 A pragmatic idealist. A dark ambassador. A ghost imprisoned in the past.. "
-                           + "\n                 A fighter longing for a moment of rest..",
-        Properties:        "MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, stalker, ex-drifter",
-        Age:               Util.GetAge (),        
-        Website:           "www.silanael.com (silanael.x in the future)",
-        "E-mail":          "sila@silanael.com",
-        "PGP-fingerprint": "FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE",
-        Arweave:           "zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4",
-        ArFS:              "a44482fd-592e-45fa-a08a-e526c31b87f1",
-        GitHub:            "https://github.com/Silanael",
-        DockerHub:         "https://hub.docker.com/u/silanael",
-        DeviantArt:        "https://www.deviantart.com/silanael",
-        KOII:              "https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE",
-        Twitter:           "https://www.twitter.com/silanael",        
-        "The Question":    "If you could have anything in the world, what would it be?"      
-    });
-
+    OutputObject = new OutputObj_Author ();
     
     async OnExecute (cmd)
     { 

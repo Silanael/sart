@@ -222,8 +222,8 @@ class SARTObject extends SARTBase
         return field_defs;                
     }
 
-    GetFieldDef   (field_name, case_sensitive = false) { return this.GET_FIELD_DEF   (field_name, case_sensitive); }
-    GetFieldGroup (group_name, case_sensitive = false) { return this.GET_FIELD_GROUP (group_name, case_sensitive); }
+    GetFieldDef   (field_name, case_sensitive = false) { return this.constructor.GET_FIELD_DEF   (field_name, case_sensitive); }
+    GetFieldGroup (group_name, case_sensitive = false) { return this.constructor.GET_FIELD_GROUP (group_name, case_sensitive); }
     
     GetFieldValue (field, case_sensitive = false)
     {
@@ -542,6 +542,7 @@ class SARTObject extends SARTBase
     }
 
 
+    /*
     static FROM_JSOBJ (js_obj, name = null)
     {
         if (js_obj == null)
@@ -564,7 +565,7 @@ class SARTObject extends SARTBase
             return sart_obj;
         }
     }
-
+    */
  
 
 }
