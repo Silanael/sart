@@ -22,6 +22,8 @@ const FieldList  = require ("./FieldList");
 
 class SARTObject extends SARTBase
 {
+    ObjectType         = "SARTObject";
+    
     Valid              = true;
     DataLoaded         = false;
 
@@ -81,7 +83,7 @@ class SARTObject extends SARTBase
         
         for (const fdef of this.GetAllFieldDefs ()?.AsArray () )
         {
-            this.FieldData.Add (new FData (fdef) );
+            this.FieldData.Add (new FData (this, fdef) );
         }
     }
 
@@ -240,12 +242,7 @@ class SARTObject extends SARTBase
     /** Field can be either string or FieldDef. */
     GetFieldData (field)
     {        
-        const def = field instanceof FieldDef ? field: this.GetFieldDef (field);
-
-        if (def != null)
-            return new FData (def, this, def.GetFieldValue (this), def.GetFieldTextValue (this) );
-        else
-            return null;
+        return this.FieldData.GetByName (field instanceof FieldDef ? field.GetFieldName (): field);        
     }
     
 

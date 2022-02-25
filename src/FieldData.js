@@ -15,31 +15,34 @@ const SARTGroup  = require ("./SARTGroup");
 
 
 class FieldData extends SARTBase
-{    
-    FieldObject    = null;
-    FieldDef       = null;
-    FieldValue     = null;
-    FieldTextValue = null;
+{       
+    Obj   = null;
+    Def   = null;
+    Value = null;    
 
 
-    constructor (def, obj, value, textvalue)
+    constructor (obj, def, name = null)
     {        
         super ();
 
-        this.WithName (def.GetFieldName () );
-        
-        this.FieldDef       = def;
-        this.FieldObject    = obj;        
-        this.FieldValue     = value;
-        this.FieldTextValue = textvalue;
-        
+        this.Obj = obj;
+        this.Def = def;
+
+        if (this.Obj == null)
+            Sys.ERR_PROGRAM_ONCE ("'obj' not given to the constructor!", "FieldData");
+
+        if (name != null)
+            this.WithName (name);
+
+        else if (this.Def != null)
+            this.WithName (def.GetFieldName () );
     }
     
-    GetFieldName       () { return this.GetName ();      }
-    GetFieldValue      () { return this.FieldValue;      }
-    GetFieldTextValue  () { return this.FieldTextValue;  }
-    GetFieldDef        () { return this.FieldDef;        }
-    GetStrTopWidth     () { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
+    GetFieldName       () { return this.GetName ();                                                  }
+    GetFieldValue      () { return this.Def?.GetFieldValue (this.Obj);                               }
+    GetFieldTextValue  () { return Util.IsSetStrOr (this.GetFieldValue ()?.toString (), "-");        }
+    GetFieldDef        () { return this.Def                                                          }
+    GetTopStrWidth     () { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
 
     toString           () { "FieldData '" + this.FieldName + "'"; }
 

@@ -422,7 +422,7 @@ function GetTXStatusStr (statuscode, confirmations)
 {
 
     if (statuscode == Constants.TXSTATUS_NOTFOUND)
-        return Sys.ANSIERROR ("NOT FOUND / FAILED");
+        return Sys.ANSIERROR ("NOT FOUND");
 
 
     else if (statuscode == Constants.TXSTATUS_PENDING)
@@ -434,7 +434,7 @@ function GetTXStatusStr (statuscode, confirmations)
         if (IsConfirmationAmountSafe (confirmations) )
             return "CONFIRMED";
         else
-            return Sys.ANSIWARNING ("MINED, LOW CONFIRMATIONS");
+            return Sys.ANSIWARNING ("MINED");
     }
 
 

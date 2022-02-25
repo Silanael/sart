@@ -194,7 +194,7 @@ const FIELDS = new FieldList ().With
 
 class Transaction extends SARTObject
 {
-    Type                = "Transaction";
+    ObjectType          = "Transaction";
     Network             = "Arweave";
 
     State               = new TXStatus ();

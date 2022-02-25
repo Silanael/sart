@@ -36,13 +36,13 @@ class TXStatus
                 return "Mined with " + this.Confirmations + " confirmations.";
 
             else if (this.IsMined () )
-                return "Mined, but amount of confirmations (" + this.Confirmations + ") still low.";
+                return "Mined, but the amount of confirmations is still low (" + this.Confirmations + "). May still fail, though this is unlikely.";
 
             else if (this.IsPending () )
-                return "The transaction is still waiting to be mined.";
+                return "In the mempool, still waiting to be mined (pending).";
 
             else if (this.IsFailed () )
-                return "Unable to retrieve transaction status - it may have failed."
+                return "Failed or invalid TXID given (transaction not found)."
         }
         else
             return str_if_not_present != null ? str_if_not_present : "Status not fetched.";
