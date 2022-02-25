@@ -10,7 +10,7 @@
 const CONSTANTS  = require ("./CONSTANTS");
 const Sys        = require ("./System.js");
 const Util       = require ("./Util.js");
-const FieldData  = require ("./FieldData").FieldData;
+const FData      = require ("./FieldData").FieldData;
 const FieldDataG = require ("./FieldData").FieldDataGroup;
 const FieldDef   = require ("./FieldDef");
 const SARTBase   = require ("./SARTBase");
@@ -29,6 +29,8 @@ class SARTObject extends SARTBase
     Warnings           = null;
 
     Value              = null;
+
+    FieldData          = new SARTGroup ();
 
     // ***
 
@@ -76,6 +78,11 @@ class SARTObject extends SARTBase
 
         this.Name        = name;
         this.Value       = value;
+        
+        for (const fdef of this.GetAllFieldDefs ()?.AsArray () )
+        {
+            this.FieldData.Add (new FData (fdef) );
+        }
     }
 
 
@@ -236,7 +243,7 @@ class SARTObject extends SARTBase
         const def = field instanceof FieldDef ? field: this.GetFieldDef (field);
 
         if (def != null)
-            return new FieldData (def, this, def.GetFieldValue (this), def.GetFieldTextValue (this) );
+            return new FData (def, this, def.GetFieldValue (this), def.GetFieldTextValue (this) );
         else
             return null;
     }

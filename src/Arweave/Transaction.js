@@ -158,22 +158,27 @@ const FIELDS = new FieldList ().With
         .WithAliases   ("Bundle", "InBundle")
         .WithInheritFetch ("IsInBundle"),
 
-    new Field ("Status")         
-        .WithFunction  (function (t) { return t?.GetStatusDesc     (); } )
+    new Field ("Condition")         
+        .WithFunction  (function (t) { return t?.GetConditionStr   (); } )
         .WithFetch (FETCH_STATUS),
-
-    new Field ("StatusStr")       
+    
+    new Field ("Status")         
         .WithFunction  (function (t) { return t?.GetStatusStr      (); } )
-        .WithInheritFetch ("Status"),
+        .WithFetch (FETCH_STATUS),        
 
     new Field ("StatusCode")      
         .WithFunction  (function (t) { return t?.GetStatusCode     (); } )
-        .WithInheritFetch ("Status"),
+        .WithInheritFetch ("StatusText"),
 
     new Field ("Confirmations")   
-        .WithFunction  (function (t) { return t?.GetStatusConfirms (); } )
-        .WithInheritFetch ("Status"),
-    
+        .WithFunction  (function (t) { return t?.GetConfirmations  (); } )
+        .WithInheritFetch ("StatusText"),
+
+    new Field ("StatusText")         
+        .WithFunction  (function (t) { return t?.GetStatusText     (); } )
+        .WithFetch (FETCH_STATUS),
+            
+        
     new Field ("Warnings")       
         .WithAliases ("WARN")
         .WithNullDisplayValue ("NONE"),
@@ -254,14 +259,15 @@ class Transaction extends SARTObject
     GetTotalAR               ()         { return this.GetFee_AR      ()        + this.GetQTY_AR      ();                              }
     GetTotalWinston          ()         { return this.GetFee_Winston ()        + this.GetQTY_Winston ();                              }
     GetDataSize_B            ()         { return this.DataSize_Bytes   != null ? this.DataSize_Bytes   : 0;                           }    
-    GetStatusStr             ()         { return this.State?.GetStatus ();                                                            }    
-    GetStatusDesc            ()         { return this.State?.GetStatusDescription ();                                                 }    
-    GetStatusConfirms        ()         { return this.State?.GetConfirmations ();                                                     }        
-    GetStatusCode            ()         { return this.State?.GetStatusCode ();                                                        }    
-    HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR          > 0;                           }
+    GetStatusStr             ()         { return this.State?.GetStatusStr     ();                                                     }
+    GetStatusCode            ()         { return this.State?.GetStatusCode    ();                                                     }    
+    GetStatusText            ()         { return this.State?.GetStatusText    ();                                                     }    
+    GetConfirmations         ()         { return this.State?.GetConfirmations ();                                                     }            
+    GetConditionStr          ()         { return this.State?.GetConditionStr  ();                                                     }        
+    HasFee                   ()         { return this.Fee_AR           != null && this.Fee_AR           > 0;                          }
     HasTransfer              ()         { return this.Quantity_AR      > 0     || this.Quantity_Winston > 0;                          }
-    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }    
-    DataLoaded               ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes  > 0;                           }
+    HasData                  ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes   > 0;                          }    
+    DataLoaded               ()         { return this.DataSize_Bytes   != null && this.DataSize_Bytes   > 0;                          }
     HasRecipient             ()         { return Util.IsSet (this.Target);                                                            }
     GetRecipient             ()         { return this.HasRecipient   () ? this.Target : null;                                         }
     IsBundle                 ()         { return this.HasTag (CONSTANTS.TXTAGS.BUNDLE_FORMAT);                                        }

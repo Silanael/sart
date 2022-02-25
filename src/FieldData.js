@@ -26,12 +26,6 @@ class FieldData extends SARTBase
     {        
         super ();
 
-        if (def == null)
-            return Sys.ERR_PROGRAM ("FieldData (): 'def' null!", this);
-
-        if (obj == null)
-            return Sys.ERR_PROGRAM ("FieldData (): 'obj' null!", this);
-
         this.WithName (def.GetFieldName () );
         
         this.FieldDef       = def;

@@ -10,19 +10,24 @@ const ByTXQuery   = require ("../GQL/ByTXQuery");
 
 class TXStatus 
 {
-    TXID          = null;
-    Status        = null;
-    StatusCode    = null;
+    TXID          = null;    
+    
+    StatusStr     = null;    
+    StatusCode    = null;    
     Confirmations = null;
     MinedAtBlock  = null;
 
+    ConditionStr  = null;
 
-    IsFetched        () { return this.Status != null; }
-    GetStatus        (str_if_not_present = null) { return this.Status != null ? this.Status : str_if_not_present; };
-    GetStatusCode    () { return this.StatusCode    };
-    GetConfirmations () { return this.Confirmations };
 
-    GetStatusDescription    (str_if_not_present = null)
+    IsFetched        () { return this.StatusCode != null; }
+    GetStatusStr     () { return this.StatusStr;          };
+    GetStatusCode    () { return this.StatusCode          };
+    GetConditionStr  () { return this.ConditionStr        };    
+    GetConfirmations () { return this.Confirmations       };
+
+
+    GetStatusText (str_if_not_present = null)
     { 
 
         if (this.IsFetched () )
@@ -84,18 +89,23 @@ class TXStatus
     {
         if (txstatus != null) 
         {
+            
             this.StatusCode    = txstatus.status;
             this.Confirmations = txstatus.confirmed?.number_of_confirmations;
             this.MinedAtBlock  = txstatus.confirmed?.block_height;
-            this.Status        = Arweave.GetTXStatusStr (this.StatusCode, this.Confirmations);
+            this.StatusStr     = Arweave.GetTXStatusStr (this.StatusCode, this.Confirmations);
+            this.ConditionStr  = this.IsConfirmed () ? "OK"
+                                                     : this.IsMined () || this.IsPending ? "WAIT"
+                                                                                         : "FAILED";
         }
 
         else 
         {
-            this.Status        = null;
-            this.StatusCode    = null;
-            this.Confirmations = null;
-            this.MinedAtBlock  = null;
+            this.StatusCode    = null; 
+            this.Confirmations = null; 
+            this.MinedAtBlock  = null; 
+            this.State         = null; 
+            this.Status        = null; 
             Sys.ERR_PROGRAM ("'txstatus' null", "TxStatusInfo.SetToArweaveTXStatus");
         }
     }
