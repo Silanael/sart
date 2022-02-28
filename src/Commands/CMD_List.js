@@ -18,6 +18,7 @@ const Arweave      = require ("../Arweave/Arweave");
 const Analyze      = require ("../Features/TXAnalyze");
 const SETTINGS     = require ("../SETTINGS.js").SETTINGS;
 const OutputParams = require ("../OutputParams");
+const Transaction  = require ("../Arweave/Transaction");
 
 
 class CMD_List extends CommandDef
@@ -42,7 +43,8 @@ class SubCMD_Address extends CommandDef
 {
     Name            = "ADDRESS";
     MinArgsAmount   = 1;
-    AsListByDefault = true;
+    OutputObjectClass = Transaction;
+    DefaultListMode   = Constants.LISTMODE_TABLE;
 
     constructor ()
     {
@@ -55,8 +57,7 @@ class SubCMD_Address extends CommandDef
             new ArgDef ("last")  .WithHasParam ().WithAlias ("latest", "newest").WithFunc (SubCMD_Address._HandleLast),                                                                                            
             new ArgDef ("oldest").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._HandleOldest),            
         );
-
-        this.WithAsListByDefault ();
+        
     }
   
     
@@ -115,8 +116,13 @@ class SubCMD_Address extends CommandDef
                     fee_winston_total  += t.GetFee_Winston ();
                     qty_winston_total  += t.GetQTY_Winston ();                
                 }
-                                
-                cmd.Transactions.Output (new OutputParams ().WithCMD (cmd) );
+                
+                const outputparams = new OutputParams ();
+                outputparams.WithCMD      (cmd                           );
+                outputparams.WithFields   (this.GetEffectiveFields (cmd) );
+                outputparams.WithListMode (cmd .GetListMode        ()    );
+                
+                cmd.Transactions.Output (cmd);
 
                 if (amount >= 1)
                 {
