@@ -526,7 +526,7 @@ function ERR (str, src, args = {error_id: null})
 {    
     if (!IsQuiet () )
     {        
-        const msg = src != null ? src + ": " + str : str;
+        const msg = src != null ? src?.toString () + ": " + str : str;
         if (IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
         if (IsErrSTDERR () ) console.error (ANSIERROR (msg) );        
     }       

@@ -30,7 +30,8 @@ class CommandInstance extends SARTObject
     CDef           = null;
     
     CommandName    = null;    
-    Arguments      = null;
+    RawArguments   = null;
+    Arguments      = {};
 
     OutputObject   = null;
     OutputParams   = null;
@@ -70,13 +71,14 @@ class CommandInstance extends SARTObject
     GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting   (key);     }
     GetEffectiveSettingOr(key, val)    { return Sys.GetMain ()?.GetSettingOr (key, val);}
     GetConfig            ()            { return this.Config;                            }
-    GetArgs              ()            { return this.Arguments;                         }
-    GetArgsAmount        ()            { return this.Arguments != null ? this.Arguments.GetAmount () : 0; }
-    Pop                  ()            { return this.Arguments?.Pop   ();  }
-    PopLC                ()            { return this.Arguments?.PopLC ();  }
-    PopUC                ()            { return this.Arguments?.PopLC ();  }
-    Peek                 ()            { return this.Arguments?.Peek ();  }
-    RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
+    GetRawArguments      ()            { return this.RawArguments;                         }
+    GetRawArgsAmount     ()            { return this.RawArguments != null ? this.RawArguments.GetAmount () : 0; }
+    Pop                  ()            { return this.RawArguments?.Pop   ();  }
+    PopLC                ()            { return this.RawArguments?.PopLC ();  }
+    PopUC                ()            { return this.RawArguments?.PopLC ();  }
+    Peek                 ()            { return this.RawArguments?.Peek ();   }
+    GetArgumentValue     (arg_name)    { return this.Arguments[arg_name];     }
+    RequireAmount        (amount, msg) { return this.RawArguments != null ? this.RawArguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
     GetFileOutputDest    ()            { return this.FileOutputDest;         }
     HasWantedFields      ()            { return this.WantedFields != null;   }
@@ -156,7 +158,7 @@ class CommandInstance extends SARTObject
         if (args == null)
             return Sys.ERR_PROGRAM ("Execute: 'args' null!", this);
 
-        this.Arguments = args;
+        this.RawArguments = args;
         this.Success   = false;
         this.Fetches   = 0;
         this.Config    = new Settings.Config ().WithName ("Command");
@@ -178,7 +180,7 @@ class CommandInstance extends SARTObject
             return false;
 
 
-        else if (this.GetArgsAmount () < this.CDef.GetMinArgsAmount () )
+        else if (this.GetRawArgsAmount () < this.CDef.GetMinArgsAmount () )
         {
             this.CDef.DisplayHelp ();
             return Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
@@ -188,7 +190,7 @@ class CommandInstance extends SARTObject
         // Good to go
         else
         {               
-            Sys.VERBOSE ("Processing command's arguments (" + this.GetArgsAmount () + ")...");         
+            Sys.VERBOSE ("Processing command's arguments (" + this.GetRawArgsAmount () + ")...");         
 
             // Rest are arguments
             if (! args.ProcessArgs (this.CDef.ValidArgs, this) )
