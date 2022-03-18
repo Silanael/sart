@@ -63,7 +63,7 @@ class Main
 
         this.State.Main = this;
 
-        await this.RunCommand (new Arguments.Args (argv.slice (FIRST_ARG)) );
+        await this.RunCommand (new Arguments (argv.slice (FIRST_ARG)) );
     }
 
     async RunCommand (args)

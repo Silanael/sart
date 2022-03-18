@@ -12,7 +12,7 @@ const Util           = require ("./Util");
 const Constants      = require ("./CONSTANTS");
 const State          = require ("./ProgramState");
 const Settings       = require ("./Config");
-const Arguments      = require ("./Arguments");
+const Arguments      = require ("./ArgumentDef");
 const SARTObject     = require ("./SARTObject");
 const COMMANDS       = require ("./COMMANDS");
 const OPTIONS        = require ("./OPTIONS");
@@ -72,12 +72,12 @@ class CommandInstance extends SARTObject
     GetEffectiveSettingOr(key, val)    { return Sys.GetMain ()?.GetSettingOr (key, val);}
     GetConfig            ()            { return this.Config;                            }
     GetRawArguments      ()            { return this.RawArguments;                         }
-    GetRawArgsAmount     ()            { return this.RawArguments != null ? this.RawArguments.GetAmount () : 0; }
-    Pop                  ()            { return this.RawArguments?.Pop   ();  }
-    PopLC                ()            { return this.RawArguments?.PopLC ();  }
-    PopUC                ()            { return this.RawArguments?.PopLC ();  }
-    Peek                 ()            { return this.RawArguments?.Peek ();   }
-    GetArgumentValue     (arg_name)    { return this.Arguments[arg_name];     }
+    GetRawArgsAmount     ()            { return this.RawArguments != null ? this.RawArguments.GetTotalAmount () : 0; }
+    GetNextUnhandledArg  ()            { return this.RawArguments?.GetNext   ();  }
+    GetNextUnhandledArgLC()            { return this.RawArguments?.GetNextLC ();  }
+    GetNextUnhandledArgUC()            { return this.RawArguments?.GetNextLC ();  }
+    PeekNextUnhandledArg ()            { return this.RawArguments?.Peek ();       }
+    GetArgumentValue     (arg_name)    { return this.Arguments[arg_name];         }
     RequireAmount        (amount, msg) { return this.RawArguments != null ? this.RawArguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
     GetFileOutputDest    ()            { return this.FileOutputDest;         }
@@ -108,7 +108,7 @@ class CommandInstance extends SARTObject
 
     GetCommandDefFromArgs (args)
     {
-        let cmd_name = args.PopLC ();
+        let cmd_name = args.GetNextLC ();
         let def      = null;
                 
 
@@ -129,7 +129,7 @@ class CommandInstance extends SARTObject
                 else
                     cmd_name = default_cmd;            
 
-                args = new Arguments.Args ([default_param]);  
+                args = new Arguments ([default_param]);  
             }
             else
             {

@@ -34,7 +34,7 @@ class CMD_Help extends CommandDef
 
     OnOutput (cmd)
     {
-        const cmd_req =  cmd.PopLC ();
+        const cmd_req =  cmd.GetNextUnhandledArg ();
 
         // Requested command present.
         if (cmd_req != null)

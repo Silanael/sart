@@ -11,61 +11,34 @@ const CONSTANTS     = require ("./CONSTANTS");
 const SARTDef       = require ("./SARTDefinition");
 const Util          = require ("./Util");
 const Sys           = require ("./System");
-const Args          = require ("./Arguments");
+const ArgDef        = require ("./ArgumentDef");
 const SETTINGS      = require ("./SETTINGS").SETTINGS;
+const SARTGroup     = require("./SARTGroup");
 const LOGLEVELS     = CONSTANTS.LOGLEVELS;
 const OUTPUTDESTS   = CONSTANTS.OUTPUTDESTS;
 const OUTPUTFORMATS = CONSTANTS.OUTPUTFORMATS;
 
 
 
-class Option extends Args.ArgDef
+class Option extends ArgDef
 {
-    
-    SettingKey   = null;
-    SettingValue = null;
-
-
-    constructor (name)
-    {
-        super (name);        
-    }
-
+        
     WithSetting (key, value = null)
     {
-        this.SettingKey   = key;
-        this.SettingValue = value;
+        this.Key   = key;
+        this.Value = value;
 
         if (value == null)
             this.HasParameter = true;
 
         return this;
     }
-
  
-    _DoInvoke (param, config)
-    {
-
-        if (this.SettingKey != null)
-        {
-            if (config == null)
-                Sys.ERR_PROGRAM ("Invoke: 'config' null!", this);
-            
-            else if (this.HasParameter)            
-                return config.SetSetting (this.SettingKey, param);
-
-            else 
-                return config.SetSetting (this.SettingKey, this.SettingValue);                            
-        }
-
-        else
-            return Sys.ERR_PROGRAM ("Was unable to set option '" + this + "' - no valid actions available.");
-    }
 }
 
 
 
-const OPTIONS = new Args.ArgDefs 
+const OPTIONS = new SARTGroup
 (    
     new Option ("--no-msg"          ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.NOMSG),  
     new Option ("--msg"             ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.MSG),    
@@ -73,11 +46,11 @@ const OPTIONS = new Args.ArgDefs
     new Option ("--verbose"         ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.VERBOSE).WithAlias ("-V"),
     new Option ("--quiet"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.QUIET),  
     new Option ("--debug"           ).WithSetting (SETTINGS.LogLevel, LOGLEVELS.DEBUG),  
-    new Option ("--msg-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
-    new Option ("--err-out"         ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.ErrOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
-    new Option ("--stderr"          ).WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, OUTPUTDESTS.STDERR);  
-                                                                     if (conf.GetSetting (SETTINGS.LogLevel) != LOGLEVELS.MSG) 
-                                                                         conf.SetSetting (SETTINGS.LogLevel,    LOGLEVELS.MSG) } ),
+    new Option ("--msg-out"         ),//.WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
+    new Option ("--err-out"         ),//.WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.ErrOut, Util.StrToFlags (a, OUTPUTDESTS) ) } ),
+    new Option ("--stderr"          ),//.WithFunc (function (conf, a) { conf.SetSetting (SETTINGS.MsgOut, OUTPUTDESTS.STDERR);  
+                                       //                              if (conf.GetSetting (SETTINGS.LogLevel) != LOGLEVELS.MSG) 
+                                        //                                 conf.SetSetting (SETTINGS.LogLevel,    LOGLEVELS.MSG) } ),
     new Option ("--msg-stderr"      ).WithInvoke ("--stderr", "--msg"),
     new Option ("--verbose-stderr"  ).WithInvoke ("--stderr", "--verbose"),
     new Option ("--debug-stderr"    ).WithInvoke ("--stderr", "--debug"),

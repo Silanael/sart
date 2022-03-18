@@ -10,7 +10,7 @@
 const Sys          = require ("../System");
 const Util         = require ("../Util");
 const Constants    = require ("../CONSTANTS");
-const ArgDef       = require ("../Arguments").ArgDef;
+const ArgDef       = require ("../ArgumentDef");
 const CommandDef   = require ("../CommandDef").CommandDef;
 const TXQuery      = require ("../GQL/TXQuery");
 const TXGroup      = require ("../Arweave/TXGroup");
@@ -52,10 +52,10 @@ class SubCMD_Address extends CommandDef
 
         this.WithArgs 
         (
-            new ArgDef ("sort")  .WithHasParam ()                               .WithFunc (SubCMD_Address._SetSort),
-            new ArgDef ("amount").WithHasParam ()                               .WithFunc (SubCMD_Address._SetAmount),
-            new ArgDef ("last")  .WithHasParam ().WithAlias ("latest", "newest").WithFunc (SubCMD_Address._HandleLast),                                                                                            
-            new ArgDef ("oldest").WithHasParam ().WithAlias ("first")           .WithFunc (SubCMD_Address._HandleOldest),            
+            new ArgDef ("sort")  .WithHasParam (),                            
+            new ArgDef ("amount").WithHasParam (),                               
+            new ArgDef ("last")  .WithHasParam ().WithAlias ("latest", "newest"),
+            new ArgDef ("oldest").WithHasParam ().WithAlias ("first")
         );
         
     }

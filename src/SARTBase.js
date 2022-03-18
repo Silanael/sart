@@ -29,6 +29,7 @@ class SARTBase
 
 
     WithName           (name)                                  { this.Name       = name;                                        return this; }
+    WithAlias          (alias)                                 { this.Aliases    = this.Aliases.push   (alias);                 return this; }
     WithAliases        (...aliases)                            { this.Aliases    = this.Aliases.concat (aliases);               return this; }
     WithObjType        (objtype)                               { this.ObjectType = objtype;                                                  }
     WithMain           (main)                                  { this.Main       = main;                                        return this; }    

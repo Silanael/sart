@@ -1,12 +1,13 @@
 const CONSTANTS    = require ("./CONSTANTS");
 const SARTDef      = require ("./SARTDefinition");
-const Arguments    = require ("./Arguments");
+const Arguments    = require ("./ArgumentDef");
 const Util         = require ("./Util");
 const Sys          = require ("./System");
 const { SETTINGS } = require ("./SETTINGS");
-const ArgDef       = Arguments.ArgDef;
+const ArgDef       = require ("./ArgumentDef");
 const OutputParams = require ("./OutputParams");
 const FieldGroup   = require ("./FieldGroup");
+const SARTGroup    = require ("./SARTGroup");
 
 
 class CommandDef extends SARTDef
@@ -14,7 +15,7 @@ class CommandDef extends SARTDef
 
     MinArgsAmount     = 0;
     
-    ValidArgs         = new Arguments.ArgDefs ();
+    ValidArgs         = new SARTGroup ();
     Subcommands       = {};
     
     OutputObjectClass = null;
@@ -145,8 +146,7 @@ class CommandDef extends SARTDef
 
 const ARGDEF_FIELDS = new ArgDef ("fields")
                         .WithHasParam ()
-                        .WithAlias ("f")
-                        .WithFunc (CommandDef._HandleWantedFields);
+                        .WithAlias ("f")                        
 
 
 

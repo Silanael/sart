@@ -1,242 +1,127 @@
-// *****************************
-// *** Silanael ARweave Tool ***
-// *****************************
-//
-// Arguments.js - 2021-12-07_01
-//
-// Command-arguments.
-//
-
-const Sys       = require ("./System");
-const Util      = require ("./Util");
-const SARTDef   = require ("./SARTDefinition");
-const SARTGroup = require ("./SARTGroup");
+const Sys  = require ("./System");
+const Util = require ("./Util");
 
 
-class ArgDef extends SARTDef
+
+
+
+class Arguments 
 {
-    HasParameter  = false;
-    SettingKey    = null;
-    SettingValue  = null;
-    Function      = null;
-    Alias         = null;
-    Invokes       = [];
 
-    Deprecated    = false;
-    UnderWork     = false;
+    _Argv        = null;
+    _Unprocessed = null;    
 
 
-    /** This implementation does nothing.*/
-    _DoInvoke (param, handler) {}
-
-
-    WithAlias      (name)             { this.Alias        = name;         return this; }
-    WithFunc       (func)             { this.Function     = func;         return this; }
-    WithInvoke     (...option_names)  { this.Invokes      = option_names; return this; }
-    WithDeprecated ()                 { this.Deprecated   = true;         return this; }
-    WithUnderWork  ()                 { this.UnderWork    = true;         return this; }
-    WithHasParam   ()                 { this.HasParameter = true;         return this; }
-
-    CanBeInvoked   ()                 { return !this.Deprecated && !this.UnderWork; }
-    MatchesName    (name)             { return super.HasName (name, true) || (this.Alias != null && Util.StrCmp (name, this.Alias, false) ); }
-
-    Invoke (param, handler, defs)
+    constructor (argv) 
     {
-        if (this.HasParameter && param == null)
-            return Sys.ERR ("Parameter missing.", this);
-
-        else if (this.CanBeInvoked () )
-        {
-            Sys.VERBOSE ("Invoking argument '" + this.GetName () + "' with " + (param != null ? "parameter '" + param + "'." : "no parameter.") );
-
-            let success = false;
-
-            if (this.Function != null)
-                success = this.Function (param, handler);
-
-            else
-                success = this._DoInvoke (param, handler);
-
-            // Invoke listed arguments, if any.
-            if (this.Invokes.length > 0)
-            {
-                if (defs == null)
-                    return Sys.ERR_PROGRAM ("Unable to invoke the additional arguments - 'defs' null!", this);
-
-                else for (const i of this.Invokes)
-                {
-                    if (defs.InvokeArgIfExists (i, null, handler)?.err )                    
-                        return Sys.ERR ("An error occurred during processing of one of the invokes - aborting.");
-                }
-            }
-
-            return success;
-        }
-        else
-        {
-            if (this.Deprecated)
-                return Sys.ERR ("Option deprecated and removed.", this);
-
-            else if (this.UnderWork)
-                return Sys.WARN ("This option is not yet ready. Stay tuned.", this);
-
-            else
-                return Sys.ERR_PROGRAM ("Unable to invoke argument '" + opt_name + " - argument not operational for undefined reason.");
-        }
-
-        return false;
+        this._Argv        = argv;
+        this._Unprocessed = [...argv];        
     }
+
+
+    HasNext            () { return this._Argv != null && this._Unprocessed?.length > 0 ? true : false; }
+    Peek               () { return this.HasNext () ? this._Unprocessed[0] : null;                      }
+    GetNext            () { return this._Unprocessed.shift ();                                         }
+    GetNextLC          () { return this.GetNext ()?.toLowerCase();                                     }
+    GetNextUC          () { return this.GetNext ()?.toUpperCase();                                     }    
+    GetTotalAmount     () { return this._Argv != null ? this._Argv.length : 0;                         }
+    GetRemainingAmount () { return this.HasNext () ? this._Unprocessed.length : 0;                     }
+    AllToStr           () { return Util.ArrayToStr (this._Argv);                                       }
+    RemainingToStr     () { return this.HasNext () ? Util.ArrayToStr (this._Unprocessed) : null;       }
 
     
-}
-
-
-
-class ArgDefs extends SARTGroup
-{
-    /** Returns the argument if invoked, null otherwise. */
-    InvokeArgIfExists (arg_name, arg_param, handler)
+    RequireAmount (amount, msg = null) 
     {
-        if (handler == null)
-        {
-            Sys.ERR_PROGRAM ("'handler' null!", "InvokeArgsIfExists");
-            return { def: null, error_occurred: true }
-        }
-
-        for (const o of this.AsArray () )
-        {            
-            if (o != null && o.MatchesName (arg_name) )
-            {   
-                Sys.DEBUG ("ArgDef " + o?.GetName () + " matched arg_name '" + arg_name + "'.")                            
-                const success = o.Invoke (arg_param, handler, this);
-                return { def: o, error_occurred: !success }
-            }                           
-        }
-
-        return { def: null, error_occurred: false }
-    }
-}
-
-
-
-
-class Args
-{
-
-    _Argv = null;
-    _Pos  = 0;
-
-
-    constructor (argv)
-    {
-        this.SetTo (argv);        
-    }
-
-
-    HasNext   ()     { return this._Argv != null && this._Pos < this._Argv.length; }
-    PopLC     ()     { return this.Pop ()?.toLowerCase ();                         }
-    PopUC     ()     { return this.Pop ()?.toUpperCase ();                         }
-    Peek      ()     { return this._Argv[this._Pos];                               }
-    GetAmount ()     { return this._Argv.length - this._Pos;                       }    
-
-    SetTo (argv) 
-    { 
-        this._Argv = argv; 
-        this._Pos = 0; 
-
-        if (argv == null) 
-            Sys.ERR_PROGRAM ("SetTo: 'argv' null!", "Args"); 
-    }
-
-
-    RequireAmount (amount, msg = null)
-    { 
-        if (this._Argv.length - this._Pos < amount)
+        if (this._Argv.length - this._Pos < amount) 
         {
             Sys.ERR_MISSING_ARG (msg);
             return false;
         }
+
         else
             return true;
     }
+
+
+    static GetArgDef (argdefs, argname) { return argdefs.GetByName (argname, true); }
     
 
-    Pop ()
-    {
-        if (this.HasNext () )
-        {
-            const arg = this._Argv[this._Pos];
-            ++this._Pos;
-            return arg;
-        }
-        else
-            return null;
-    }
-
-
-    RemainingToStr ()
-    { 
-        let str = this._Argv[this._Pos];         
-        for (let C = this._Pos + 1 ; C < this._Argv.length; ++C)
-        {
-            str += " " + this._Argv[C];
-        }        
-    }
-
     /** Adds the valid options to the config provided, returning an Arguments-instance containing non-arguments (command and command-parameters). */
-    ProcessArgs (argdefs, handler)
+    ProcessArgs (argdefs, handler_func = function (argdef, argname, param) { return false; } ) 
     {
-        if (this._Argv == null || argdefs == null || handler == null)
+        if (this._Argv == null || argdefs == null || handler_func == null) 
         {
-            Sys.ERR_PROGRAM ( (this._Argv    == null ? "'argv' "    : "") +
-                              (      argdefs == null ? "'argdefs' " : "") +
-                              (      handler == null ? "'handler' " : "") +
-                               " null!", "Args");
+            Sys.ERR_PROGRAM ( (this._Argv == null ? "'argv' " : "") +
+                              (argdefs == null    ? "'argdefs' " : "") +
+                              (target  == null    ? "'target' " : "") +
+                              " null!", "Args");
             return false;
         }
 
-        Sys.DEBUG ("Starting to process " + this.GetAmount () + " arguments..");
-             
-        const len         = this._Argv.length;
-        const unprocessed = [];
-        let   success     = true;
-     
-        for (let i = this._Pos; i < len;)
-        {            
-            const arg_name = this._Argv[i];
-            Sys.DEBUG ("Argument #" + i + ": " + arg_name);
-
-            const {def, error_occurred} = argdefs.InvokeArgIfExists (arg_name, ++i < len ? this._Argv[i] : null, handler)
+        Sys.DEBUG ("Starting to process " + this.GetRemainingAmount () + " arguments with a def-group '" + argdefs + "'..");
         
-            if (error_occurred == true)
-            {
-                Sys.DEBUG ("Error with argument #" + i + " '" + arg_name + "'");
-                success = false; 
-            }
+        const unprocessed = [];
+        let i = 1;      
+
+        while (this._Unprocessed.length > 0)
+        {            
+            const arg_name = this._Unprocessed.shift ();
+
+            Sys.DEBUG("Argument #" + i + ": " + arg_name);
+
+            const def = Arguments.GetArgDef (argdefs, arg_name);
 
             if (def != null)
             {
-                // Skip over the parameter.
-                if (def.HasParameter)
-                ++i;
+                if (! this.__ProcessArg (argdefs, def, def.HasParameter ? this._Unprocessed.shift () : null, handler) )
+                    return Sys.ERR ("Error with argument #" + i + " '" + arg_name + "'");                
             }
-            
-            else if (arg_name.startsWith ("--") )            
-            {
-                Sys.ERR ("Unrecognized option '" + i + "'. Aborting argument-processing process.", "ProcessArgs");
-                return false;
-            }
+
+            else if (arg_name.startsWith ("--") ) 
+                return Sys.ERR ("Unrecognized option '" + i + "'. Aborting argument-processing process.", "ProcessArgs");
+                                    
             else
                 unprocessed.push (arg_name);
-        }
-                                        
-        this.SetTo (unprocessed);
 
-        return success;        
+            ++i;
+        }
+
+        this._Unprocessed = unprocessed;
+
+        return true;
     }
 
 
-        
+    __ProcessArg (argdefs, argdef, param, handler_func = function (argdef, argname, param) { return false; } )
+    {
+        if (argdef.CanBeInvoked () )
+        {
+            Sys.VERBOSE ("Invoking argument '" + argdef.GetName () + "' with " + (param != null ? "parameter '" + param + "'." : "no parameter.") );
+
+            if (! handler_func (argdef, argdef.GetName (), param) )
+                return false;
+            
+            // Invoke listed arguments, if any.
+            if (argdef.Invokes.length > 0)
+            {
+                if (argdefs == null)
+                    return Sys.ERR_PROGRAM ("Unable to invoke the additional arguments - 'argdefs' null!", this);
+
+                else for (const i of this.Invokes)
+                {
+                    if (! this.__ProcessArg (argdefs, Arguments.GetArgDef (argdefs, i), null, handler_func) )
+                        return Sys.ERR ("Failed to invoke argument '" + i + "' linked to argument '" + argdef + "'!");
+                    else
+                        Sys.DEBUG ("Invoked argument '" + i + "' from the invoke-list of argument '" + argdef + "'.");
+                }
+            }
+
+            return true;
+        }
+        else                    
+            return Sys.ERR ("Could not invoke argument " + argdef + ": " + argdef.GetNoInvokeReasonStr () );        
+    }
 }
 
-module.exports = { Args, ArgDef, ArgDefs };
+
+module.exports = Arguments;
