@@ -73,7 +73,7 @@ class Arguments
 
             if (def != null)
             {
-                if (! this.__ProcessArg (argdefs, def, def.HasParameter ? this._Unprocessed.shift () : null, handler) )
+                if (! this.__ProcessArg (argdefs, def, def.HasParameter ? this._Unprocessed.shift () : null, handler_func) )
                     return Sys.ERR ("Error with argument #" + i + " '" + arg_name + "'");                
             }
 

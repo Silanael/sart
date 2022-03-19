@@ -30,8 +30,8 @@ class CommandInstance extends SARTObject
     CDef           = null;
     
     CommandName    = null;    
-    RawArguments   = null;
-    Arguments      = {};
+    Arguments      = null;
+    ArgumentValues = {};
 
     OutputObject   = null;
     OutputParams   = null;
@@ -71,14 +71,15 @@ class CommandInstance extends SARTObject
     GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting   (key);     }
     GetEffectiveSettingOr(key, val)    { return Sys.GetMain ()?.GetSettingOr (key, val);}
     GetConfig            ()            { return this.Config;                            }
-    GetRawArguments      ()            { return this.RawArguments;                         }
-    GetRawArgsAmount     ()            { return this.RawArguments != null ? this.RawArguments.GetTotalAmount () : 0; }
-    GetNextUnhandledArg  ()            { return this.RawArguments?.GetNext   ();  }
-    GetNextUnhandledArgLC()            { return this.RawArguments?.GetNextLC ();  }
-    GetNextUnhandledArgUC()            { return this.RawArguments?.GetNextLC ();  }
-    PeekNextUnhandledArg ()            { return this.RawArguments?.Peek ();       }
-    GetArgumentValue     (arg_name)    { return this.Arguments[arg_name];         }
-    RequireAmount        (amount, msg) { return this.RawArguments != null ? this.RawArguments.RequireAmount (amount, msg) : false; }
+    GetArguments         ()            { return this.Arguments;                         }
+    GetArgumentsAmount   ()            { return this.Arguments != null ? this.Arguments.GetTotalAmount () : 0; }
+    GetNextUnhandledArg  ()            { return this.Arguments?.GetNext   ();  }
+    GetNextUnhandledArgLC()            { return this.Arguments?.GetNextLC ();  }
+    GetNextUnhandledArgUC()            { return this.Arguments?.GetNextLC ();  }
+    PeekNextUnhandledArg ()            { return this.Arguments?.Peek ();       }
+    GetArgumentValueByName(arg_name)   { return this.ArgumentValues[arg_name]; }    
+    GetArgumentValues    ()            { return this.ArgumentValues;           }    
+    RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
     GetFileOutputDest    ()            { return this.FileOutputDest;         }
     HasWantedFields      ()            { return this.WantedFields != null;   }
@@ -158,14 +159,14 @@ class CommandInstance extends SARTObject
         if (args == null)
             return Sys.ERR_PROGRAM ("Execute: 'args' null!", this);
 
-        this.RawArguments = args;
+        this.Arguments = args;
         this.Success   = false;
         this.Fetches   = 0;
         this.Config    = new Settings.Config ().WithName ("Command");
 
 
         // Extract options and get the remaining arguments
-        if (! args.ProcessArgs (OPTIONS.OPTIONS, this.Config) )
+        if (! args.ProcessArgs (OPTIONS.OPTIONS, this.__OnOptionArg ) )
         {
             Sys.DEBUG ("Processing options returned false. Aborting the command execution sequence.");
             return false;
@@ -180,7 +181,7 @@ class CommandInstance extends SARTObject
             return false;
 
 
-        else if (this.GetRawArgsAmount () < this.CDef.GetMinArgsAmount () )
+        else if (this.GetArgumentsAmount () < this.CDef.GetMinArgsAmount () )
         {
             this.CDef.DisplayHelp ();
             return Sys.ERR ("Insufficient arguments for the command '" + this.CDef + "' - at least " + this.CDef.GetMinArgsAmount () + " required.");
@@ -190,10 +191,10 @@ class CommandInstance extends SARTObject
         // Good to go
         else
         {               
-            Sys.VERBOSE ("Processing command's arguments (" + this.GetRawArgsAmount () + ")...");         
+            Sys.VERBOSE ("Processing command's arguments (" + this.GetArgumentsAmount () + ")...");         
 
             // Rest are arguments
-            if (! args.ProcessArgs (this.CDef.ValidArgs, this) )
+            if (! args.ProcessArgs (this.CDef.ValidArgs, this.__OnCommandArg) )
             {
                 Sys.DEBUG ("Processing command's ValidArgs returned false. Aborting the command execution sequence.");
                 return false;
@@ -246,6 +247,18 @@ class CommandInstance extends SARTObject
         return this.Success;
     }
 
+    __OnOptionArg (argdef, argname, param)
+    {
+        console.log (this);
+        //this.Config.SetSetting (argdef.Key, argdef.Value != null ? argdef.Value : param);
+        return true;
+    }
+
+    __OnCommandArg (argdef, argname, param)
+    {
+        this.ArgumentValues[argname] = param != null ? param : true;
+        return true;
+    }
 
 
 }
@@ -302,7 +315,7 @@ function GetCommandDef (name, commands = null, args = null)
         {
             Sys.DEBUG ("Command handler found for '" + name + '".');
             
-            if (args != null && o.HasSubcommands () && args.GetAmount () > 0)
+            if (args != null && o.HasSubcommands () && args.GetRemainingAmount () > 0)
             {
                 const scname = args.Peek ();                
 
@@ -313,7 +326,7 @@ function GetCommandDef (name, commands = null, args = null)
                     if (subcommand != null)
                     {
                         Sys.DEBUG ("Found a subcommand-handler for  '" + scname + '".');
-                        args.Pop ();
+                        args.GetNext ();
                         return subcommand;
                     }
                     else

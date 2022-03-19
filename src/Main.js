@@ -21,7 +21,7 @@ const ProgramState  = require ("./ProgramState.js");
 const Arguments     = require ("./Arguments");
 const Concurrent    = require ("./Concurrent");
 const Cache         = require ("./Cache");
-const Command       = require ("./Command");
+const Command       = require ("./CommandInstance");
 const Sys           = require ('./System.js');
 const Config        = require ('./Config.js');
 const SETTINGS      = require ("./SETTINGS").SETTINGS;
@@ -63,7 +63,7 @@ class Main
 
         this.State.Main = this;
 
-        await this.RunCommand (new Arguments (argv.slice (FIRST_ARG)) );
+        await this.RunCommand (new Arguments (argv.slice (FIRST_ARG) ) );
     }
 
     async RunCommand (args)
