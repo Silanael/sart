@@ -35,6 +35,8 @@ class ArgumentDef extends SARTDef
     WithHasParam         ()                  { this.HasParameter = true;                                  return this; }
       
     CanBeInvoked         ()                  { return !this.Deprecated && !this.UnderWork; }
+    GetKey               ()                  { return Util.Or (this.Key, this.GetName () ); }
+    GetValue             (value_override)    { return value_override != null ? value_override : Util.Or (this.Value, true); }
 
     GetNoInvokeReasonStr ()
     {

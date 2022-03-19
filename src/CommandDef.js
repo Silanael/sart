@@ -1,9 +1,8 @@
 const CONSTANTS    = require ("./CONSTANTS");
 const SARTDef      = require ("./SARTDefinition");
-const Arguments    = require ("./ArgumentDef");
 const Util         = require ("./Util");
 const Sys          = require ("./System");
-const { SETTINGS } = require ("./SETTINGS");
+
 const ArgDef       = require ("./ArgumentDef");
 const OutputParams = require ("./OutputParams");
 const FieldGroup   = require ("./FieldGroup");
@@ -56,6 +55,7 @@ class CommandDef extends SARTDef
     GetMinArgsAmount      ()            { return this.MinArgsAmount; }
     GetSubcommands        ()            { return this.Subcommands;   }
     HasSubcommands        ()            { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
+    GetValidArgs          ()            { return this.ValidArgs;  }
     GetOutputObjectClass  ()            { return this.OutputObjectClass; }
     HasOutputObjectClass  ()            { return this.OutputObjectClass != null; }
     RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }

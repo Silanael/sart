@@ -8,9 +8,6 @@
 //
 
 const CONSTANTS     = require ("./CONSTANTS");
-const SARTDef       = require ("./SARTDefinition");
-const Util          = require ("./Util");
-const Sys           = require ("./System");
 const ArgDef        = require ("./ArgumentDef");
 const SETTINGS      = require ("./SETTINGS").SETTINGS;
 const SARTGroup     = require("./SARTGroup");

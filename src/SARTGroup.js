@@ -45,14 +45,14 @@ class SARTGroup extends SARTBase
 
     GetByName (name, case_sensitive = false)
     { 
-        if (!case_sensitive)
+        if (case_sensitive)
             return this.ByName[name];
 
         else
         {
             for (const e of this.Entries)
             {
-                if (Util.StrCmp (e.GetName (), name, !case_sensitive) )
+                if (Util.StrCmp (e.GetName (), name, true) )
                     return e;
             }
         }

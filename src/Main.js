@@ -33,6 +33,7 @@ const OutputF_JSON  = require ("./OutputFormats/OutputFormat_JSON");
 const OutputF_CSV   = require ("./OutputFormats/OutputFormat_CSV");
 const OutputFormat  = require ("./OutputFormat");
 const OutputParams  = require ("./OutputParams");
+const { OPTIONS }   = require("./OPTIONS");
 
 
 
@@ -71,6 +72,8 @@ class Main
         await Command.RunCommand (this, args);
     }
 
+    GetCommandDefs        ()                 { return COMMANDS; }
+    GetOptions            ()                 { return OPTIONS;  }
     GetCommandDef         (cmd_name, args)   { return Command.GetCommandDef (cmd_name, null, args); }
     GetGlobalConfig       ()                 { return ProgramState.GlobalConfig;   }
     SetGlobalSetting      (key, value)       { return ProgramState.GlobalConfig.SetSetting (key, value); }
