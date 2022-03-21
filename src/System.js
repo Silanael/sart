@@ -17,6 +17,7 @@ const OutputFormats = Constants.OUTPUTFORMATS;
 const { SETTINGS }  = require ("./SETTINGS");
 const State         = require ("./ProgramState.js");
 const SARTBase      = require ("./SARTBase");
+const Util          = require ("./Util");
 
 
 
@@ -83,14 +84,34 @@ function ANSI (code, msg = null)
 };
 
 
+async function ReadFile (filename)
+{
+    return new Promise 
+    (
+        function (resolve, reject)
+        {            
+            FS.readFile (filename, (error, data) => 
+            {
+                if (error != null)
+                {
+                    ErrorHandler (error, { prefix: "Failed to read file '" + filename + "'" } );                    
+                    resolve (null);
+                }
+                else
+                    resolve (data);
+            });
+                     
+        }
+    )
+}
 
-function ErrorHandler (error)
+
+function ErrorHandler (error, msgs = {prefix: null, suffix: null} )
 {        
     msg = "???";    
     
     if (error != null)
     {
-        console.log (error);
         DEBUG (error);
         
         // The Error is an exception
@@ -125,7 +146,7 @@ function ErrorHandler (error)
                     }
                     break;              
             }
-            ERR ("ERROR: " + msg);
+            ERR ("ERROR: " + (msgs?.prefix != null ? msgs.prefix + ": " : "") + msg + Util.Or (msgs?.suffix, "") );
             return true;            
         }        
     }
@@ -708,5 +729,6 @@ module.exports =
     GetMain,
     IsDebug,
     IsMsg,
-    IsVerbose   
+    IsVerbose,
+    ReadFile
 };

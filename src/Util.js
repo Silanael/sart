@@ -9,6 +9,7 @@
 
 // Imports
 const Path      = require ('path');
+const Crypto    = require ("crypto");
 
 const CONSTANTS = require ("./CONSTANTS");
 const Package   = require ("../package.json");
@@ -55,6 +56,7 @@ async function Delay     (ms)                    { await new Promise (r => setTi
 function AmountStr       (amount, sing, plur)    { return amount == null || amount <= 0 ? "no " + plur : amount == 1 ? "one " + sing : amount + " " + plur; }
 function GetTopStrLen    (str1, str2)            { const s1len = str1 != null ? str1.length : 0; const s2len = str2 != null ? str2.length : 0; 
                                                    return s1len > s2len ? s1len : s2len; }
+function GetRandomUUIDv4 ()                      { return Crypto.randomUUID (); }
 
 function AssignIfNotNull (dest, varname, value)
 {
@@ -260,6 +262,17 @@ function ObjToJSON (obj)
     return null;
 }
 
+function JSONToObj (json_str)
+{
+    if (json_str != null)
+    {
+        try               { return JSON.parse (json_str); }
+        catch (exception) { return null; }
+    }
+    
+    return null;
+}
+
 
 function StrToFlags (str, flagtable, opts = {chr_separator: ",", lcase: false, ucase: true, ret_no_matches: null } )
 {
@@ -439,4 +452,5 @@ module.exports = {
                    IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen, AppendToArrayNoDupes,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
-                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional, IsSetStrOr };
+                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional, IsSetStrOr,
+                   GetRandomUUIDv4, JSONToObj };

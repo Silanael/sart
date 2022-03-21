@@ -68,9 +68,9 @@ class Arguments
         
         // Process options if any
         if (! this.__ProcessArgGroup (Sys.GetMain ().GetOptions (), 
-              (def, param) => commandsetup.Config.SetSetting (def.Key, param != null ? param : def.Value) ) )
+              (def, param) => commandsetup.Config.SetSetting (def.Key, param != null ? param : def.Value) )  )
         {
-            Sys.DEBUG ("Processing options returned false. Aborting the command execution sequence.");
+            Sys.ERR ("Processing options returned false. Aborting the command execution sequence.");
             return null;
         }
 
@@ -88,10 +88,9 @@ class Arguments
         
 
         // Remaining are command-specific arguments
-        if (! this.__ProcessArgGroup (commandsetup.Command.GetValidArgs (), 
-              (def, param) => commandsetup.ParamValues[def.GetKey ()] = def.GetValue (param) ) )
+        if (! this.__ProcessArgGroup (commandsetup.Command.GetValidArgs (), null, commandsetup.ParamValues) )              
         {
-            Sys.DEBUG ("Processing options returned false. Aborting the command execution sequence.");
+            Sys.ERR ("Processing options returned false. Aborting the command execution sequence.");
             return null;
         }
 
@@ -108,7 +107,7 @@ class Arguments
 
 
 
-    __ProcessArgGroup (argdefs, func)
+    __ProcessArgGroup (argdefs, func = null, data_obj = null)
     {
         const not_processed = [];
 
@@ -123,12 +122,12 @@ class Arguments
 
             if (def != null)
             {
-                Sys.INFO ("Definition found for arg '" + arg_name + "'.");
+                Sys.DEBUG ("Definition found for arg '" + arg_name + "'.");
 
                 const param = def.HasParameter ? this._Unprocessed.shift () : null;                
 
-                if (! this.__InvokeArg (argdefs, def, param, func) )
-                    return Sys.ERR ("Error with argument #" + i + " '" + arg_name + "'");                
+                if (! def.InvokeArg (argdefs, param, func, data_obj) )
+                    return Sys.ERR ("Error with argument '" + arg_name + "'");                
             }
 
             else if (arg_name.startsWith ("--") ) 
@@ -147,37 +146,6 @@ class Arguments
 
 
 
-    __InvokeArg (argdefs, argdef, param, func)
-    {
-        if (argdef.CanBeInvoked () )
-        {
-            Sys.VERBOSE ("Invoking argument '" + argdef.GetName () + "' with " + (param != null ? "parameter '" + param + "'." : "no parameter.") );
-
-            if (argdef.HasParameter && param == null)
-                return Sys.ERR ("Argument '" + argdef + "' missing a parameter!");
-
-            func (argdef, param);
-            
-            // Invoke listed arguments, if any.
-            if (argdef.Invokes.length > 0)
-            {
-                if (argdefs == null)
-                    return Sys.ERR_PROGRAM ("Unable to invoke the additional arguments - 'argdefs' null!", this);
-
-                else for (const i of this.Invokes)
-                {
-                    if (! this.__InvokeArg (command_def, argdefs, Arguments.GetArgDef (argdefs, i), null, func) )
-                        return Sys.ERR ("Failed to invoke argument '" + i + "' linked to argument '" + argdef + "'!");
-                    else
-                        Sys.DEBUG ("Invoked argument '" + i + "' from the invoke-list of argument '" + argdef + "'.");
-                }
-            }
-
-            return true;
-        }
-        else                    
-            return Sys.ERR ("Could not invoke argument " + argdef + ": " + argdef.GetNoInvokeReasonStr () );        
-    }
 
 
 

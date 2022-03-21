@@ -17,7 +17,7 @@ const Sys            = require ('../System.js');
 const Config         = require ('../Config.js');
 const Fetch          = require ("../Concurrent");
 const { SETTINGS }   = require ("../SETTINGS");
-
+const Util           = require ("../Util");
 
 
 
@@ -102,6 +102,34 @@ async function TestConnection ()
     return { State: State.ConnectionState, NetworkInfo: null }
 }
 
+
+
+async function ReadWalletJSON (filename)
+{
+    if (filename == null)
+    {
+        Sys.ERR ("Wallet filename not provided.");
+        return null;
+    }
+
+    const wallet_json = await Sys.ReadFile (filename);
+    
+    if (wallet_json == null)
+    {
+        Sys.ERR ("Failed to read the wallet file.");
+        return null;
+    }
+
+    const wallet_obj = Util.JSONToObj (wallet_json);
+    
+    if (wallet_obj == null)
+    {
+        Sys.ERR ("Failed to parse the wallet file - not a valid JSON-file.");
+        return null;
+    }
+
+    return wallet_obj;
+}
 
 
 function GetTargetHost ()
@@ -461,6 +489,7 @@ module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, 
                    IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, Connect, GetTargetHost, GetConnectionStatus, GetRecipient,
+                   ReadWalletJSON,
                    TXSTATUS_OK       : Constants.TXSTATUS_OK, 
                    TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
                    TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,

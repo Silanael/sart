@@ -74,6 +74,7 @@ class CommandInstance extends SARTObject
     GetNextUnhandledArgUC()            { return this.Arguments?.GetNextLC ();  }
     PeekNextUnhandledArg ()            { return this.Arguments?.Peek ();       }
     GetParamValueByName  (arg_name)    { return this.ParamValues[arg_name]; }    
+    GetParamValueByDef   (argdef)      { return argdef?.GetValueFromDataObj (this.ParamValues); }    
     GetParamValues       ()            { return this.ParamValues;           }    
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
@@ -93,7 +94,7 @@ class CommandInstance extends SARTObject
 
     __OnFetchExecuted    (fetch)       { ++this.Fetches; }
     
-
+    
     AppendConfigToGlobal ()            
     { 
         if (! Sys.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
