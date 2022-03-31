@@ -35,7 +35,7 @@ function Init ()
     {        
         Sys.VERBOSE ("Initializing Arweave-js with host " + Config.GetHostString () + " .")
 
-        State.ArweaveInstance = ArweaveLib.init
+        const ar_instance = ArweaveLib.init
         (
             {
                 host:     Config.GetSetting (SETTINGS.ArweaveHost),
@@ -43,8 +43,9 @@ function Init ()
                 protocol: Config.GetSetting (SETTINGS.ArweaveProto),
                 timeout:  Config.GetSetting (SETTINGS.ArweaveTimeout_ms)
             }
-        );    
- 
+        );               
+        
+        State.ArweaveInstance = ar_instance; 
     }
 
     return State.ArweaveInstance;
@@ -137,6 +138,16 @@ function GetTargetHost ()
     return State.ArweaveInstance != null ? GetHostStr (State.ArweaveInstance) : Config.GetHostString ();
 }
 
+async function GetWalletAddress (wallet_json)
+{
+    return await (Init ())?.wallets.getAddress (wallet_json);
+}
+
+async function GetWalletBalance (wallet_json)
+{
+    const addr = await GetWalletAddress (wallet_json);
+    return await (Init ())?.wallets.getBalance (addr);
+}
 
 
 function GetHostStr (arweave)
@@ -262,14 +273,19 @@ async function GetMemPool ()
     {
         try
         {
-            const ret = await arweave.api.get (ENDPOINT_PENDING);
+            const ret = await arweave.api.get (Constants.ENDPOINT_PENDING);
             if (ret.data != null)
                 return ret.data;
         }
-        catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetmemPool", GetHostStr (arweave) ); }
+        catch (exception) { Sys.ON_EXCEPTION (exception, "Arweave.GetMemPool", GetHostStr (arweave) ); }
     }
 
     return null;
+}
+
+async function GetMemPoolSize ()
+{
+    return (await GetMemPool ())?.length;
 }
 
 async function GetPeers ()
@@ -487,9 +503,9 @@ function IsTxOKByCode (statuscode) {return statuscode == Constants.TXSTATUS_OK; 
 
 module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, GetTxStrData, GetTxRawData, GetPeers,
                    IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
-                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetPendingTXAmount,
+                   OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetMemPoolSize, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, Connect, GetTargetHost, GetConnectionStatus, GetRecipient,
-                   ReadWalletJSON,
+                   ReadWalletJSON, GetWalletAddress, GetWalletBalance,
                    TXSTATUS_OK       : Constants.TXSTATUS_OK, 
                    TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
                    TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,

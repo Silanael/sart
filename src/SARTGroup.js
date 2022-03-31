@@ -44,16 +44,16 @@ class SARTGroup extends SARTBase
 
 
     GetByName (name, case_sensitive = false)
-    { 
+    {         
         if (case_sensitive)
             return this.ByName[name];
 
         else
         {
-            for (const e of this.Entries)
-            {
-                if (Util.StrCmp (e.GetName (), name, true) )
-                    return e;
+            for (const e of Object.entries (this.ByName) )
+            {                
+                if (Util.StrCmp (e[0], name, true) )
+                    return e[1];
             }
         }
         return null;
@@ -116,6 +116,17 @@ class SARTGroup extends SARTBase
             
             if (id != null)         { this.ByID  [id]   = entry; }
             if (Util.IsSet (name) ) { this.ByName[name] = entry; }
+
+            if (entry.Aliases?.length > 0)
+            {
+                for (const a of entry.Aliases)
+                {                    
+                    if (this.ByName[a] == null)
+                        this.ByName[a] = entry;
+                    else
+                        Sys.ERR ("Group '" + this + "' already contains a name clashing with alias '" + a + "' of '" + entry + "'.");
+                }
+            }
             
             this.Entries.push (entry);
         }

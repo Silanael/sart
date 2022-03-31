@@ -39,6 +39,7 @@ function IsString        (value)                 { return value instanceof Strin
 function IsSet           (value)                 { return value != null && value != "" && value.length > 0; }
 function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
+function IsMIMEType      (str)                   { return str?.split ("/")?.length == 2; }
 function GetUNIXTimeMS   ()                      { return new Date ().getTime (); }
 function GetVersion      ()                      { return Package.version; }
 function GetVersionStr   ()                      { return "v" + Package.version + " [" + Package.versiondate + "]"; }
@@ -57,6 +58,27 @@ function AmountStr       (amount, sing, plur)    { return amount == null || amou
 function GetTopStrLen    (str1, str2)            { const s1len = str1 != null ? str1.length : 0; const s2len = str2 != null ? str2.length : 0; 
                                                    return s1len > s2len ? s1len : s2len; }
 function GetRandomUUIDv4 ()                      { return Crypto.randomUUID (); }
+
+function SetMissingMembers (js_obj, ...name_value_pairs)
+{    
+    if (js_obj == null)
+        throw "Util.SetMissingMembers: js_obj null";
+
+    if (name_value_pairs?.length % 2 != 0)
+        throw "Util.SetMissingMembers: name_value_pairs not supplied or not in pairs of two."; 
+
+    const len = name_value_pairs.length;
+    let name, value;
+
+    for (let C = 0; C < len;)
+    {
+        name  = name_value_pairs [C++];
+        value = name_value_pairs [C++];
+        if (js_obj[name] == null)
+            js_obj[name] = value;
+    }
+    
+}
 
 function AssignIfNotNull (dest, varname, value)
 {
@@ -390,6 +412,27 @@ function GetShortArweaveHash (hash)
         return null;
 }
 
+function GetShortString (str, max_len = 10, separator = "...")
+{
+    if (str == null)
+        return null;
+
+    if (str.length <= max_len)
+        return str;
+
+    if (separator == null)
+        separator = "";
+
+    const ends_len = parseInt ( (max_len - separator.length) / 2);
+
+    if (ends_len <= 0)
+        return str.slice (0, max_len);
+
+    else
+        return str.slice (0, ends_len) + separator + str.slice (-ends_len);
+    
+}
+
 
 function GetDate (unixtime = null, date_time_spacer_chr = ' ', utc = false)
 {         
@@ -453,4 +496,4 @@ module.exports = {
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional, IsSetStrOr,
-                   GetRandomUUIDv4, JSONToObj };
+                   GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString };

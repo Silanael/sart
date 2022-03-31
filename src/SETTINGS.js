@@ -55,7 +55,7 @@ const SETTINGS =
     ConfigVersion           : new Setting ("ConfigVersion")            .DV (Constants.CONFIG_VERSION).RO (),
     AppVersion              : new Setting ("AppVersion")               .DV (Package.version).RO (),
     AppVersionCode          : new Setting ("AppVersionCode")           .DV (Package.versioncode).RO (),
-    LogLevel                : new Setting ("LogLevel")                 .DV (Constants.IS_TTY ? LOGLEVELS.MSG : LOGLEVELS.NOMSG),
+    LogLevel                : new Setting ("LogLevel")                 .DV (Constants.IS_TTY ? LOGLEVELS.DEBUG : LOGLEVELS.NOMSG),
     MsgOut                  : new Setting ("MsgOut")                   .DV (OUTPUTDESTS.STDOUT),
     ErrOut                  : new Setting ("ErrOut")                   .DV (OUTPUTDESTS.STDERR),
     ArweaveHost             : new Setting ("ArweaveHost")              .DV ("arweave.net"),

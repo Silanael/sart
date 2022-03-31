@@ -109,6 +109,7 @@ class Arguments
 
     __ProcessArgGroup (argdefs, func = null, data_obj = null)
     {
+        const processed = {};
         const not_processed = [];
 
 
@@ -124,6 +125,13 @@ class Arguments
             {
                 Sys.DEBUG ("Definition found for arg '" + arg_name + "'.");
 
+                const def_name = def.GetName ();
+
+                if (processed [def_name] != null && !def.AllowMultiple)
+                    return Sys.ERR ("Argument '" + def_name + "' given multiple times.");
+
+                processed[def_name] = true;
+
                 const param = def.HasParameter ? this._Unprocessed.shift () : null;                
 
                 if (! def.InvokeArg (argdefs, param, func, data_obj) )
@@ -137,10 +145,24 @@ class Arguments
                 not_processed.push (arg_name);        
             
         }
-
+        
         this._Unprocessed = not_processed;
 
-        return true;
+
+        // Check if any mandatory arguments are left unprocessed
+        const missing_args = [];
+        for (const def of argdefs.AsArray () )
+        {
+            if (!def.IsOptional && processed[def.GetName()] != true)
+                missing_args.push (def.GetName () );
+        }
+
+        if (missing_args.length > 0)
+            return Sys.ERR ("Mandatory arguments missing: " + Util.ArrayToStr (missing_args) );
+
+        else
+            return true;
+
     }
 
 

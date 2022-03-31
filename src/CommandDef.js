@@ -210,6 +210,34 @@ class FieldCMD extends CommandDef
 
 }
 
+class OutputCMD extends CommandDef
+{
 
-module.exports = { CommandDef, MessageCMD, SettingCMD, FieldCMD };
+    Function;
+
+    constructor (name, output_func)
+    {
+        super (name);
+
+        this.Function = output_func;
+
+        if (output_func == null)
+            this.OnProgramError ("a function was not given to the constructor", this);
+    }
+
+    OnExecute (cmd)
+    {
+        return true;
+    }
+
+    OnOutput (cmd)
+    {  
+        if (this.Function != null)
+            Sys.OUT_TXT (this.Function () );
+                
+    }  
+}
+
+
+module.exports = { CommandDef, MessageCMD, SettingCMD, FieldCMD, OutputCMD };
 

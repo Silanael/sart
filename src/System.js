@@ -8,6 +8,7 @@
 //
 
 const FS            = require ("fs");
+const ReadLine      = require ('readline');
 
 // Local imports
 const Constants     = require ("./CONSTANTS.js");
@@ -62,6 +63,7 @@ function IsErrSTDOUT        ()                       { return ( GetSetting (SETT
 function IsErrSTDERR        ()                       { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                      }
 function IsForceful         ()                       { return GetSetting (SETTINGS.Force);                                                                    }
 function IsANSIAllowed      ()                       { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                                     }
+function IsTTY              ()                       { return Constants.IS_TTY; }
 
 function ERR_MISSING_ARG    (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT  (obj)                    { PrintObj.SetRecursive (obj);     };
@@ -329,6 +331,14 @@ function RESET_ANSI ()
     {
         d?.OutputANSICode (ANSICODE_CLEAR);
     }
+}
+
+function OUT_NEWLINE ()
+{
+    for (const d of Main.GetOutputDests () )
+    {
+        d?.OutputBinary ("\n");        
+    }        
 }
 
 
@@ -643,6 +653,46 @@ function EXIT (code)
 }
 
 
+async function INPUT_LINE (settings = { prompt_str: "SART> ", caption_str: null } )
+{
+    if (IsTTY () )
+    {
+        if (settings.caption_str != null)
+            OUT_TXT (settings.caption_str);
+
+        if (settings.prompt_str != null)
+            OUT_TXT_RAW (settings.prompt_str);
+
+        const input = ReadLine.createInterface ( {input: process.stdin, output: null} );
+    
+        let input_line;
+        for await (const line of input)
+        {
+            input_line = line;
+            break;     
+        }        
+
+        input.close ();
+        return input_line;
+    }
+    else
+    {
+        ERR_PROGRAM_ONCE ("INPUT_LINE called when the STDIN is not a TTY!");
+        return null;
+    }
+}
+
+async function INPUT_GET_CONFIRM (severe = true, operation_name_str = null)
+{
+    const line = await INPUT_LINE 
+    ({ 
+        prompt_str: "CONFIRM ACTION " + (operation_name_str != null ? + "'" + operation_name_str + "' " : "") + "BY TYPING 'execute' "  
+                     + (severe ? "IN UPPERCASE TO PROCEED> " : "TO PROCEED> "),        
+    })
+
+    return Util.StrCmp (line, "EXECUTE", !severe);
+}
+
 
 function ON_EXCEPTION (exception, src = "Something", subject = null)
 {    
@@ -692,6 +742,7 @@ module.exports =
     OUT_BIN,
     OUT_ANSI,
     RESET_ANSI,
+    OUT_NEWLINE,
     SET_RECURSIVE_OUT,
     ANSI,
     ANSIRED,
@@ -730,5 +781,7 @@ module.exports =
     IsDebug,
     IsMsg,
     IsVerbose,
-    ReadFile
+    ReadFile,
+    INPUT_LINE,
+    INPUT_GET_CONFIRM
 };

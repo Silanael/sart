@@ -2,36 +2,81 @@ const Sys  = require ("./System");
 const Util = require ("./Util");
 
 
-let ProcessIndicatorRunning = false;
-let AnimFrame = 0;
+let ProgressIndicatorActive = false;
+let AnimFrame  = 0;
+let Result_STR = null;
+let ProgressIndicatorTask       = null;
 
 const AnimFrames = [ "/", "-", "\\", "|" ];
 
-async function ProcessIndicator (caption = "PROCESSING...", delay_ms = 120)
+
+async function __StartProgressIndicator (settings = {} )
 {    
-    if (ProcessIndicatorRunning)
+    if (ProgressIndicatorActive)
         return;
 
-    ProcessIndicatorRunning = true;
-    AnimFrame = 0;
+    Util.SetMissingMembers (settings, "caption", "PROCESSING...", "delay_ms", 120)
 
-    if (caption != null)
-        Sys.OUT_TXT_RAW (caption + " ");
+    ProgressIndicatorActive = true;
+    AnimFrame               = 0;
+    Result_STR              = "";
+
+    if (settings.caption != null)
+        Sys.OUT_TXT_RAW (settings.caption + " ");
 
     Sys.OUT_TXT_RAW (AnimFrames [AnimFrame] + " " );
 
-    while (ProcessIndicatorRunning)
+    while (ProgressIndicatorActive)
     {
-        await Util.Delay (delay_ms);
+        await Util.Delay (settings.delay_ms);
 
         ++AnimFrame;
         if (AnimFrame >= AnimFrames.length)
             AnimFrame = 0; 
 
-        Sys.OUT_TXT_RAW ("\b\b" + AnimFrames [AnimFrame] + " ");
-        
+        if (ProgressIndicatorActive)
+            Sys.OUT_TXT_RAW ("\b\b" + AnimFrames [AnimFrame] + " ");
     }
+
+    Sys.OUT_TXT_RAW ("\b\b" + Result_STR);
+    Sys.OUT_NEWLINE ();
+
+    
+}
+
+async function AsyncWithProcessIndicator (settings = { caption : "PROCESSING...", delay_ms : 120 }, ...async_functions)
+{
+    if (async_functions?.length <= 0)
+    {
+        Sys.ERR_PROGRAM ("AsyncWithProcessIndicator: No async-functions supplied.");
+        return null;
+    }
+
+    if (ProgressIndicatorActive || ProgressIndicatorTask != null)
+    {
+        Sys.ERR_PROGRAM ("Progress indicator already active.");
+        return null;
+    }
+
+    ProgressIndicatorTask = __StartProgressIndicator (settings); 
+    
+    const ret = await Promise.any ( [...async_functions, ProgressIndicatorTask] );
+    
+    StopProgressIndicator (ret != null ? "OK" : "FAILED");
+    await ProgressIndicatorTask;
+
+    ProgressIndicatorTask = null;
+
+    return ret;
+}
+
+function StopProgressIndicator (result_str = null)
+{
+    if (result_str != null)
+        Result_STR = result_str;
+
+    ProgressIndicatorActive = false;
 }
 
 
-module.exports = { ProcessIndicator };
+module.exports = { AsyncWithProcessIndicator };

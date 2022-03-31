@@ -19,7 +19,13 @@ const OUTPUTFORMATS = CONSTANTS.OUTPUTFORMATS;
 
 class Option extends ArgDef
 {
-        
+    
+    constructor (name = null)
+    {
+        super (name);
+        this.WithIsOptional ();
+    }
+
     WithSetting (key, value = null)
     {
         this.Key   = key;

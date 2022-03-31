@@ -16,6 +16,8 @@ const SARTDef   = require ("./SARTDefinition");
 class ArgumentDef extends SARTDef
 {
     HasParameter         = false;
+    IsOptional           = false;
+    AllowMultiple        = false;
            
     Key                  = null;
     Value                = null;
@@ -36,6 +38,8 @@ class ArgumentDef extends SARTDef
     WithDeprecated       (depr_msg_str)                        { this.Deprecated      = true; this.DeprMsgStr = depr_msg_str;       return this; }
     WithUnderWork        ()                                    { this.UnderWork       = true;                                       return this; }
     WithHasParam         ()                                    { this.HasParameter    = true;                                       return this; }
+    WithIsOptional       ()                                    { this.IsOptional      = true;                                       return this; }
+    WithAllowMultiple    ()                                    { this.AllowMultiple   = true;                                       return this; }
     WithParamValidList   (...valid_values)                     { this.HasParameter    = true; this.ValidValues    = valid_values;   return this; }
     WithParamValidFunc   (val_valid_func, msg_invalid = null)  { this.HasParameter    = true; this.ValidValueFunc = val_valid_func; 
                                                                  this.ValueInvalidMsg = msg_invalid;                                return this; }
