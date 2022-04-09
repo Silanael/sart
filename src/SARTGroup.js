@@ -17,9 +17,10 @@ const OutputParams = require ("./OutputParams");
 class SARTGroup extends SARTBase
 {
 
-    Entries = [];
-    ByID    = {};
-    ByName  = {};
+    Entries        = [];
+    ByID           = {};
+    ByName         = {};
+    NameValuePairs = {};
 
 
     constructor (...entries)
@@ -37,7 +38,7 @@ class SARTGroup extends SARTBase
     GetAmount       ()           { return this.Entries.length;                                                    }        
     GetByID         (id)         { return this.ByID[id];                                                          }    
     ContainsID      (id)         { return this.GetByID (id) != null;                                              }
-    GetByIndex      (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }
+    GetByIndex      (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }    
     AsArray         ()           { return this.Entries;                                                           }
     AddAllFromGroup (group)      { return this.AddAll (group.AsArray () ); }
     toString        ()           { return "SARTGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
@@ -45,18 +46,12 @@ class SARTGroup extends SARTBase
 
     GetByName (name, case_sensitive = false)
     {         
-        if (case_sensitive)
-            return this.ByName[name];
+        return Util.GetKeyFromJSObj (this.ByName, name, case_sensitive);        
+    }
 
-        else
-        {
-            for (const e of Object.entries (this.ByName) )
-            {                
-                if (Util.StrCmp (e[0], name, true) )
-                    return e[1];
-            }
-        }
-        return null;
+    GetValue (name, case_sensitive = false)
+    { 
+        return Util.GetKeyFromJSObj (this.NameValuePairs, name, case_sensitive);        
     }
 
     
@@ -95,7 +90,7 @@ class SARTGroup extends SARTBase
         }
     }
     
-    Add (entry, id = null) 
+    Add (entry, {id = null, allow_duplicates = false} = {} ) 
     {
         
         if (entry == null)
@@ -105,7 +100,7 @@ class SARTGroup extends SARTBase
             id = entry.GetID ();
 
 
-        if (this.Contains (entry) )
+        if (!allow_duplicates && this.Contains (entry) )
             Sys.ERR_PROGRAM ("'" + entry.toString () + "' already contained in group '" + this.toString () + "' or duplicate name and/or ID present.");
 
         else 
@@ -114,8 +109,9 @@ class SARTGroup extends SARTBase
             
             const name = entry.GetName ();
             
-            if (id != null)         { this.ByID  [id]   = entry; }
-            if (Util.IsSet (name) ) { this.ByName[name] = entry; }
+            if (id != null)          { this.ByID  [id]   = entry; }
+            if (Util.IsSet (name) )  { this.ByName[name] = entry; }
+            if ('Value' in entry)    { this.NameValuePairs[name] = entry.Value; }
 
             if (entry.Aliases?.length > 0)
             {

@@ -10,6 +10,7 @@
 //
 
 const Util = require ("./Util");
+const Sys  = require ("./System");
 
 
 class SARTBase
@@ -20,7 +21,10 @@ class SARTBase
 
     Main               = null;
     NameCaseSensitive  = false;
-    
+
+    Errors             = null;
+    Warnings           = null;
+
 
     constructor (name = null)
     {
@@ -39,6 +43,13 @@ class SARTBase
     toString           ()                                      { return this.Name != null ? this.Name : "SARTBase"; }
     WithCaseSensitive  ()                                      { this.NameCaseSensitive = true;  return this; }
 
+    OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN,             warning, src, opts)                 }  
+    OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,              error,   src, opts)                 }  
+    OnOverridableError (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src, opts)                 }  
+    OnErrorOnce        (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,              error,   src, opts)                 }  
+    OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,              error,   src, opts)                 }
+    HasWarnings        ()                                      { return this.Warnings?.length > 0;                                                            }
+    HasErrors          ()                                      { return this.Errors  ?.length > 0;                                                            }       
 
     HasName (name)
     { 
@@ -76,6 +87,16 @@ class SARTBase
         return false;
     }
 
+    __OnError (field, errfunc, error, src, opts)
+    {
+        if (!errfunc (error, src, opts) )
+        {
+            this[field] = Util.AppendToArray (this[field], error, " "); 
+            return false;
+        }
+        else
+            return true;        
+    }    
 
 }
 

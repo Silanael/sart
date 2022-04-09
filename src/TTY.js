@@ -60,7 +60,7 @@ async function AsyncWithProcessIndicator (settings = { caption : "PROCESSING..."
 
     ProgressIndicatorTask = __StartProgressIndicator (settings); 
     
-    const ret = await Promise.any ( [...async_functions, ProgressIndicatorTask] );
+    const ret = await Promise.race ( [...async_functions, ProgressIndicatorTask] );
     
     StopProgressIndicator (ret != null ? "OK" : "FAILED");
     await ProgressIndicatorTask;

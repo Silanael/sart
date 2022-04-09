@@ -17,7 +17,6 @@ const OutputDests   = Constants.OUTPUTDESTS;
 const OutputFormats = Constants.OUTPUTFORMATS;
 const { SETTINGS }  = require ("./SETTINGS");
 const State         = require ("./ProgramState.js");
-const SARTBase      = require ("./SARTBase");
 const Util          = require ("./Util");
 
 

@@ -79,6 +79,7 @@ const SETTINGS =
     SizeDigits              : new Setting ("SizeDigits")               .DV (5),
     VarNamesUppercase       : new Setting ("VarNamesUppercase")        .DV (false),
     ANSIAllowed             : new Setting ("ANSIAllowed")              .DV (true),
+    DuplicateTagsAllowed    : new Setting ("DuplicateTagsAllowed")     .DV (false),
     CSVReplacePeriodWith    : new Setting ("CSVReplacePeriodWith")     .DV ("#!#"),
     JSONSpacing             : new Setting ("JSONSpacing")              .DV (3),
     MultiInputSeparatorChr  : new Setting ("MultiInputSeparatorChr")   .DV (","),

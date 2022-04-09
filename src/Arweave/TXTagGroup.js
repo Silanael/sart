@@ -19,13 +19,10 @@ const TXTag        = require ("./TXTag");
 
 class TXTagGroup extends SARTGroup
 {
-    NameValuePairs = {};
     Duplicates     = false;
     TotalBytes     = null;
 
-
-    GetList          () { return this.List;           }
-    GetNameValueObj  () { return this.NameValuePairs; }
+    
     HasDuplicates    () { return this.Duplicates || this.AsArray ()?.length != Object.keys (this.ByName)?.length; }
     GetTotalBytes    () { if (this.TotalBytes == null) this.Validate (); return this.TotalBytes; }
     toString         () { return "TXTagGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
@@ -77,6 +74,57 @@ class TXTagGroup extends SARTGroup
         return str;
     }
 
+    AddTagNV (name, value, allow_duplicates = Sys.GetMain().GetSetting (SETTINGS.DuplicateTagsAllowed) )
+    {                
+        return this.AddTag (new TXTag ({name: name, value: value} ), allow_duplicates);
+    }
+
+    AddTag (tag, allow_duplicates = Sys.GetMain().GetSetting (SETTINGS.DuplicateTagsAllowed) )
+    {   
+        if (tag == null)
+            return this.OnError ("Parameter 'tag' null!");
+
+        if (tag.GetName () == null)
+            return this.OnError ("Tried to add a tag with no name ('name' null)");
+        
+        if (tag.GetValue () == null)
+            return this.OnError ("Tried to add tag '" + tag.GetName () + "' with no value ('value' null)");
+
+        return this.Add (tag, {allow_duplicates: allow_duplicates});
+    }
+
+    /** 'tags' may be either a TXTagGroup or an array of strings as name-value -pairs. */
+    AddTags (tags, allow_duplicates = Sys.GetMain().GetSetting (SETTINGS.DuplicateTagsAllowed) )
+    {        
+        if (tags == null)
+            return this.OnProgramError ("WithTags: 'taggroup' null!", this);
+
+        let success = true;
+
+        if (tags instanceof TXTagGroup)
+        {
+            for (const t of tags.AsArray () )
+            {
+                success &= this.AddTag (new TXTag ({tag: t} ), allow_duplicates); // New TXTag-instance intentional.
+            }
+        }
+        else
+        {
+            if (tags.length <= 0 || tags.length % 2 != 0)
+            {
+                this.OnProgramError ("WithTags: Tags not given in pairs of two - need to be in pairs of name+value.");
+                return false;
+            }
+            const len = tags.length;
+            for (let C = 0; C < len;)
+            {
+                success &= this.AddTag (new TXTag ( {name: tags[C++], value: tags[C++] } ), allow_duplicates); 
+            }
+        }
+        
+        return success;
+    }
+
     AddArweaveTXTags (arweave_tx_tags) 
     {
         if (arweave_tx_tags == null || arweave_tx_tags.length <= 0) 
@@ -85,7 +133,7 @@ class TXTagGroup extends SARTGroup
         for (const t of arweave_tx_tags) 
         {
             if (t.name != null && t.values != null)
-                this.Add (new TXTag (t.name, t.values) );
+                this.Add (new TXTag ({name: t.name, value: t.values} ) );
                 
             else
                 Sys.ERR_ONCE ("Tag not in corrent format - need to be { name:'foo', values:['bar','baz'] } - " + Util.ObjToStr (t), "TXTag.ADD_NATIVE_TAGS");
@@ -134,7 +182,7 @@ class TXTagGroup extends SARTGroup
 
         for (const t of src) 
         {
-            tags.Add (new TXTag (t.name, t.value), {add_duplicates: true} );
+            tags.Add (new TXTag ( {name: t.name, value: t.value} ), {add_duplicates: true} );
         }
 
         tags.Validate ();
@@ -154,14 +202,14 @@ class TXTagGroup extends SARTGroup
         }
 
         const txid = arweave_tx.id;
-        const len  = arweave_tx.tags != null ? arweave_tx.tags.length : 0;
+        const len  = arweave_tx.tags != null ? arweave_tx.tags.length : 0;               
 
-        if (len <= 0)
-            this.OnWarning ("No tags obtained from transaction " + txid + " !", "TXTagGroup.FROM_ARWEAVETX");
-
+        if (len <= 0)         
+            Sys.WARN ("No tags obtained from transaction " + txid + " !", "TXTagGroup.FROM_ARWEAVETX");            
+            
 
         else 
-        {
+        {            
             const tags = new TXTagGroup ();
 
             let tag;
@@ -170,16 +218,18 @@ class TXTagGroup extends SARTGroup
             {
                 tag = arweave_tx.tags[C];
                 tags.Add (new TXTag
-                (
-                    tag.get ('name',  { decode: true, string: true } ),
-                    tag.get ('value', { decode: true, string: true } )
-                ));                
+                ({
+                    name:  tag.get ('name',  { decode: true, string: true } ),
+                    value: tag.get ('value', { decode: true, string: true } )
+                }));                
             }
 
             tags.Validate ();
 
             return tags;
         }
+
+              
 
         return null;
     }

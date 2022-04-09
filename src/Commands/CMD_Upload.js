@@ -20,6 +20,100 @@ const ArgDef       = require ("../ArgumentDef");
 const TTY          = require ("../TTY");
 const FS           = require ("fs");
 const Crypto       = require ("crypto");
+const ARGDEFS      = require ("../ARGUMENTDEFS");
+
+
+const ArgDefs = 
+{
+    Filename:    new ArgDef ("filename")
+                 .WithAliases ("file", "f")
+                 .WithHasParam ()
+                 .WithDescription ("Path to the file to be uploaded."),
+
+    ContentType: new ArgDef ("content-type")
+                 .WithHasParam ()
+                 .WithAliases ("ct", "mimetype", "mime")
+                 .WithParamValidFunc (Util.IsMIMEType, "Does not seem to be a valid MIME type.")
+                 .WithDescription ("MIME type of the file, ie. video/mp4 for a .mp4 file."),  
+                 
+    DriveID:     new ArgDef ("driveid")
+                 .WithHasParam ()
+                 .WithIsOptional ()
+                 .WithAliases ("drive", "drv")
+                 .WithParamValidFunc (Util.IsArFSID, "Not a valid UUID (should be like 00000000-0000-4000-0000-0123456789ab")
+                 .WithDescription ("Destination ArFS drive ID. If not supplied, folder ID is used to determine drive ID."),
+ 
+    FolderID:    new ArgDef ("folderid")
+                 .WithHasParam ()
+                 .WithIsOptional ()
+                 .WithAliases ("folder", "dir")
+                 .WithParamValidFunc (Util.IsArFSID, "Not a valid UUID (should be like 00000000-0000-4000-0000-0123456789ab")
+                 .WithDescription ("Destination ArFS folder ID. If not supplied, drive root folder will be used."),
+                 
+    FileID:      new ArgDef ("fileid")
+                 .WithHasParam ()
+                 .WithIsOptional ()
+                 .WithAliases ("file-id")
+                 .WithParamValidFunc (Util.IsArFSID, "Not a valid UUID (should be like 00000000-0000-4000-0000-0123456789ab")
+                 .WithDescription ("The file ID for the new file, to replace existing one with a new version, or if one wants to come up with their own ID. If not supplied, it will be randomly generated."),                
+ 
+    Tag_DataTX:  new ArgDef ("tag-datatx")
+                 .WithHasParam ()
+                 .WithAliases ("tag", "datatxtag", "datatag")
+                 .WithIsOptional ()
+                 .WithAllowMultiple ()
+                 .WithDescription ("Used to define a custom Arweave transaction tag for the data transaction."),
+ 
+    Tag_MetaTX:  new ArgDef ("tag-metatx")
+                 .WithHasParam ()
+                 .WithAliases ("metatag", "metatxtag")
+                 .WithIsOptional ()
+                 .WithAllowMultiple ()
+                 .WithDescription ("Used to define a custom Arweave transaction tag for the ArFS metadata transaction."),
+ 
+    Tag_File:   new ArgDef ("tag-file")
+                 .WithAliases ("filetag")
+                 .WithIsOptional ()
+                 .WithAllowMultiple ()
+                 .WithDescription ("Used to define a 'File-<tag>' tag for the data transaction, also adding the tag into the ArFS metadata JSON if present."),                
+ 
+    Tag_ArfSMeta: new ArgDef ("arfs-meta-field")
+                 .WithHasParam ()
+                 .WithAliases ("arfsfield", "arfs-field")
+                 .WithIsOptional ()
+                 .WithAllowMultiple ()
+                 .WithDescription ("Adds a custom field to the ArFS metadata JSON. For uniformity with the protocol convention, the field names should be in lower camel case, ie. 'customProperty'."),  
+ 
+    Caption:      new ArgDef ("caption")
+                 .WithHasParam ()
+                 .WithIsOptional ()                
+                 .WithDescription ("A brief caption of what the file is about, such as 'A photo of <insert name here> in 1985.'. Added as a tag 'File-Caption' to the data transaction, and as 'caption' field of ArFS metadata JSON if present."),  
+ 
+    Description: new ArgDef ("description")
+                 .WithHasParam ()
+                 .WithIsOptional ()
+                 .WithAliases ("comment", "note", "info")                
+                 .WithDescription ("An optional comment/information about the file, added as a 'File-Description' tag to the data transaction, and as a 'description' field of ArFS metadata JSON if present."), 
+ 
+    Keywords:    new ArgDef ("keywords")
+                 .WithHasParam ()
+                 .WithIsOptional ()                
+                 .WithDescription ("Add a comma-separated list as a 'Keywords' tag to the data transaction, and to a 'keywords' field on ArFS metadata JSON if present."),                                
+ 
+    URL:         new ArgDef ("url")
+                 .WithHasParam ()
+                 .WithIsOptional ()                
+                 .WithDescription ("Specify the URL from which the file originated. Added as a tag 'File-Source-URL' to the data transaction, and as 'sourceURL' field of ArFS metadata JSON if present."),  
+ 
+    Author:      new ArgDef ("author")
+                 .WithHasParam ()
+                 .WithIsOptional ()                
+                 .WithDescription ("Specify the author of the file. Added as tags 'Author' and 'File-Author' to the data transaction, and as 'author' field of ArFS metadata JSON if present."),                  
+ 
+    Minimal:     new ArgDef ("minimal")                
+                 .WithIsOptional ()                
+                 .WithDescription ("Create transactions containing only the 'Content-Type' tag. Implies no ArFS-transactions."),                 
+}
 
 
 class CMD_Upload extends CommandDef
@@ -27,110 +121,16 @@ class CMD_Upload extends CommandDef
     constructor ()
     {
         super ("UPLOAD");
+
         this.MinArgsAmount = 5;
-        this.WithArgs
-        (
-            new ArgDef ("walletfile")
-                .WithAliases ("wallet", "w")
-                .WithHasParam ()
-                .WithDescription ("Path to the wallet.json."),
 
-            new ArgDef ("filename")
-                .WithAliases ("file", "f")
-                .WithHasParam ()
-                .WithDescription ("Path to the file to be uploaded."),
-
-            new ArgDef ("content-type")
-                .WithHasParam ()
-                .WithAliases ("ct", "mimetype", "mime")
-                .WithParamValidFunc (Util.IsMIMEType, "Does not seem to be a valid MIME type.")
-                .WithDescription ("MIME type of the file, ie. video/mp4 for a .mp4 file."),
-
-            new ArgDef ("driveid")
-                .WithHasParam ()
-                .WithIsOptional ()
-                .WithAliases ("drive", "drv")
-                .WithParamValidFunc (Util.IsArFSID, "Not a valid UUID (should be like 00000000-0000-4000-0000-0123456789ab")
-                .WithDescription ("Destination ArFS drive ID. If not supplied, folder ID is used to determine drive ID."),
-
-            new ArgDef ("folderid")
-                .WithHasParam ()
-                .WithIsOptional ()
-                .WithAliases ("folder", "dir")
-                .WithParamValidFunc (Util.IsArFSID, "Not a valid UUID (should be like 00000000-0000-4000-0000-0123456789ab")
-                .WithDescription ("Destination ArFS folder ID. If not supplied, drive root folder will be used."),
-
-            new ArgDef ("fileid")
-                .WithHasParam ()
-                .WithIsOptional ()
-                .WithAliases ("file-id")
-                .WithParamValidFunc (Util.IsArFSID, "Not a valid UUID (should be like 00000000-0000-4000-0000-0123456789ab")
-                .WithDescription ("The file ID for the new file, to replace existing one with a new version, or if one wants to come up with their own ID. If not supplied, it will be randomly generated."),                
-
-            new ArgDef ("tag-datatx")
-                .WithHasParam ()
-                .WithAliases ("tag", "datatxtag", "datatag")
-                .WithIsOptional ()
-                .WithAllowMultiple ()
-                .WithDescription ("Used to define a custom Arweave transaction tag for the data transaction."),
-
-            new ArgDef ("tag-metatx")
-                .WithHasParam ()
-                .WithAliases ("metatag", "metatxtag")
-                .WithIsOptional ()
-                .WithAllowMultiple ()
-                .WithDescription ("Used to define a custom Arweave transaction tag for the ArFS metadata transaction."),
-
-            new ArgDef ("tag-file")
-                .WithAliases ("filetag")
-                .WithIsOptional ()
-                .WithAllowMultiple ()
-                .WithDescription ("Used to define a 'File-<tag>' tag for the data transaction, also adding the tag into the ArFS metadata JSON if present."),                
-
-            new ArgDef ("arfs-meta-field")
-                .WithHasParam ()
-                .WithAliases ("arfsfield", "arfs-field")
-                .WithIsOptional ()
-                .WithAllowMultiple ()
-                .WithDescription ("Adds a custom field to the ArFS metadata JSON. For uniformity with the protocol convention, the field names should be in lower camel case, ie. 'customProperty'."),  
-
-            new ArgDef ("caption")
-                .WithHasParam ()
-                .WithIsOptional ()                
-                .WithDescription ("A brief caption of what the file is about, such as 'A photo of <insert name here> in 1985.'. Added as a tag 'File-Caption' to the data transaction, and as 'caption' field of ArFS metadata JSON if present."),  
-
-            new ArgDef ("description")
-                .WithHasParam ()
-                .WithIsOptional ()
-                .WithAliases ("comment", "note", "info")                
-                .WithDescription ("An optional comment/information about the file, added as a 'File-Description' tag to the data transaction, and as a 'description' field of ArFS metadata JSON if present."), 
-
-            new ArgDef ("keywords")
-                .WithHasParam ()
-                .WithIsOptional ()                
-                .WithDescription ("Add a comma-separated list as a 'Keywords' tag to the data transaction, and to a 'keywords' field on ArFS metadata JSON if present."),                                
-
-            new ArgDef ("url")
-                .WithHasParam ()
-                .WithIsOptional ()                
-                .WithDescription ("Specify the URL from which the file originated. Added as a tag 'File-Source-URL' to the data transaction, and as 'sourceURL' field of ArFS metadata JSON if present."),  
-
-            new ArgDef ("author")
-                .WithHasParam ()
-                .WithIsOptional ()                
-                .WithDescription ("Specify the author of the file. Added as tags 'Author' and 'File-Author' to the data transaction, and as 'author' field of ArFS metadata JSON if present."),                  
-
-            new ArgDef ("minimal")                
-                .WithIsOptional ()                
-                .WithDescription ("Create transactions containing only the 'Content-Type' tag. Implies no ArFS-transactions."),
-        );
+        this.WithArgs (ARGDEFS.WalletFile);
+        this.WithArgs (...Object.values (ArgDefs) );        
     }
 
     async OnExecute (cmd_instance)
     {
                 
-        const arjs = Arweave.Init ();
-
         const key                          = await Arweave.ReadWalletJSON (cmd_instance.GetParamValueByName ("walletfile") );;
         const is_minimal                   = cmd_instance.GetParamValueByName ("minimal") == true;
         const filename                     = cmd_instance.GetParamValueByName ("filename");
@@ -138,7 +138,7 @@ class CMD_Upload extends CommandDef
         const driveid                      = cmd_instance.GetParamValueByName ("driveid");
         const folderid                     = cmd_instance.GetParamValueByName ("folderid");
         const create_arfs_metadata         = is_minimal == false && driveid != null && folderid != null;
-        const fileid                       = Util.Or (cmd_instance.GetParamValueByName ("fileid"), create_arfs_metadata ? Crypto.randomUUID () : null);
+        const file_id                       = Util.Or (cmd_instance.GetParamValueByName ("fileid"), create_arfs_metadata ? Crypto.randomUUID () : null);
         const fileunixtime_ms              = FS.statSync (filename).mtime.getTime ();
         const fileunixtime_sec             = parseInt (fileunixtime_ms / 1000);
         const unixtime_now_sec             = parseInt (Util.GetUNIXTimeMS () / 1000);
@@ -146,7 +146,8 @@ class CMD_Upload extends CommandDef
         const file_description             = cmd_instance.GetParamValueByName ("description");        
         const file_keywords                = cmd_instance.GetParamValueByName ("keywords");        
         const file_url                     = cmd_instance.GetParamValueByName ("url");        
-        const file_author                  = cmd_instance.GetParamValueByName ("author");        
+        const file_author                  = cmd_instance.GetParamValueByName ("author");
+        const file_type                    = create_arfs_metadata ? "ArFS" : null;
         const filename_nopath              = filename.split ("/").pop ();
         const filename_short               = Util.GetShortString (filename_nopath, 65);
         const source_wallet_addr           = key != null ? await Arweave.GetWalletAddress (key) : null;
@@ -164,12 +165,41 @@ class CMD_Upload extends CommandDef
         if (filedata == null)
             return;
             
+        const file_hash_sha256 = Crypto.createHash ("sha256").update (filedata).digest ("hex");
             
         Sys.DEBUG ("Starting to build data transaction object..");
-        const tx = await TTY.AsyncWithProcessIndicator ({ caption: "Creating data transaction..." }, arjs.createTransaction ( {data: filedata }, key) )
+        
+        const tx = Transaction.NEW ()
+            .WithTag ("Content-Type", content_type)
+            .WithTags 
+            ([
+                "App-Name",         "SART",
+                "App-Version",      Util.GetVersion (),
+                "Type",             "file",
+                "Unix-Time",        unixtime_now_sec,                
+                "File-Name",        filename_nopath,
+                "File-UnixTime",    fileunixtime_sec,
+                "File-UnixTime-ms", fileunixtime_ms,
+                "File-SHA256",      file_hash_sha256,
+                "File-Hash",        file_hash_sha256,
+            ])
+            .WithTagIfValueSet ("File-Id",          file_id)
+            .WithTagIfValueSet ("File-Type",        file_type)
+            .WithTagIfValueSet ("File-Caption",     file_caption)
+            .WithTagIfValueSet ("File-Description", file_description)
+            .WithTagIfValueSet ("File-Keywords",    file_keywords)
+            .WithTagIfValueSet ("File-Author",      file_author)
+            .WithTagIfValueSet ("Author",           file_author)
+            .WithTagIfValueSet ("File-Source-URL",  file_url)
+            
+                            
+
+        await TTY.AsyncWithProcessIndicator ({ caption: "Creating data transaction..." }, tx.CreateAndSign ({ data: filedata, key: key} ) )
 
         if (tx == null)
             return Sys.ERR ("Failed to create transaction!");
+
+        process.exit ();
 
         tx.addTag ("Content-Type",     content_type       );
 
@@ -184,8 +214,8 @@ class CMD_Upload extends CommandDef
             tx.addTag ("File-UnixTime",    fileunixtime_sec   );        
             tx.addTag ("File-UnixTime-ms", fileunixtime_ms    );        
             tx.addTag ("File-SHA256",      Crypto.createHash ("sha256").update (filedata).digest ("hex")    );
-            if (Util.IsSet (fileid) )
-                tx.addTag ("File-Id",          fileid             );
+            if (Util.IsSet (file_id) )
+                tx.addTag ("File-Id",          file_id             );
             if (Util.IsSet (file_caption) )
                 tx.addTag ("File-Caption",    file_caption);                    
             if (Util.IsSet (file_description) )
@@ -248,7 +278,7 @@ class CMD_Upload extends CommandDef
             metatx.addTag ("Entity-Type",      "file"                                   );        
             metatx.addTag ("Drive-Id",          driveid                                 );   
             metatx.addTag ("Parent-Folder-Id",  folderid                                );   
-            metatx.addTag ("File-Id",           fileid                                  );
+            metatx.addTag ("File-Id",           file_id                                  );
             //metatx.addTag ("App-Name",         "ArDrive-Web"                            );
             //metatx.addTag ("App-Version",      "1.9.0"                                  );                                
             metatx.addTag ("Unix-Time",         unixtime_now_sec                        );                
@@ -288,7 +318,7 @@ class CMD_Upload extends CommandDef
             Sys.INFO ("");
             Sys.INFO ("Destination drive  ID: " + driveid);
             Sys.INFO ("Destination folder ID: " + folderid);
-            Sys.INFO ("New file ID:           " + fileid)
+            Sys.INFO ("New file ID:           " + file_id)
         }
 
         Sys.INFO ("");

@@ -104,6 +104,18 @@ async function TestConnection ()
 }
 
 
+async function CreateNativeTXObj (data, key)
+{
+    const arweave = await Connect ();
+    return await arweave.createTransaction ( {data: data }, key);
+}
+
+async function SignNativeTXObj (ntxobj, key)
+{
+    const arweave = await Connect ();
+    return await arweave.transactions.sign (ntxobj, key);
+}
+
 
 async function ReadWalletJSON (filename)
 {
@@ -505,7 +517,7 @@ module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, 
                    IsConfirmationAmountSafe, GetTXStatusStr, IsTxOKByCode,
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetMemPoolSize, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, Connect, GetTargetHost, GetConnectionStatus, GetRecipient,
-                   ReadWalletJSON, GetWalletAddress, GetWalletBalance,
+                   ReadWalletJSON, GetWalletAddress, GetWalletBalance, CreateNativeTXObj, SignNativeTXObj,
                    TXSTATUS_OK       : Constants.TXSTATUS_OK, 
                    TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
                    TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,

@@ -480,7 +480,24 @@ function GetCmdArgs (argv, cmd_pos, flags)
 }
 
 
+function GetKeyFromJSObj (js_obj, key, case_sensitive = false)
+{
+    if (js_obj == null)
+        return null;
 
+    else if (case_sensitive)
+        return js_obj[key];
+
+    else
+    {
+        for (const e of Object.entries (js_obj) )
+        {                
+            if (StrCmp (e[0], key, true) )
+                return e[1];
+        }
+    }
+    return null;
+}
 
 
 
@@ -496,4 +513,4 @@ module.exports = {
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional, IsSetStrOr,
-                   GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString };
+                   GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj };

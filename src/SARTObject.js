@@ -27,9 +27,6 @@ class SARTObject extends SARTBase
     Valid              = true;
     DataLoaded         = false;
 
-    Errors             = null;
-    Warnings           = null;
-
     Value              = null;
 
     FieldData          = new SARTGroup ();
@@ -88,14 +85,7 @@ class SARTObject extends SARTBase
     }
 
 
-    WithValue          (value)                                 { this.SetValue (value);              return this;                                             }    
-    OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN, warning, src, opts)                             }  
-    OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }  
-    OnOverridableError (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src, opts)                 }  
-    OnErrorOnce        (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }  
-    OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,  error,   src, opts)                             }
-    HasWarnings        ()                                      { return this.Warnings?.length > 0;                                                            }
-    HasErrors          ()                                      { return this.Errors  ?.length > 0;                                                            }    
+    WithValue          (value)                                 { this.SetValue (value);              return this;                                             }     
     GetRecursiveFields ()                                      { return this.RecursiveFields;                                                                 }
     IsValid            ()                                      { return this.Valid == true;                                                                   }
     SetInvalid         ()                                      { this.Valid = false; return this;                                                             }
@@ -527,16 +517,7 @@ class SARTObject extends SARTBase
             
     }
 
-    __OnError (field, errfunc, error, src, opts)
-    {
-        if (!errfunc (error, src, opts) )
-        {
-            this[field] = Util.AppendToArray (this[field], error, " "); 
-            return false;
-        }
-        else
-            return true;        
-    }
+  
 
 
     Output (output_args = new OutputArgs () )

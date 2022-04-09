@@ -198,7 +198,7 @@ class Transaction extends SARTObject
     Network             = "Arweave";
 
     State               = new TXStatus ();
-    ArweaveTX           = null;
+    NativeTXObj         = null;
     GQL_Edge            = null;
       
     TXID                = null;
@@ -221,6 +221,7 @@ class Transaction extends SARTObject
     IsLogical           = null;
     BundleTXID          = null;
     
+
     static FIELDS                  = FIELDS;
     static FIELDS_DEFAULTS         = SARTObject._FIELDS_CREATEOBJ (null, ["time","txid","flags","ctype","DestShort","qty_ar","fee_ar"]);
     static FIELDS_SETTINGKEYS      = SARTObject._FIELDS_CREATEOBJ ("Fields_Transaction_Table", "Fields_Transaction_Entries");
@@ -233,14 +234,56 @@ class Transaction extends SARTObject
     constructor (txid = null)
     {
         super ();
-        this.SetTXID (txid);
+
+        if (txid != null)
+            this.__SetTXID (txid);
     }
 
 
+    static       NEW             ()           { return new Transaction ();                                                            }    
+    static       EXISTING        (txid)       { return new Transaction (txid);                                                        }    
     static       FROM_GQL_EDGE   (edge)       { return edge != null ?       new Transaction ().SetGQLEdge   (edge)       : null;      }
-    static async FROM_ARWEAVE_TX (arweave_tx) { return edge != null ? await new Transaction ().SetArweaveTX (arweave_tx) : null;      }
+    static async FROM_ARWEAVE_TX (arweave_tx) { return edge != null ? await new Transaction ().SetNativeTXObj (arweave_tx) : null;      }
+
+    /** Will give an error if value is null.  */
+    WithTag (name, value) 
+    {
+        if (this.Tags == null)
+            this.Tags = new TXTagGroup ();
+                
+        if (! this.Tags.AddTagNV (name, value) )
+            this.OnError ("Error while adding tag '" + name + "' with value of '" + value + "'.");
+
+        return this;
+    }
     
-    
+    /** Won't give an error if value is null.  */
+    WithTagIfValueSet (name, value)
+    {
+        return value != null ? this.WithTag (name, value) : this;                    
+    }
+
+    /** 'tags' may be either a TXTagGroup or an array of strings as name-value -pairs. */
+    WithTags (tags)
+    {
+        if (tags == null)
+        {
+            this.OnProgramError ("WithTags: 'taggroup' null!", this);
+            return this;
+        }
+
+        else
+        {
+            if (this.Tags == null)
+                this.Tags = new TXTagGroup ();
+
+            if (! this.Tags.AddTags (tags) )
+                this.OnError ("Something failed when adding tags.", this);
+        }
+
+        return this;
+    } 
+
     /** Overridable. Should be 4 characters. */
     GetTypeShort () { return "TX  "; }
     toString     () { return "TX " + this.GetTXID (); }  
@@ -277,6 +320,7 @@ class Transaction extends SARTObject
     GetTag                   (tag)      { return this.Tags?.GetTag   (tag);                                                           }        
     GetTagValue              (tag)      { return this.GetTag ()?.GetValue ();                                                         }        
     GetTags                  ()         { return this.Tags;                                                                           }        
+    GetTagsAmount            ()         { return this.Tags != null ? this.Tags.GetAmount () : 0;                                      }        
     GetTagsAsArray           ()         { return this.Tags != null ? this.Tags.AsArray () : [];                                       }        
     IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                                }        
     IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                                }            
@@ -303,7 +347,7 @@ class Transaction extends SARTObject
     GenerateFetchInfo ()
     {
         return { "GQL"   : this.GQL_Edge  != null,
-                 "GET"   : this.ArweaveTX != null,
+                 "GET"   : this.NativeTXObj != null,
                  "Status": this.State?.IsFetched ()
                };
     }
@@ -335,16 +379,6 @@ class Transaction extends SARTObject
     }
  
     
-    WithTag (name, value)
-    {
-        if (this.Tags == null) 
-            this.Tags = new TXTagGroup ();
-
-        this.Tags.Add (new TXTag (name, value) );
-        
-        return this; 
-    }
-
   
     async FetchData (opts = { as_string: false } )
     {
@@ -373,7 +407,7 @@ class Transaction extends SARTObject
     async FetchDataStr () { const r = await this.FetchData ({as_string: true}); return r; }
 
 
-    SetTXID (txid)
+    __SetTXID (txid)
     {
         if (txid == null)
             return;
@@ -392,7 +426,7 @@ class Transaction extends SARTObject
     }
 
 
-    SetOwner (owner)
+    __SetOwner (owner)
     {
         if (owner == null)
             return;
@@ -409,6 +443,47 @@ class Transaction extends SARTObject
     }
 
   
+    async CreateAndSign ( { data, key } ) // A new syntax has been discovered.
+    {
+        if (key == null)
+            return this.OnProgramError ("Create: No key supplied!", this);
+
+        else if (this.TXID != null || this.NativeTXObj != null)
+            return this.OnProgramError ("Tried to create a transaction on a Transaction-object that has already been set up (TXID and/or NativeTXObj not null)", this);
+
+        else
+        {
+            const ntxobj = await Arweave.CreateNativeTXObj (data, key);
+            
+            if (ntxobj == null)
+                return this.OnProgramError ("Create: Something failed when trying to create the transaction (null returned by Arweave.CreateNativeTXObj).", this);
+
+            const txid = this.id;
+
+            Sys.DEBUG ("Created a new transaction with a TXID " + txid);
+
+            const tags_amount = this.GetTagsAmount ();            
+            const tags        = this.GetTagsAsArray ();
+            Sys.DEBUG ("Adding tags to the native TX object - " + tags_amount + " total.");
+            if (tags_amount > 0)
+            {
+                for (const t of tags)
+                {
+                    t.AddToNativeTXObj (ntxobj);                    
+                }
+            }
+            
+            if (await this.SetNativeTXObj (ntxobj) == false)
+                return this.OnProgramError ("Failed to set the native TX-object for some reason for new transaction " + txid + ".", this);
+
+            Sys.DEBUG ("Signing the new transaction (TXID " + txid + "):");
+            await Arweave.SignNativeTXObj (ntxobj, key);
+
+            return true;
+        }
+        
+    }
+
 
     SetGQLEdge (edge) 
     { 
@@ -416,8 +491,8 @@ class Transaction extends SARTObject
 
         if (edge != null)
         {            
-            this.SetTXID  (edge.node?.id);
-            this.SetOwner (edge.node?.owner?.address)
+            this.__SetTXID  (edge.node?.id);
+            this.__SetOwner (edge.node?.owner?.address)
             
             this.__SetObjectProperty ("Target"             , edge.node?.recipient         != null ? edge.node.recipient                 : null);
             this.__SetObjectProperty ("BlockID"            , edge.node?.block?.id         != null ? edge.node.block.id                  : null);
@@ -444,33 +519,41 @@ class Transaction extends SARTObject
     }
 
 
-    async SetArweaveTX (arweave_tx)
-    {        
-        this.ArweaveTX = arweave_tx;        
+    async SetNativeTXObj (arweave_tx)
+    {     
+        Sys.DEBUG ("Setting the transaction to match the following native TX object:");   
+        Sys.DEBUG (arweave_tx);
+
+        if (this.NativeTXObj != null)
+            return this.OnProgramError ("SetNativeTXObj: Transaction already initialized (NativeTXObj not null).");
+
+        this.NativeTXObj = arweave_tx;        
         const config = State.GetGlobalConfig ();
 
         if (config.MaxTXFormat == null || arweave_tx.format <= config.MaxTXFormat || Settings.IsForceful () )
-        {            
-            this.SetTXID      (arweave_tx.id);
-            this.SetOwner     (await Arweave.OwnerToAddress (arweave_tx.owner) );   
-            
-            this.__SetObjectProperty ("Target"           , Arweave.GetRecipient (arweave_tx)                   );
-            this.__SetObjectProperty ("Fee_Winston"      , Number (arweave_tx.reward)                          );
-            this.__SetObjectProperty ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );
+        {                     
+            this.__SetTXID      (arweave_tx.id);
+            this.__SetOwner     (await Arweave.OwnerToAddress (arweave_tx.owner) );                
+
+            this.__SetObjectProperty ("Target"           , Arweave.GetRecipient (arweave_tx)                   );            
+            this.__SetObjectProperty ("Fee_Winston"      , Number (arweave_tx.reward)                          );            
+            this.__SetObjectProperty ("Fee_AR"           , Number (Arweave.WinstonToAR (arweave_tx.reward))    );            
             this.__SetObjectProperty ("Quantity_Winston" , Number (arweave_tx.quantity)                        );
             this.__SetObjectProperty ("Quantity_AR"      , Number (Arweave.WinstonToAR (arweave_tx.quantity))  );
             this.__SetObjectProperty ("DataSize_Bytes"   , Number (arweave_tx.data_size)                       );
             this.__SetObjectProperty ("DataRoot"         , arweave_tx.data_root                                );            
             this.__SetObjectProperty ("TXAnchor"         , arweave_tx.last_tx                                  );            
-            this.__SetObjectProperty ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );    
-            
+            this.__SetObjectProperty ("Tags"             , TXTagGroup.FROM_ARWEAVETX (arweave_tx)              );                                         
 
             this.__SetObjectProperty ("DataLocation"     , arweave_tx.data?.length > 0 ? Util.IsSet (arweave_tx.data_root) ? "TX + DataRoot" : "TX" 
                                                  : Util.IsSet (arweave_tx.data_root) ? "DataRoot" : "NO DATA" );
+                            
                                                  
             this.Validate ();
             this.__OnTXFetched ();
             this.DataLoaded = true;
+
+            Sys.DEBUG ("Setting transaction to native TX object done.");   
         }
         else
             this.OnError ("Unsupported transaction format/version '" + arweave_tx.format + "'. Use --force to process anyway.", "Transaction.SetArweaveTXData",
@@ -492,14 +575,14 @@ class Transaction extends SARTObject
     {
         Sys.VERBOSE ("Fetching transaction info via HTTP GET..", this);
 
-        if (this.ArweaveTX != null)
+        if (this.NativeTXObj != null)
         {
             Sys.DEBUG ("Already fetched via get.", this.GetTXID () );
             return true;
         }
 
         if (txid != null)
-            this.SetTXID (txid);
+            this.__SetTXID (txid);
 
         else if ( (txid = this.GetTXID ()) == null)
             return Sys.OnProgramError ("TXID not supplied.", "Transaction.FetchFromArweave");
@@ -508,7 +591,7 @@ class Transaction extends SARTObject
         
         if (arweave_tx != null)
         {
-            await this.SetArweaveTX (arweave_tx);
+            await this.SetNativeTXObj (arweave_tx);
             return true;
         }
 
@@ -530,7 +613,7 @@ class Transaction extends SARTObject
         }
 
         if (txid != null)
-            this.SetTXID (txid);
+            this.__SetTXID (txid);
 
         else if ( (txid = this.GetTXID ()) == null)
             return Sys.OnProgramError ("TXID not supplied.", "Transaction.FetchViaGQL");

@@ -19,6 +19,7 @@ const CMD_Info       = require ("./Commands/CMD_Info");
 const CMD_List       = require ("./Commands/CMD_List");
 const CMD_Help       = require ("./Commands/CMD_Help");
 const CMD_ReadMe     = require ("./Commands/CMD_ReadMe");
+const CMD_Upload     = require ("./Commands/CMD_Upload");
 
 const CMD_Console    = require ("./Commands/CMD_Console");
 const CMD_Test       = Util.RequireOptional ("./Commands/CMD_Test");
@@ -34,7 +35,8 @@ const COMMANDS =
     "connect"     : null,
     "list"        : new CMD_List   ()         .WithAliases ("ls"),    
     "get"         : null,    
-    "status"      : null,    
+    "status"      : null, 
+    "upload"      : new CMD_Upload (),   
     "verify"      : null,
     "pending"     : null,
     "console"     : new CMD_Console (),
