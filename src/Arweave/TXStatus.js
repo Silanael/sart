@@ -112,6 +112,7 @@ class TXStatus
 
 
 
+    IsExisting  () { return this.StatusCode != Constants.TXSTATUS_NOTFOUND; }
     IsMined     () { return this.StatusCode == Constants.TXSTATUS_OK;       };
     IsPending   () { return this.StatusCode == Constants.TXSTATUS_PENDING;  };
     IsFailed    () { return this.StatusCode == Constants.TXSTATUS_NOTFOUND; };

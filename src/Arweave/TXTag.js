@@ -19,6 +19,9 @@ class TXTag extends SARTObject
         super (tag != null ? tag.GetName (): name); 
         this.Value = tag != null ? tag.GetValue () : value;
         
+        if (! Util.IsString (this.Value) )
+            this.Value = this.Value.toString ();
+
         if (this.GetName () == null)
             Sys.ERR_PROGRAM ("Attempted to create a tag with 'name' " + (this.Value == null ? "and value " : "") + " as null!", this);
             

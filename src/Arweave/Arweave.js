@@ -11,7 +11,7 @@
 // Imports
 const ArweaveLib     = require ('arweave');
 
-const Constants      = require ("../CONSTANTS.js");
+const CONSTANTS      = require ("../CONSTANTS.js");
 const State          = require ("../ProgramState.js");
 const Sys            = require ('../System.js');
 const Config         = require ('../Config.js');
@@ -91,14 +91,14 @@ async function TestConnection ()
         
         if (info != null)
         {            
-            State.ConnectionState = Constants.CONNSTATES.OK;
+            State.ConnectionState = CONSTANTS.CONNSTATES.OK;
             return { State: State.ConnectionState, NetworkInfo: info };
         }
         else
-            State.ConnectionState = Constants.CONNSTATES.FAIL;
+            State.ConnectionState = CONSTANTS.CONNSTATES.FAIL;
     }
     else
-        State.ConnectionState = Constants.CONNSTATES.NOTCONN;
+        State.ConnectionState = CONSTANTS.CONNSTATES.NOTCONN;
 
     return { State: State.ConnectionState, NetworkInfo: null }
 }
@@ -115,6 +115,55 @@ async function SignNativeTXObj (ntxobj, key)
     const arweave = await Connect ();
     return await arweave.transactions.sign (ntxobj, key);
 }
+
+async function PostTX (ntxobj, direct = false)
+{    
+    const txid = ntxobj?.id;
+
+    if (txid == null)
+        return Sys.ERR_PROGRAM ("'ntxobj' null or lacking ID", "PostTX");
+
+    const arweave = Connect ();
+
+    try
+    {
+        Sys.VERBOSE ("Posting transaction " + txid + " using " + (direct ? "arweave.transactions.post" : "arweave.js uploader") + "...", "PostTX");
+
+        if (direct)
+        {
+            let { status, statusText } = await arweave.transactions.post (ntxobj);
+    
+            if (CONSTANTS.TXSTATUSES_POST_OK.includes (status) )
+            {
+                Sys.VERBOSE ("Transaction " + txid + " successfully posted (response code " + status + ").", "PostTX");
+                return true;
+            }
+            else
+            {
+                Sys.ERR ("Failed to post transaction " + txid + ": " + statusText + " (response code " + status + ")", "PostTX");
+                return false;
+            }
+        }
+        else
+        {
+            let uploader = await arweave.transactions.getUploader (ntxobj);
+
+            while (! uploader.isComplete) 
+            {
+                await uploader.uploadChunk ();
+                Sys.INFO (uploader.pctComplete + "% done, " + uploader.uploadedChunks + "/" + uploader.totalChunks + " chunks.");
+            }                    
+        }
+    }
+    catch (exception)
+    {
+        Sys.ERR ("Error while trying to post transaction " + txid + ": " + exception);
+        return false;
+    }
+}
+
+async function PostTXDirect   (ntxobj) { await PostTX (ntxobj, true);  }
+async function PostTXUploader (ntxobj) { await PostTX (ntxobj, false); }
 
 
 async function ReadWalletJSON (filename)
@@ -285,7 +334,7 @@ async function GetMemPool ()
     {
         try
         {
-            const ret = await arweave.api.get (Constants.ENDPOINT_PENDING);
+            const ret = await arweave.api.get (CONSTANTS.ENDPOINT_PENDING);
             if (ret.data != null)
                 return ret.data;
         }
@@ -477,15 +526,15 @@ async function GetTXsForAddress (address, tags = null)
 function GetTXStatusStr (statuscode, confirmations)
 {
 
-    if (statuscode == Constants.TXSTATUS_NOTFOUND)
+    if (statuscode == CONSTANTS.TXSTATUS_NOTFOUND)
         return Sys.ANSIERROR ("NOT FOUND");
 
 
-    else if (statuscode == Constants.TXSTATUS_PENDING)
+    else if (statuscode == CONSTANTS.TXSTATUS_PENDING)
         return Sys.ANSIWARNING ("PENDING");
 
 
-    else if (statuscode == Constants.TXSTATUS_OK)
+    else if (statuscode == CONSTANTS.TXSTATUS_OK)
     {
         if (IsConfirmationAmountSafe (confirmations) )
             return "CONFIRMED";
@@ -506,7 +555,7 @@ function GetTXStatusStr (statuscode, confirmations)
 }
 
 
-function IsTxOKByCode (statuscode) {return statuscode == Constants.TXSTATUS_OK; }
+function IsTxOKByCode (statuscode) {return statuscode == CONSTANTS.TXSTATUS_OK; }
 
 
 
@@ -518,8 +567,9 @@ module.exports = { Init, Post, DisplayArweaveInfo, SearchTag, GetTx, GetTxData, 
                    OutputTxData, GetTXsForAddress, GetNetworkInfo, PrintNetworkInfo, OwnerToAddress, GetMemPool, GetMemPoolSize, GetPendingTXAmount,
                    GetTXStatus, GetTXs, WinstonToAR, QuantityToAR, Connect, GetTargetHost, GetConnectionStatus, GetRecipient,
                    ReadWalletJSON, GetWalletAddress, GetWalletBalance, CreateNativeTXObj, SignNativeTXObj,
-                   TXSTATUS_OK       : Constants.TXSTATUS_OK, 
-                   TXSTATUS_NOTFOUND : Constants.TXSTATUS_NOTFOUND, 
-                   TXSTATUS_PENDING  : Constants.TXSTATUS_PENDING,
-                   CONNSTATES        : Constants.CONNSTATES, 
+                   PostTX, PostTXDirect, PostTXUploader,
+                   TXSTATUS_OK       : CONSTANTS.TXSTATUS_OK, 
+                   TXSTATUS_NOTFOUND : CONSTANTS.TXSTATUS_NOTFOUND, 
+                   TXSTATUS_PENDING  : CONSTANTS.TXSTATUS_PENDING,
+                   CONNSTATES        : CONSTANTS.CONNSTATES, 
                    };

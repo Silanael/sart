@@ -19,6 +19,7 @@ const TXTag        = require ("./TXTag");
 
 class TXTagGroup extends SARTGroup
 {
+    Name           = "Transaction tags";
     Duplicates     = false;
     TotalBytes     = null;
 

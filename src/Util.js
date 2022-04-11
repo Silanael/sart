@@ -35,7 +35,7 @@ function PopArg (args)
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
 function IsFlag          (arg, flags)            { return flags[arg] != null; }
 function IsFlagWithArg   (arg, flags)            { return flags[arg]?.A; }
-function IsString        (value)                 { return value instanceof String || typeof value == "string" || Object.prototype.toString.call (value) === "[object String]";}
+function IsString        (value)                 { return value instanceof String || typeof value === "string";}
 function IsSet           (value)                 { return value != null && value != "" && value.length > 0; }
 function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }

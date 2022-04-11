@@ -199,6 +199,9 @@ class CMD_Upload extends CommandDef
         if (tx == null)
             return Sys.ERR ("Failed to create transaction!");
 
+        tx.Tags.Print ();
+        tx.Output ();
+
         process.exit ();
 
         tx.addTag ("Content-Type",     content_type       );

@@ -193,6 +193,20 @@ class SARTGroup extends SARTBase
     }
 
     GetNamesAsStr (opts = CONSTANTS.UTIL_ARRAYTOSTR_DEFAULTS) { return Util.ArrayToStr (this.GetNamesAsArray (), opts); }    
+
+    Print ()
+    {
+        const array = this.AsArray ();
+        
+        Sys.OUT_TXT ("Group '" + this.GetName () + "' with " + array.length + " entries:");
+
+        let index = 1;
+        for (const e of this.AsArray () )
+        {
+            Sys.OUT_TXT (index + "#: " + e.toString () );
+            ++index;
+        }
+    }
 }
 
 

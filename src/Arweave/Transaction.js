@@ -220,6 +220,8 @@ class Transaction extends SARTObject
     DataFetched         = false;
     IsLogical           = null;
     BundleTXID          = null;
+    IsNew               = false;
+    IsPosted            = false;
     
 
     static FIELDS                  = FIELDS;
@@ -236,7 +238,12 @@ class Transaction extends SARTObject
         super ();
 
         if (txid != null)
+        {
             this.__SetTXID (txid);
+            this.IsNew = false;            
+        }
+        else
+            this.IsNew = true;
     }
 
 
@@ -460,7 +467,7 @@ class Transaction extends SARTObject
 
             const txid = this.id;
 
-            Sys.DEBUG ("Created a new transaction with a TXID " + txid);
+            Sys.DEBUG ("Created a new transaction.");
 
             const tags_amount = this.GetTagsAmount ();            
             const tags        = this.GetTagsAsArray ();
@@ -472,16 +479,27 @@ class Transaction extends SARTObject
                     t.AddToNativeTXObj (ntxobj);                    
                 }
             }
-            
-            if (await this.SetNativeTXObj (ntxobj) == false)
-                return this.OnProgramError ("Failed to set the native TX-object for some reason for new transaction " + txid + ".", this);
-
+                        
             Sys.DEBUG ("Signing the new transaction (TXID " + txid + "):");
             await Arweave.SignNativeTXObj (ntxobj, key);
+            Sys.DEBUG ("Signed a new transaction - TXID: " + txid);
+
+            if (await this.SetNativeTXObj (ntxobj) == false)
+                return this.OnProgramError ("Failed to set the native TX-object for some reason for the new transaction " + txid + ".", this);
+
+            this.IsNew    = true;
+            this.IsPosted = false;
 
             return true;
         }
         
+    
+    }
+
+    async Post ()
+    {
+        if (await this.UpdateAndGetStatus ()?.IsExisting () )
+            return this.OnProgramError ("Attempted to re-post transaction '" + this.GetTXID () + "'.")
     }
 
 
@@ -526,6 +544,9 @@ class Transaction extends SARTObject
 
         if (this.NativeTXObj != null)
             return this.OnProgramError ("SetNativeTXObj: Transaction already initialized (NativeTXObj not null).");
+
+        if (this.TXID != null && this.TXID != arweave_tx.id)
+            return this.OnProgramError ("Tried to set the transaction '" + this.TXID + "' to an Arweave native TX object with different TXID: '" + arweave_tx.id + "'");
 
         this.NativeTXObj = arweave_tx;        
         const config = State.GetGlobalConfig ();

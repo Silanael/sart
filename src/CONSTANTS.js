@@ -28,6 +28,8 @@ const TXSTATUS_OK               = 200;
 const TXSTATUS_PENDING          = 202;
 const TXSTATUS_NOTFOUND         = 404;
 
+const TXSTATUSES_POST_OK        = [200, 208];
+
 const ENDPOINT_PENDING          = "tx/pending";
 
 const GQL_MAX_RESULTS            = 100;
@@ -169,4 +171,5 @@ module.exports =
     UTIL_ARRAYTOSTR_DEFAULTS,
     LISTMODE_TABLE,
     LISTMODE_SEPARATE,
+    TXSTATUSES_POST_OK
 };
