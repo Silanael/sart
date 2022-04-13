@@ -1,7 +1,6 @@
 const Sys         = require ('../System.js');
 const Constants   = require ("../CONSTANTS.js");
 const State       = require ("../ProgramState");
-const Config      = require ("../Config");
 const { SETTINGS} = require ("../SETTINGS");
 const Arweave     = require ("./Arweave.js");
 const ByTXQuery   = require ("../GQL/ByTXQuery");
@@ -49,7 +48,7 @@ class TXStatus
 
     }
 
-    async UpdateFromTXID (txid) 
+    async FetchStatus (txid) 
     {
         if (this.TXID != null && txid != this.TXID)
             Sys.WARN ("TXID mismatch - was " + this.TXID + ", updating to " + txid, "TXStatus.UpdateFromTXID");
@@ -81,11 +80,11 @@ class TXStatus
             */
         }
 
-        this.SetToArweaveTXStatus (txstatus);                
+        this.__SetToArweaveTXStatus (txstatus);                
     }
 
 
-    SetToArweaveTXStatus (txstatus) 
+    __SetToArweaveTXStatus (txstatus) 
     {
         if (txstatus != null) 
         {
@@ -112,14 +111,14 @@ class TXStatus
 
 
 
-    IsExisting  () { return this.StatusCode != Constants.TXSTATUS_NOTFOUND; }
+    IsExisting  () { return this.StatusCode != Constants.TXSTATUS_NOTFOUND; };
     IsMined     () { return this.StatusCode == Constants.TXSTATUS_OK;       };
     IsPending   () { return this.StatusCode == Constants.TXSTATUS_PENDING;  };
     IsFailed    () { return this.StatusCode == Constants.TXSTATUS_NOTFOUND; };
     IsConfirmed () 
     {
         const key = SETTINGS.SafeConfirmationsMin;
-        const safe_confirm_min = Config.GetSetting (key);
+        const safe_confirm_min = Sys.GetMain().GetSetting (key);
 
         if (safe_confirm_min == null || isNaN (safe_confirm_min) ) 
         {

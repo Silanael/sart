@@ -59,6 +59,17 @@ function GetTopStrLen    (str1, str2)            { const s1len = str1 != null ? 
                                                    return s1len > s2len ? s1len : s2len; }
 function GetRandomUUIDv4 ()                      { return Crypto.randomUUID (); }
 
+function SetPropertyIfValueNotNull (js_obj, propertyname, value)
+{
+    if (js_obj == null)
+        return null;
+
+    if (value != null)
+        js_obj[propertyname] = value;
+
+    return js_obj;
+}
+
 function SetMissingMembers (js_obj, ...name_value_pairs)
 {    
     if (js_obj == null)
@@ -513,4 +524,4 @@ module.exports = {
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional, IsSetStrOr,
-                   GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj };
+                   GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj, SetPropertyIfValueNotNull };

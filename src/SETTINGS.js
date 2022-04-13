@@ -89,6 +89,7 @@ const SETTINGS =
     QueryMinBlockHeight     : new Setting ("QueryMinBlockHeight")      .DV (null),
     QueryMaxBlockHeight     : new Setting ("QueryMaxBlockHeight")      .DV (null),
     IncludeInvalidTX        : new Setting ("IncludeInvalidTX")         .DV (false),
+    DirectTXPostMaxDataSize : new Setting ("DirectTXPostMaxDataSize")  .DV (256 * 1024),
     Force                   : new Setting ("Force")                    .DV (false),
     MaxArFSMetadataSize     : new Setting ("MaxArFSMetadataSize")      .DV (1073741824), // 1MB ought to be enough for anybody?
     MaxTXFormat             : new Setting ("MaxTXFormat")              .DV (2),

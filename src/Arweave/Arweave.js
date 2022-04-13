@@ -123,7 +123,7 @@ async function PostTX (ntxobj, direct = false)
     if (txid == null)
         return Sys.ERR_PROGRAM ("'ntxobj' null or lacking ID", "PostTX");
 
-    const arweave = Connect ();
+    const arweave = await Connect ();
 
     try
     {
@@ -152,7 +152,9 @@ async function PostTX (ntxobj, direct = false)
             {
                 await uploader.uploadChunk ();
                 Sys.INFO (uploader.pctComplete + "% done, " + uploader.uploadedChunks + "/" + uploader.totalChunks + " chunks.");
-            }                    
+            }
+            
+            return true;
         }
     }
     catch (exception)
@@ -162,8 +164,8 @@ async function PostTX (ntxobj, direct = false)
     }
 }
 
-async function PostTXDirect   (ntxobj) { await PostTX (ntxobj, true);  }
-async function PostTXUploader (ntxobj) { await PostTX (ntxobj, false); }
+async function PostTXDirect   (ntxobj) { return (await PostTX (ntxobj, true)  ); }
+async function PostTXUploader (ntxobj) { return (await PostTX (ntxobj, false) ); }
 
 
 async function ReadWalletJSON (filename)

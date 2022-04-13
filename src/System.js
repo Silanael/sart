@@ -43,6 +43,9 @@ const ANSI_UNDERLINE = "\033[4m";
 const ANSI_BLINK     = "\033[5m";
 const ANSI_BLINK_OFF = "\033[25m";
 
+const CHOICESTR_DEFAULT_YES = ["Y/n"];
+const CHOICESTR_DEFAULT_NO  = ["y/N"];
+
 const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
 var Main = null;
@@ -692,6 +695,20 @@ async function INPUT_GET_CONFIRM (severe = true, operation_name_str = null)
     return Util.StrCmp (line, "EXECUTE", !severe);
 }
 
+async function INPUT_GET_YESNO (question_str = null, default_choice = false)
+{
+    const line = await INPUT_LINE 
+    ({ 
+        prompt_str: (question_str != null ?  question_str + " " : "Proceed? ") + (default_choice == true ? CHOICESTR_DEFAULT_YES : CHOICESTR_DEFAULT_NO)                       
+    })
+
+    if (default_choice == true)
+        return Util.StrCmp (line, "N", true) == false;
+    else
+        return Util.StrCmp (line, "Y", true) == true;
+    
+}
+
 
 function ON_EXCEPTION (exception, src = "Something", subject = null)
 {    
@@ -782,5 +799,6 @@ module.exports =
     IsVerbose,
     ReadFile,
     INPUT_LINE,
-    INPUT_GET_CONFIRM
+    INPUT_GET_CONFIRM,
+    INPUT_GET_YESNO
 };

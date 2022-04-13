@@ -87,23 +87,22 @@ class Main
     GetSizeStr            (bytes, hr)        { return Util.GetSizeStr (bytes, hr, hr ? this.GetSetting (SETTINGS.SizeDigits) : null); }
     GetActiveCommand      ()                 { return this.State.ActiveCommandInst; }
 
-    GetSetting (key)
+    GetSetting (key, value_if_null = null)
     {                
+        let val = null;
+
         if (this.State.ActiveCommandInst != null && this.State.ActiveCommandInst.HasSetting (key) )
-            return this.State.ActiveCommandInst.GetSetting (key);
+            val = this.State.ActiveCommandInst.GetSetting (key);
           
         else if (this.State.GlobalConfig != null)
-            return this.State.GlobalConfig.GetSetting (key); 
+            val = this.State.GlobalConfig.GetSetting (key); 
           
         else
-            return null;
+            return value_if_null;
+
+        return val != null ? val : value_if_null;        
     }
-    
-    GetSettingOr (key, value_if_null)
-    {
-        const value = this.GetSetting (key);
-        return value != null ? value : value_if_null;
-    }
+        
 
     OutputObjects (objs, args = new OutputParams () )
     {     

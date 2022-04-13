@@ -26,9 +26,9 @@ const FetchDef     = require ("../FetchDef");
 const FieldList    = require ("../FieldList");
 
 
-const FETCH_GQL    = new FetchDef ("GraphQL", async function (t) { await t.FetchViaGQL        (); } );
-const FETCH_GET    = new FetchDef ("GET",     async function (t) { await t.FetchViaGet        (); } );
-const FETCH_STATUS = new FetchDef ("Status",  async function (t) { await t.UpdateAndGetStatus (); } );    
+const FETCH_GQL    = new FetchDef ("GraphQL", async function (t) { await t.FetchViaGQL  (); } );
+const FETCH_GET    = new FetchDef ("GET",     async function (t) { await t.FetchViaGet  (); } );
+const FETCH_STATUS = new FetchDef ("Status",  async function (t) { await t.FetchStatus  (); } );    
 
 
 const FETCHDEFS = new SARTGroup ().With
@@ -336,7 +336,7 @@ class Transaction extends SARTObject
     IsFailed                 ()         { return this.State?.IsFailed      ()                                                         }
     IsConfirmed              ()         { return this.State?.IsConfirmed   ()                                                         }
     GetState                 ()         { return this.State;                                                                          }
-    async UpdateAndGetStatus ()         { await  this.State.UpdateFromTXID (this.GetTXID () ); this.DataLoaded = true;return this.State; }
+   
 
 
     IsInSameBlockAs (tx)
@@ -493,15 +493,54 @@ class Transaction extends SARTObject
             return true;
         }
         
-    
+        return false;
     }
 
     async Post ()
     {
-        if (await this.UpdateAndGetStatus ()?.IsExisting () )
-            return this.OnProgramError ("Attempted to re-post transaction '" + this.GetTXID () + "'.")
+        if (this.NativeTXObj == null)
+            return this.OnProgramError ("Post: Native TX object null!", this);
+
+        Sys.VERBOSE ("Confirming that transaction " + this.GetTXID () + " does not exist prior to posting it.. ")
+        
+        const state = await this.UpdateAndGetStatus ();
+        
+        if (state.IsExisting () )
+            return this.OnProgramError ("Attempted to re-post transaction '" + this.GetTXID () + "' - aborting post.")
+        
+        else
+        {
+            const dtxp_max_bytes = Sys.GetMain ().GetSetting (SETTINGS.DirectTXPostMaxDataSize, 0)
+            const datasize_bytes = this.GetDataSize_B ();
+            const ntxobj         = this.NativeTXObj;
+
+            let success = false;
+
+            if (datasize_bytes <= dtxp_max_bytes)
+            {
+                Sys.DEBUG ("Transaction data size (" + datasize_bytes + "b) is <= DirectTXPostMaxDataSize (" + dtxp_max_bytes + "b), using direct post.");
+                success = await Arweave.PostTXDirect (ntxobj);
+            }
+            else
+            {
+                Sys.DEBUG ("Transaction data size (" + datasize_bytes + "b) is > DirectTXPostMaxDataSize (" + dtxp_max_bytes + "b), using an uploader.");
+                success = await Arweave.PostTXUploader (ntxobj);
+            }
+
+            if (!success)
+                this.OnError ("Uploading the transaction may have failed.");
+
+            return success;
+        }
     }
 
+    async WaitForConfirmation ()
+    {
+        if (this.IsPosted == false)
+            return this.OnProgramError ("WaitForConfirmation called for a transaction that has not been posted.", this);
+        
+        
+    }
 
     SetGQLEdge (edge) 
     { 
@@ -591,6 +630,12 @@ class Transaction extends SARTObject
     }
 
 
+    async FetchStatus ()
+    {
+        await this.State.FetchStatus (this.GetTXID () ); 
+        this.DataLoaded = true;
+        return this.State;
+    } 
     
     async FetchViaGet (txid = null)
     {

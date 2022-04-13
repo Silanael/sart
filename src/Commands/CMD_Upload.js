@@ -152,6 +152,7 @@ class CMD_Upload extends CommandDef
         const filename_short               = Util.GetShortString (filename_nopath, 65);
         const source_wallet_addr           = key != null ? await Arweave.GetWalletAddress (key) : null;
         
+        const transactions                 = [];
 
         if (key == null)
             return false;
@@ -166,10 +167,12 @@ class CMD_Upload extends CommandDef
             return;
             
         const file_hash_sha256 = Crypto.createHash ("sha256").update (filedata).digest ("hex");
-            
-        Sys.DEBUG ("Starting to build data transaction object..");
+        const file_size_bytes  = filedata.byteLength;    
+
+
+        Sys.DEBUG ("Starting to build data transaction...");
         
-        const tx = Transaction.NEW ()
+        const datatx = Transaction.NEW ()
             .WithTag ("Content-Type", content_type)
             .WithTags 
             ([
@@ -182,6 +185,7 @@ class CMD_Upload extends CommandDef
                 "File-UnixTime-ms", fileunixtime_ms,
                 "File-SHA256",      file_hash_sha256,
                 "File-Hash",        file_hash_sha256,
+                "File-Size-Bytes",  file_size_bytes,
             ])
             .WithTagIfValueSet ("File-Id",          file_id)
             .WithTagIfValueSet ("File-Type",        file_type)
@@ -191,63 +195,155 @@ class CMD_Upload extends CommandDef
             .WithTagIfValueSet ("File-Author",      file_author)
             .WithTagIfValueSet ("Author",           file_author)
             .WithTagIfValueSet ("File-Source-URL",  file_url)
-            
-                            
+                                
+        if ( ! await TTY.AsyncWithProcessIndicator ({ caption: "Creating data transaction..." }, datatx.CreateAndSign ({ data: filedata, key: key} ) ) )
+            return this.OnError ("Failed to create/sign a transaction. Aborting.");
 
-        await TTY.AsyncWithProcessIndicator ({ caption: "Creating data transaction..." }, tx.CreateAndSign ({ data: filedata, key: key} ) )
+        //else
+            //transactions.push (datatx);
 
-        if (tx == null)
-            return Sys.ERR ("Failed to create transaction!");
-
-        tx.Tags.Print ();
-        tx.Output ();
-
-        process.exit ();
-
-        tx.addTag ("Content-Type",     content_type       );
-
-        if (!is_minimal)
-        {
-            tx.addTag ("App-Name",         "SART"             );
-            tx.addTag ("App-Version",      Util.GetVersion () );
-            tx.addTag ("Type",             "file"             );
-            if (create_arfs_metadata)
-                tx.addTag ("File-Type",        "ArFS"             );
-            tx.addTag ("File-Name",        filename_nopath    );        
-            tx.addTag ("File-UnixTime",    fileunixtime_sec   );        
-            tx.addTag ("File-UnixTime-ms", fileunixtime_ms    );        
-            tx.addTag ("File-SHA256",      Crypto.createHash ("sha256").update (filedata).digest ("hex")    );
-            if (Util.IsSet (file_id) )
-                tx.addTag ("File-Id",          file_id             );
-            if (Util.IsSet (file_caption) )
-                tx.addTag ("File-Caption",    file_caption);                    
-            if (Util.IsSet (file_description) )
-                tx.addTag ("File-Description",    file_description);
-            if (Util.IsSet (file_keywords) )
-                tx.addTag ("File-Keywords",    file_keywords);   
-            if (Util.IsSet (file_author) )
-            {
-                tx.addTag ("File-Author",       file_author           );            
-                tx.addTag ("Author",            file_author           );            
-            }
-            if (Util.IsSet (file_url) )
-                tx.addTag ("File-Source-URL",    file_url);                        
-            tx.addTag ("Unix-Time",        unixtime_now_sec);
-        }
-        Sys.DEBUG ("Data transaction object built.");
-
-        await TTY.AsyncWithProcessIndicator ({ caption: "Signing data transaction.. " }, arjs.transactions.sign (tx, key) );
+        const datatxid = datatx.GetTXID ();
         
 
 
-        const txid     = tx.id;
+
+        if (create_arfs_metadata)
+        {
+            Sys.DEBUG ("Starting to build ArFS metadata..");
+            const arfs_metadata =
+            {
+                name:             filename_nopath,
+                size:             file_size_bytes, //tx.data.length,
+                lastModifiedDate: fileunixtime_ms,
+                dataTxId:         datatxid,
+                dataContentType:  content_type,            
+            }
+            Util.SetPropertyIfValueNotNull (arfs_metadata, "caption",     file_caption);
+            Util.SetPropertyIfValueNotNull (arfs_metadata, "description", file_description);
+            Util.SetPropertyIfValueNotNull (arfs_metadata, "keywords",    file_keywords);
+            Util.SetPropertyIfValueNotNull (arfs_metadata, "author",      file_author);
+            Util.SetPropertyIfValueNotNull (arfs_metadata, "sourceURL",   file_url);
+
+            const arfs_metadata_json = Util.ObjToJSON (arfs_metadata);
+            
+            if (arfs_metadata_json == null)
+            {
+                this.OnProgramError ("Failed to stringify the created ArFS-metadata. Aborting.");
+                Sys.DEBUG (arfs_metadata);
+                return false;
+            }
+
+            Sys.DEBUG ("Starting to build ArFS metadata transaction...");
+
+            const arfs_metatx = Transaction.NEW ()
+            .WithTags 
+            ([
+                "Content-Type",     "application/json",
+                "App-Name",         "SART",
+                "App-Version",      Util.GetVersion (),
+                "Type",             "ArFS file-entity",
+                "Unix-Time",        unixtime_now_sec,                
+                "ArFS",             "0.11",
+                "Entity-Type",      "file",
+                "Drive-Id",         driveid,
+                "Parent-Folder-Id", folderid,
+                "File-Id",          "3ljXt6uccnfaX_mgDVMe1RlB-66pOvD3wwkfD03KSSo", //file_id,
+
+                "File-Name",        filename_nopath,
+                "File-UnixTime",    fileunixtime_sec,
+                "File-UnixTime-ms", fileunixtime_ms,
+                "File-SHA256",      file_hash_sha256,
+                "File-Hash",        file_hash_sha256,
+                "File-Size-Bytes",  file_size_bytes,
+            ])                        
+            .WithTagIfValueSet ("File-Caption",     file_caption)
+            .WithTagIfValueSet ("File-Description", file_description)
+            .WithTagIfValueSet ("File-Keywords",    file_keywords)
+            .WithTagIfValueSet ("File-Author",      file_author)            
+            .WithTagIfValueSet ("File-Source-URL",  file_url)
+    
+            
+            if (! await TTY.AsyncWithProcessIndicator ({ caption: "Creating ArFS metadata transaction..." }, 
+                                                         arfs_metatx.CreateAndSign ({ data: arfs_metadata_json, key: key} ) ) )
+            {
+                this.OnError ("Failed to create/sign an ArFS metadata transaction.");
+
+                if (await Sys.INPUT_GET_YESNO ("Proceed anyway?", false) != true)
+                    return this.OnError ("Posting the transaction aborted.");
+            }
+            else
+                transactions.push (arfs_metatx);
+
+        }
+
+
+
+
+        for (const t of transactions)
+        {
+            t.Output ();
+        }
+        
+
+        if (await Sys.INPUT_GET_CONFIRM (true) != true)
+        {
+            Sys.INFO ("Operation aborted by the user.");
+            return false;
+        }        
+
+        for (const t of transactions)
+        {
+            await TTY.AsyncWithProcessIndicator ({ caption: "Posting transaction " + t.GetTXID () + " ..." }, t.Post () );
+        }
+
+        return true;
+
+        process.exit ();
+
+        datatx.addTag ("Content-Type",     content_type       );
+
+        if (!is_minimal)
+        {
+            datatx.addTag ("App-Name",         "SART"             );
+            datatx.addTag ("App-Version",      Util.GetVersion () );
+            datatx.addTag ("Type",             "file"             );
+            if (create_arfs_metadata)
+                datatx.addTag ("File-Type",        "ArFS"             );
+            datatx.addTag ("File-Name",        filename_nopath    );        
+            datatx.addTag ("File-UnixTime",    fileunixtime_sec   );        
+            datatx.addTag ("File-UnixTime-ms", fileunixtime_ms    );        
+            datatx.addTag ("File-SHA256",      Crypto.createHash ("sha256").update (filedata).digest ("hex")    );
+            if (Util.IsSet (file_id) )
+                datatx.addTag ("File-Id",          file_id             );
+            if (Util.IsSet (file_caption) )
+                datatx.addTag ("File-Caption",    file_caption);                    
+            if (Util.IsSet (file_description) )
+                datatx.addTag ("File-Description",    file_description);
+            if (Util.IsSet (file_keywords) )
+                datatx.addTag ("File-Keywords",    file_keywords);   
+            if (Util.IsSet (file_author) )
+            {
+                datatx.addTag ("File-Author",       file_author           );            
+                datatx.addTag ("Author",            file_author           );            
+            }
+            if (Util.IsSet (file_url) )
+                datatx.addTag ("File-Source-URL",    file_url);                        
+            datatx.addTag ("Unix-Time",        unixtime_now_sec);
+        }
+        Sys.DEBUG ("Data transaction object built.");
+
+        await TTY.AsyncWithProcessIndicator ({ caption: "Signing data transaction.. " }, arjs.transactions.sign (datatx, key) );
+        
+
+
+        const txid     = datatx.id;
         const filesize = filedata.byteLength;
         
 
         const arfs_meta =
         {
             name:             filename_nopath,
-            size:             filesize, //tx.data.length,
+            size:             file_size_bytes, //tx.data.length,
             lastModifiedDate: fileunixtime_ms,
             dataTxId:         txid,
             dataContentType:  content_type,            
@@ -290,13 +386,13 @@ class CMD_Upload extends CommandDef
         }       
 
         const wallet_balance_winston = await Arweave.GetWalletBalance (key);
-        const total_cost_winston     = parseInt (tx.reward) + parseInt (metatx != null ? metatx.reward : 0);
+        const total_cost_winston     = parseInt (datatx.reward) + parseInt (metatx != null ? metatx.reward : 0);
         const remaining_winston      = wallet_balance_winston - total_cost_winston;
 
         Sys.INFO ("*** SOURCE FILE ***");
         Sys.INFO ("");
         Sys.INFO ("File path:    " + filename);
-        Sys.INFO ("File size:    " + Util.GetSizeStr (filesize, true) + " (" + filesize + " bytes )");
+        Sys.INFO ("File size:    " + Util.GetSizeStr (file_size_bytes, true) + " (" + file_size_bytes + " bytes )");
         Sys.INFO ("Content-Type: " + content_type);        
         if (file_caption != null)
             Sys.INFO ("Caption:      " + file_caption);
@@ -313,7 +409,7 @@ class CMD_Upload extends CommandDef
 
         Sys.INFO ("*** TRANSACTIONS TO BE POSTED ***");
         Sys.INFO ("");
-        Sys.INFO (tx.id + " - Data transaction containing file '" + Util.GetShortString (filename_nopath, 65) + "'");        
+        Sys.INFO (datatx.id + " - Data transaction containing file '" + Util.GetShortString (filename_nopath, 65) + "'");        
 
         if (metatx != null)
         {
@@ -353,14 +449,14 @@ class CMD_Upload extends CommandDef
 
 
         
-        let uploader = await arjs.transactions.getUploader (tx);
+        let uploader = await arjs.transactions.getUploader (datatx);
 
         while (! uploader.isComplete) 
         {
             await uploader.uploadChunk ();
             Sys.INFO (uploader.pctComplete + "% done, " + uploader.uploadedChunks + "/" + uploader.totalChunks + " chunks.");
         }        
-        Sys.INFO ("Data TXID: " + tx.id);
+        Sys.INFO ("Data TXID: " + datatx.id);
 
         if (metatx != null)
         {
