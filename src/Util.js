@@ -54,7 +54,7 @@ function Append          (base, str, sep = " ")  { return base != null ? base + 
 function AppendToArray   (array = [], val)       { if (array == null) array = []; if (val != null) array.push (val); return array; }
 function CopyKeysToObj   (src, dest)             { if (src == null || dest == null) return; for (const e of Object.entries (src) ) { dest[e[0]] = e[1]; }  }
 async function Delay     (ms)                    { await new Promise (r => setTimeout (r, ms) ); }
-function AmountStr       (amount, sing, plur)    { return amount == null || amount <= 0 ? "no " + plur : amount == 1 ? "one " + sing : amount + " " + plur; }
+function GetAmountStr    (amount, sing, plur)    { return amount == null || amount <= 0 ? "no " + plur : amount == 1 ? "one " + sing : amount + " " + plur; }
 function GetTopStrLen    (str1, str2)            { const s1len = str1 != null ? str1.length : 0; const s2len = str2 != null ? str2.length : 0; 
                                                    return s1len > s2len ? s1len : s2len; }
 function GetRandomUUIDv4 ()                      { return Crypto.randomUUID (); }
@@ -523,5 +523,6 @@ module.exports = {
                    IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen, AppendToArrayNoDupes,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
-                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, AmountStr, IsString, RequireOptional, IsSetStrOr,
+                   Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, GetAmountStr, AmountStr:GetAmountStr,
+                   IsString, RequireOptional, IsSetStrOr,
                    GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj, SetPropertyIfValueNotNull };

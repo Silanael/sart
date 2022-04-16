@@ -23,28 +23,30 @@ const OutputParams   = require ("./OutputParams");
 
 class CommandInstance extends SARTObject
 {
-    CDef           = null;
+    CDef            = null;
     
-    CommandName    = null;    
-    Arguments      = null;
-    ParamValues    = {};
+    CommandName     = null;    
+    Arguments       = null;
+    ParamValues     = {};
 
-    OutputObject   = null;
-    OutputParams   = null;
+    OutputObject    = null;
+    OutputParams    = null;
 
-    Config         = new Settings.Config ();
-    FileOutputDest = null;
-    OutputDests    = [];
+    Config          = new Settings.Config ();
+    FileOutputDest  = null;
+    OutputDests     = [];
 
-    WantedFields   = null;
-    WantedListMode = null;
+    WantedFields    = null;
+    WantedListMode  = null;
 
-    StartTime      = null;
-    EndTime        = null;
-    Fetches        = 0;
+    ActiveOperation = null;
 
-    Success        = null;
-    Failed         = null;
+    StartTime       = null;
+    EndTime         = null;
+    Fetches         = 0;
+
+    Success         = null;
+    Failed          = null;
 
 
 
@@ -60,6 +62,7 @@ class CommandInstance extends SARTObject
     IncrementFetchesBy   (amount)      { this.Fetches += amount;                        }
     GetFetchesAmount     ()            { return this.Fetches != null ? this.Fetches : 0 }
     WasSuccessful        ()            { return this.Success;                           }
+    IsOperationActive    ()            { return this.ActiveOperation != null;           }
   
     GetCommandName       ()            { return this.CommandName;                       }
     HasSetting           (key)         { return this.Config.HasSetting (key);           }
@@ -182,6 +185,14 @@ class CommandInstance extends SARTObject
         return this.Success;
     }
 
+    StartOperation (operation)
+    {
+        if (this.IsOperationActive () )
+            return Sys.ERR_PROGRAM ("An operation was already active while trying to start '" + operation?.toString() + "'");
+
+        this.ActiveOperation = operation;
+        return true;
+    }
 
 }
 

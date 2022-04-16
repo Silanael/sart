@@ -50,22 +50,23 @@ const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
 var Main = null;
 
-function SetMain            (main)                   { Main = main; }
-function GetMain            ()                       { return Main; }
+function SetMain                    (main)           { Main = main; }
+function GetMain                    ()               { return Main; }
 
-function GetSetting         (key)                    { return State.GetSetting (key); }
+function GetSetting                 (key)            { return State.GetSetting (key); }
 
-function IsQuiet            ()                       { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
-function IsMsg              ()                       { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsVerbose          ()                       { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsDebug            ()                       { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsMsgSTDOUT        ()                       { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                      }
-function IsMsgSTDERR        ()                       { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                      }
-function IsErrSTDOUT        ()                       { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                      }
-function IsErrSTDERR        ()                       { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                      }
-function IsForceful         ()                       { return GetSetting (SETTINGS.Force);                                                                    }
-function IsANSIAllowed      ()                       { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                                     }
-function IsTTY              ()                       { return Constants.IS_TTY; }
+function IsQuiet                    ()               { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
+function IsMsg                      ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsVerbose                  ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsDebug                    ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
+function IsMsgSTDOUT                ()               { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                }
+function IsMsgSTDERR                ()               { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                }
+function IsErrSTDOUT                ()               { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                }
+function IsErrSTDERR                ()               { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
+function IsForceful                 ()               { return GetSetting (SETTINGS.Force);                                                              }
+function IsANSIAllowed              ()               { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                               }
+function IsTTY                      ()               { return Constants.IS_TTY;                                                                         }
+function IsProgressIndicatorEnabled ()               { return IsTTY (); /* TODO - Make a config-setting */                                              }
 
 function ERR_MISSING_ARG    (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT  (obj)                    { PrintObj.SetRecursive (obj);     };
@@ -800,5 +801,6 @@ module.exports =
     ReadFile,
     INPUT_LINE,
     INPUT_GET_CONFIRM,
-    INPUT_GET_YESNO
+    INPUT_GET_YESNO,
+    IsProgressIndicatorEnabled
 };

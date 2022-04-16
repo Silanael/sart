@@ -215,7 +215,7 @@ class CMD_Upload extends CommandDef
                 name:             filename_nopath,
                 size:             file_size_bytes, //tx.data.length,
                 lastModifiedDate: fileunixtime_ms,
-                dataTxId:         datatxid,
+                dataTxId:         "3ljXt6uccnfaX_mgDVMe1RlB-66pOvD3wwkfD03KSSo", //datatxid,
                 dataContentType:  content_type,            
             }
             Util.SetPropertyIfValueNotNull (arfs_metadata, "caption",     file_caption);
@@ -247,7 +247,7 @@ class CMD_Upload extends CommandDef
                 "Entity-Type",      "file",
                 "Drive-Id",         driveid,
                 "Parent-Folder-Id", folderid,
-                "File-Id",          "3ljXt6uccnfaX_mgDVMe1RlB-66pOvD3wwkfD03KSSo", //file_id,
+                "File-Id",          "4b10e2e7-d264-4e89-8ac4-a0aaef1c87db", //, //file_id,
 
                 "File-Name",        filename_nopath,
                 "File-UnixTime",    fileunixtime_sec,

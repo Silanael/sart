@@ -16,7 +16,6 @@ const Sys          = require ('../System.js');
 const Arweave      = require ("./Arweave.js");
 const TXTag        = require ("./TXTag.js");
 const TXTagGroup   = require ("./TXTagGroup");
-const TXStatus     = require ("./TXStatus.js");
 const SARTObject   = require ("../SARTObject.js");
 const SARTGroup    = require ("../SARTGroup");
 const ByTXQuery    = require ("../GQL/ByTXQuery");
@@ -197,7 +196,6 @@ class Transaction extends SARTObject
     ObjectType          = "Transaction";
     Network             = "Arweave";
 
-    State               = new TXStatus ();
     NativeTXObj         = null;
     GQL_Edge            = null;
       
@@ -223,6 +221,12 @@ class Transaction extends SARTObject
     IsNew               = false;
     IsPosted            = false;
     
+    // TODO
+    StatusStr           = null;    
+    StatusCode          = null;    
+    Confirmations       = null;
+    MinedAtBlock        = null;
+    ConditionStr        = null;
 
     static FIELDS                  = FIELDS;
     static FIELDS_DEFAULTS         = SARTObject._FIELDS_CREATEOBJ (null, ["time","txid","flags","ctype","DestShort","qty_ar","fee_ar"]);
@@ -331,13 +335,28 @@ class Transaction extends SARTObject
     GetTagsAsArray           ()         { return this.Tags != null ? this.Tags.AsArray () : [];                                       }        
     IsNewerThan              (tx)       { return this.GetBlockHeight        () > tx?.GetBlockHeight ()                                }        
     IsOlderThan              (tx)       { return this.GetBlockHeight        () < tx?.GetBlockHeight ()                                }            
-    IsMined                  ()         { return this.State?.IsMined       ()                                                         }
-    IsPending                ()         { return this.State?.IsPending     ()                                                         }
-    IsFailed                 ()         { return this.State?.IsFailed      ()                                                         }
-    IsConfirmed              ()         { return this.State?.IsConfirmed   ()                                                         }
-    GetState                 ()         { return this.State;                                                                          }
-   
+    
+    IsStatusFetched          ()         { return this.StatusCode != null; }
+    GetStatusStr             ()         { return this.StatusStr;          };
+    GetStatusCode            ()         { return this.StatusCode          };
+    GetConditionStr          ()         { return this.ConditionStr        };    
+    GetConfirmationsAmount   ()         { return this.Confirmations       };
 
+    IsKnownByNetwork         ()         { return this.StatusCode != CONSTANTS.TXSTATUS_NOTFOUND; };
+    IsMined                  ()         { return this.StatusCode == CONSTANTS.TXSTATUS_OK;       };
+    IsPending                ()         { return this.StatusCode == CONSTANTS.TXSTATUS_PENDING;  };
+    IsFailed                 ()         { return this.StatusCode == CONSTANTS.TXSTATUS_NOTFOUND; };
+    IsConfirmed (confirmations_amount_required = Sys.GetMain().GetSetting (SETTINGS.SafeConfirmationsMin) ) 
+    {        
+        if (confirmations_amount_required == null || isNaN (confirmations_amount_required) ) 
+        {
+            Sys.ERR_ONCE ("Amount of safe amount of confirmations (config setting 'SafeConfirmationsMin' or local override) not properly set.");
+            return false;
+        }
+
+        else
+            return this.IsMined () && this.Confirmations != null && this.Confirmations >= confirmations_amount_required;
+    }
 
     IsInSameBlockAs (tx)
     { 
@@ -385,6 +404,28 @@ class Transaction extends SARTObject
         return tra + bun + dat + log + err;
     }
  
+    GetStatusText (str_if_not_present = null)
+    { 
+
+        if (this.IsStatusFetched () )
+        {
+            if (this.IsConfirmed () )
+                return "Mined with " + this.Confirmations + " confirmations.";
+
+            else if (this.IsMined () )
+                return "Mined, but the amount of confirmations is still low (" + this.Confirmations + "). May still fail, though this is unlikely.";
+
+            else if (this.IsPending () )
+                return "In the mempool, still waiting to be mined (pending).";
+
+            else if (this.IsFailed () )
+                return "Failed or invalid TXID given (transaction not found)."
+        }
+        else
+            return str_if_not_present != null ? str_if_not_present : "Status not fetched.";
+
+    }
+
     
   
     async FetchData (opts = { as_string: false } )
@@ -501,8 +542,7 @@ class Transaction extends SARTObject
         if (this.NativeTXObj == null)
             return this.OnProgramError ("Post: Native TX object null!", this);
 
-        Sys.VERBOSE ("Confirming that transaction " + this.GetTXID () + " does not exist prior to posting it.. ")
-        
+        Sys.VERBOSE ("Confirming that transaction " + this.GetTXID () + " does not exist prior to posting it.. ")        
         const state = await this.UpdateAndGetStatus ();
         
         if (state.IsExisting () )
@@ -534,12 +574,32 @@ class Transaction extends SARTObject
         }
     }
 
-    async WaitForConfirmation ()
+    /** required_confirmations_amount = null to use SETTINGS.SafeConfirmationsMin */
+    async WaitForConfirmation (required_confirmations_amount = null)
     {
-        if (this.IsPosted == false)
-            return this.OnProgramError ("WaitForConfirmation called for a transaction that has not been posted.", this);
+        //if (this.IsPosted == false)
+        //    return this.OnProgramError ("WaitForConfirmation called for a transaction that has not been posted.", this);
         
-        
+        let oldstatus = this.GetStatusCode ();
+        let newstatus = null;
+        let fetched = false;
+
+        while (!this.IsConfirmed (required_confirmations_amount) && !this.IsFailed () )
+        {
+            // Delay
+            if (fetched)
+                await Util.Delay ("20000");
+
+            await this.FetchStatus ();
+            fetched = true;
+
+            newstatus = this.GetStatusCode ();
+            if (newstatus != oldstatus)
+            {
+                oldstatus = newstatus;
+                Sys.VERBOSE (this.GetStatusText (), this);
+            }
+        }
     }
 
     SetGQLEdge (edge) 
@@ -632,11 +692,61 @@ class Transaction extends SARTObject
 
     async FetchStatus ()
     {
-        await this.State.FetchStatus (this.GetTXID () ); 
+        const txid = this.GetTXID ();
+
+        if (txid == null)
+        {
+            this.OnProgramError ("FetchStatus: Transaction does not have a TXID.", this);
+            return null;
+        }
+
+        let txstatus = await Arweave.GetTXStatus (txid);
+        
+        if (txstatus != null)
+        {
+            this.StatusCode    = txstatus.status;
+            this.Confirmations = txstatus.confirmed?.number_of_confirmations;
+            this.MinedAtBlock  = txstatus.confirmed?.block_height;
+            this.StatusStr     = Arweave.GetTXStatusStr (this.StatusCode, this.Confirmations);
+            this.ConditionStr  = this.IsConfirmed () ? "OK"
+                                                     : this.IsMined () || this.IsPending ? "BEING MINED"
+                                                                                         : "FAILED";                        
+
+            Sys.DEBUG ("StatusCode:" + this.StatusCode + " Confirmations:" + this.Confirmations + " MinedAtBlock:" + this.MinedAtBlock, this);
+
+            // TODO - Fallback to GQL if state fetch fails.
+            /*
+            const query = new ByTXQuery (Arweave);
+            const res = await query.Execute (txid);
+
+            if (res != null)
+            {
+                const tx = Transaction.FROM
+                if (res.IsMined () )
+                    txstatus = { status: Constants.TXSTATUS_OK, confirmed: {} };
+                else 
+                    txstatus = { status: Constants.TXSTATUS_PENDING, confirmed: null };
+            }
+            else
+                txstatus = { status: Constants.TXSTATUS_NOTFOUND, confirmed: null };
+            */
+        }    
+
+        else 
+        {
+            this.StatusCode    = null; 
+            this.Confirmations = null; 
+            this.MinedAtBlock  = null; 
+            this.StatusStr     = "Failed to fetch the status"; 
+            this.ConditionStr  = "STATUS FETCH FAIL"; 
+            Sys.ERR ("Failed to fetch transaction status.", this);
+        }
+        
         this.DataLoaded = true;
-        return this.State;
+        return this.GetStatusCode ();
     } 
     
+
     async FetchViaGet (txid = null)
     {
         Sys.VERBOSE ("Fetching transaction info via HTTP GET..", this);
