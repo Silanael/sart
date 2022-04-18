@@ -345,9 +345,10 @@ class Transaction extends SARTObject
     IsKnownByNetwork         ()         { return this.StatusCode != CONSTANTS.TXSTATUS_NOTFOUND; };
     IsMined                  ()         { return this.StatusCode == CONSTANTS.TXSTATUS_OK;       };
     IsPending                ()         { return this.StatusCode == CONSTANTS.TXSTATUS_PENDING;  };
-    IsFailed                 ()         { return this.StatusCode == CONSTANTS.TXSTATUS_NOTFOUND; };
+    IsNotFound               ()         { return this.StatusCode == CONSTANTS.TXSTATUS_NOTFOUND; };
+    IsFailed                 ()         { return this.IsNotFound ();                             };
     IsConfirmed (confirmations_amount_required = Sys.GetMain().GetSetting (SETTINGS.SafeConfirmationsMin) ) 
-    {        
+    {                
         if (confirmations_amount_required == null || isNaN (confirmations_amount_required) ) 
         {
             Sys.ERR_ONCE ("Amount of safe amount of confirmations (config setting 'SafeConfirmationsMin' or local override) not properly set.");

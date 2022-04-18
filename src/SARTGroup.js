@@ -90,28 +90,25 @@ class SARTGroup extends SARTBase
         }
     }
     
-    Add (entry, {id = null, allow_duplicates = false} = {} ) 
+    Add (entry, {allow_duplicates = false} = {} ) 
     {
         
         if (entry == null)
-            Sys.ERR_PROGRAM ("'entry' null.", "Transactions.Add");
-
-        if (id == null && entry.GetID != null)
-            id = entry.GetID ();
-
+            return Sys.ERR_PROGRAM ("'entry' null.", "Transactions.Add");
+        
 
         if (!allow_duplicates && this.Contains (entry) )
-            Sys.ERR_PROGRAM ("'" + entry.toString () + "' already contained in group '" + this.toString () + "' or duplicate name and/or ID present.");
+            return Sys.ERR_PROGRAM ("'" + entry.toString () + "' already contained in group '" + this.toString () + "' or duplicate name and/or ID present.");
 
         else 
         {
             Sys.DEBUG ("Adding entry " + entry, this.toString () )
             
             const name = entry.GetName ();
+            const id   = entry.GetID   ();
             
             if (id != null)          { this.ByID  [id]   = entry; }
-            if (Util.IsSet (name) )  { this.ByName[name] = entry; }
-            if ('Value' in entry)    { this.NameValuePairs[name] = entry.Value; }
+            if (Util.IsSet (name) )  { this.ByName[name] = entry; this.NameValuePairs[name] = entry.Value; }            
 
             if (entry.Aliases?.length > 0)
             {
@@ -125,9 +122,10 @@ class SARTGroup extends SARTBase
             }
             
             this.Entries.push (entry);
+            return true;
         }
 
-        return this;
+        return false;        
     }
 
 
@@ -194,7 +192,7 @@ class SARTGroup extends SARTBase
 
     GetNamesAsStr (opts = CONSTANTS.UTIL_ARRAYTOSTR_DEFAULTS) { return Util.ArrayToStr (this.GetNamesAsArray (), opts); }    
 
-    Print ()
+    Print (debug = false)
     {
         const array = this.AsArray ();
         
@@ -205,6 +203,18 @@ class SARTGroup extends SARTBase
         {
             Sys.OUT_TXT (index + "#: " + e.toString () );
             ++index;
+        }
+
+        if (debug)
+        {
+            Sys.DEBUG ("--- BY ID ---");
+            Sys.DEBUG (this.ByID      );
+
+            Sys.DEBUG ("--- BY NAME ---");
+            Sys.DEBUG (this.ByName      );
+
+            Sys.DEBUG ("--- NAME-VALUE -PAIRS ---");
+            Sys.DEBUG (this.NameValuePairs        );         
         }
     }
 }

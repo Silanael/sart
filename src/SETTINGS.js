@@ -69,6 +69,7 @@ const SETTINGS =
     ErrorWaitDelay_ms       : new Setting ("ErrorWaitDelay_ms")        .DV (5000),
     ErrorWaitVariationP     : new Setting ("ErrorWaitVariationP")      .DV (1.0),
     ErrorRetries            : new Setting ("ErrorRetries")             .DV (3),
+    MaxAsyncCalls           : new Setting ("MaxAsyncCalls")            .DV (100),
     MaxConcurrentFetches    : new Setting ("MaxConcurrentFetches")     .DV (5),
     OutputFilename          : new Setting ("OutputFilename")           .DV (null).NOCONF (),
     OutputFormat            : new Setting ("OutputFormat")             .DV (OUTPUTFORMATS.TXT),

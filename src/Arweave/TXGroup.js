@@ -2,6 +2,7 @@ const Constants   = require ("../CONSTANTS.js");
 const Sys         = require ('../System.js');
 const SARTGroup   = require ("../SARTGroup");
 const Transaction = require ("./Transaction.js");
+const Util        = require("../Util.js");
 
 
 
@@ -47,9 +48,10 @@ class TXGroup extends SARTGroup
     }
 
 
-    GetByTXID  (txid)  { return this.GetByID (txid);  }
-    HasTXID    (txid)  { return this.ContainsID   (txid);  }
-    toString   ()      { return "TXGroup";            }   
+    GetByTXID  (txid)  { return this.GetByID    (txid);  }
+    HasTXID    (txid)  { return this.ContainsID (txid);  }
+    toString   ()      { return "TXGroup '" + Util.Or (this.GetName (), "unnamed") + "' (" 
+                                 + Util.AmountStr (this.GetAmount (), "entry", "entries") + ")" }   
     GetSort    ()      { return this.SortOrder;       } 
     
 
@@ -94,47 +96,52 @@ class TXGroup extends SARTGroup
     }
 
 
-    async FetchStatusOfAll ()
+    async FetchStatusOfAll (confirm_amount_req = null)
     {
-        const report =
+        const results =
         {
-            Total:     0,
-            Confirmed: 0,
-            Mined:     0,
-            Pending:   0,
-            Missing:   0,
-
-            Transactions: {}
+            All:           this.AsArray (),
+            Processed:     new TXGroup  ().WithName ("Processed"),            
+            Confirmed:     new TXGroup  ().WithName ("Confirmed"),
+            Mined:         new TXGroup  ().WithName ("Mined"),
+            Pending:       new TXGroup  ().WithName ("Pending"),
+            NotFound:      new TXGroup  ().WithName ("Not found"),
+            
+            FailedToFetch: new TXGroup  ().WithName ("Failed to fetch"),
         }
 
-        for (const tx of this.AsArray () )
+        for (const tx of results.All)
         {
             const txid = tx.GetTXID ();
 
-            if (report.Transactions[txid] != null)
+            if (results.Processed.ContainsID (txid) )
                 this.OnError ("Duplicate TXID encountered: " + txid);
 
             else
-            {
-                const status = await tx.UpdateAndGetStatus ();
+            {                
+                const status = await tx.FetchStatus ();                
 
                 if (status == null)
-                    this.OnProgramError ("Failed to get status object for tx " + tx);
+                {
+                    this.OnError ("Failed to get status for tx " + tx);
+                    results.FailedToFetch.Add (tx);
+                }
 
                 else
-                {                
-                    report.Total++;                
-                    if      (status.IsConfirmed () ) report.Confirmed++ ; 
-                    else if (status.Mined       () ) report.Mined++     ; 
-                    else if (status.Pending     () ) report.Pending++   ; 
-                    else if (status.Failed      () ) report.Missing++   ; 
-
-                    report.Transactions[txid] = tx.GetTypeShort () + " - " + status.GetStatusFull ();
+                {                                                     
+                    if ( (confirm_amount_req != null && tx.IsConfirmed (confirm_amount_req)) || tx.IsConfirmed () )
+                        results.Confirmed.Add (tx); 
+                    
+                    if (tx.IsMined       () ) results.Mined    .Add (tx); 
+                    if (tx.IsPending     () ) results.Pending  .Add (tx); 
+                    if (tx.IsNotFound    () ) results.NotFound .Add (tx);                     
                 }
+                
+                results.Processed.Add (tx);
             }
         }
 
-        return report;
+        return results;
     }
 
 

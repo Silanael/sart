@@ -42,6 +42,8 @@ const GQL_VALID_SORT             = [ GQL_SORT_HEIGHT_ASCENDING, GQL_SORT_HEIGHT_
 
 const UTIL_ARRAYTOSTR_DEFAULTS   = { entry_separator: ", ", values_in_quotes: false };
 
+const OBJPRINT_DEPTH_DEFAULT     = 0;
+
 function FUNC_ALWAYS_TRUE        () { return true;  }
 function FUNC_ALWAYS_FALSE       () { return false; }
 
@@ -171,5 +173,6 @@ module.exports =
     UTIL_ARRAYTOSTR_DEFAULTS,
     LISTMODE_TABLE,
     LISTMODE_SEPARATE,
-    TXSTATUSES_POST_OK
+    TXSTATUSES_POST_OK,
+    OBJPRINT_DEPTH_DEFAULT
 };

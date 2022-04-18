@@ -43,6 +43,7 @@ function IsMIMEType      (str)                   { return str?.split ("/")?.leng
 function GetUNIXTimeMS   ()                      { return new Date ().getTime (); }
 function GetVersion      ()                      { return Package.version; }
 function GetVersionStr   ()                      { return "v" + Package.version + " [" + Package.versiondate + "]"; }
+function IsReleaseVersion ()                     { return Package.isRelease != false; }
 function GetDummyDate    ()                      { return "????-??-?? ??:??:??"; }
 function StripExtension  (filename)              { return filename != null ? Path.parse (filename)?.name : null; }
 function IsTTY           ()                      { return process.stdout.isTTY; }
@@ -54,7 +55,7 @@ function Append          (base, str, sep = " ")  { return base != null ? base + 
 function AppendToArray   (array = [], val)       { if (array == null) array = []; if (val != null) array.push (val); return array; }
 function CopyKeysToObj   (src, dest)             { if (src == null || dest == null) return; for (const e of Object.entries (src) ) { dest[e[0]] = e[1]; }  }
 async function Delay     (ms)                    { await new Promise (r => setTimeout (r, ms) ); }
-function GetAmountStr    (amount, sing, plur)    { return amount == null || amount <= 0 ? "no " + plur : amount == 1 ? "one " + sing : amount + " " + plur; }
+function GetAmountStr    (amount, sing, plur)    { return amount == null || amount <= 0 ? "0 " + plur : amount == 1 ? "1 " + sing : amount + " " + plur; }
 function GetTopStrLen    (str1, str2)            { const s1len = str1 != null ? str1.length : 0; const s2len = str2 != null ? str2.length : 0; 
                                                    return s1len > s2len ? s1len : s2len; }
 function GetRandomUUIDv4 ()                      { return Crypto.randomUUID (); }
@@ -524,5 +525,5 @@ module.exports = {
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, GetAmountStr, AmountStr:GetAmountStr,
-                   IsString, RequireOptional, IsSetStrOr,
+                   IsString, RequireOptional, IsSetStrOr, IsReleaseVersion,
                    GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj, SetPropertyIfValueNotNull };

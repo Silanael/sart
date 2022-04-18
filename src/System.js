@@ -11,10 +11,10 @@ const FS            = require ("fs");
 const ReadLine      = require ('readline');
 
 // Local imports
-const Constants     = require ("./CONSTANTS.js");
-const LogLevels     = Constants.LOGLEVELS;
-const OutputDests   = Constants.OUTPUTDESTS;
-const OutputFormats = Constants.OUTPUTFORMATS;
+const CONSTANTS     = require ("./CONSTANTS.js");
+const LogLevels     = CONSTANTS.LOGLEVELS;
+const OutputDests   = CONSTANTS.OUTPUTDESTS;
+const OutputFormats = CONSTANTS.OUTPUTFORMATS;
 const { SETTINGS }  = require ("./SETTINGS");
 const State         = require ("./ProgramState.js");
 const Util          = require ("./Util");
@@ -31,7 +31,8 @@ const ANSI_ESCAPE        = "\033[";
 const ANSICODE_CLEAR     = 0;
 const ANSICODE_UNDERLINE = 4;
 const ANSICODE_BLINK_ON  = 5;
-const ANSICODE_BLINK_off = 25;
+const ANSICODE_BLINK_OFF = 25;
+
 
 const ANSI_RED       = "\033[31m";
 const ANSI_YELLOW    = "\033[33m";
@@ -42,6 +43,9 @@ const ANSI_CLEAR     = "\033[0m";
 const ANSI_UNDERLINE = "\033[4m";
 const ANSI_BLINK     = "\033[5m";
 const ANSI_BLINK_OFF = "\033[25m";
+const ANSI_CLEARLINE = "\033[2K\r";
+
+const CHR_NEWLINE    = '\n';
 
 const CHOICESTR_DEFAULT_YES = ["Y/n"];
 const CHOICESTR_DEFAULT_NO  = ["y/N"];
@@ -53,7 +57,7 @@ var Main = null;
 function SetMain                    (main)           { Main = main; }
 function GetMain                    ()               { return Main; }
 
-function GetSetting                 (key)            { return State.GetSetting (key); }
+function GetSetting                 (key)            { return Main?.GetSetting (key); }
 
 function IsQuiet                    ()               { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
 function IsMsg                      ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
@@ -65,8 +69,11 @@ function IsErrSTDOUT                ()               { return ( GetSetting (SETT
 function IsErrSTDERR                ()               { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
 function IsForceful                 ()               { return GetSetting (SETTINGS.Force);                                                              }
 function IsANSIAllowed              ()               { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                               }
-function IsTTY                      ()               { return Constants.IS_TTY;                                                                         }
+function IsTTY                      ()               { return CONSTANTS.IS_TTY;                                                                         }
 function IsProgressIndicatorEnabled ()               { return IsTTY (); /* TODO - Make a config-setting */                                              }
+function IsProgressIndicatorActive  ()               { return GetProgressIndicator () != null;                                                          }
+function GetActiveCommand           ()               { return GetMain ()?.GetActiveCommand ();                                                          }
+function GetProgressIndicator       ()               { return GetActiveCommand ()?.GetProgressIndicator ();                                             }
 
 function ERR_MISSING_ARG    (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT  (obj)                    { PrintObj.SetRecursive (obj);     };
@@ -108,6 +115,37 @@ async function ReadFile (filename)
                      
         }
     )
+}
+
+
+async function Async (promises = [], {await_all = true} = {} )
+{
+    if (promises == null || promises.length <= 0)
+        return ERR_PROGRAM ("No Promises given.", "Async");
+
+    const amount         = promises.length;
+    const max_concurrent = GetSetting (SETTINGS.MaxAsyncCalls);
+
+    if (amount <= max_concurrent)
+    {
+        DEBUG ("Running " + amount + " promise(s) all in one go (await_all:" + await_all + ")...");
+        return await_all == true ? await Promise.all (promises) : await Promise.race (promises);
+    }
+    
+    else
+    {
+        let processed = 0;
+        let results = [];
+        while (processed < amount)
+        {
+            DEBUG ("Running entries " + processed + " to " + (processed + max_concurrent - 1) + " (await_all:" + await_all + ")...");
+            const entries = promises.slice (processed, (processed += max_concurrent) );
+            results.push (await_all == true ? await Promise.all (entries) : await Promise.race (entries) );
+        }
+
+        return results;
+    }
+    
 }
 
 
@@ -166,41 +204,86 @@ function ErrorHandler (error, msgs = {prefix: null, suffix: null} )
 
 class OutputDest
 {    
+
+    ANSISupported  = true;
+    Indicator      = null;
+    IndicatorDrawn = false;
+
     Start          ()         {}    
-    OutputLine     (str)      {}
-    OutputBinary   (data)     {}    
+    OutputLine     (str)      { this.ClearIndicator (); this.__DoOutputLine  (str);  this.DrawIndicator (); }
+    OutputChars    (str)      { this.ClearIndicator (); this.__DoOutputChars (str);  this.DrawIndicator (); }
+    OutputData     (data)     { this.ClearIndicator (); this.__DoOutputData  (data); this.DrawIndicator (); } 
+    NewLine        ()         { this.OutputChars (CHR_NEWLINE);    }
+    ClearLine      ()         { if (this.CanUseANSI () ) this.__DoOutputChars (ANSI_CLEARLINE); }
     Done           ()         {}
+    CanUseANSI     ()         { return this.ANSISupported && IsANSIAllowed (); }
+
+    HookIndicator   (indicator) { this.Indicator = indicator; this.DrawIndicator (); }
+    UnhookIndicator ()          { this.Indicator = null;      this.Newline       (); }    
+    
+    DrawIndicator   ()
+    { 
+        if (this.Indicator == null)
+            return; 
+
+        else
+        {
+            this.ClearIndicator (); 
+            this.__DoOutputChars (this.Indicator.GetStr () ); 
+            this.IndicatorDrawn = true;
+        }
+    }
+
+    ClearIndicator ()
+    { 
+        if (this.IndicatorDrawn) 
+            this.ClearLine (); 
+
+        this.IndicatorDrawn = false; 
+    }
+
 
     OutputANSICode (ansicode) 
     {
-        if (IsANSIAllowed () ) 
-            this.OutputBinary (ANSICODE (ansicode) );
+        if (this.CanUseANSI () ) 
+            this.OutputChars (ANSICODE (ansicode) );
     }    
 }
 
 class OutputDest_STDOUT extends OutputDest
 {
-    OutputLine (str)
+    ANSISupported = true;
+
+    __DoOutputLine (str)
     {
-        console.log (str); 
+        OUT_TXT_STDOUT (str, true);        
     }
-    OutputBinary (data)
+    __DoOutputChars (str)
     {
-        process.stdout.write (data);
+        OUT_TXT_STDOUT (str, false);        
+    }
+    __DoOutputData (data)
+    {
+        OUT_STDOUT (data);        
     }
 }
 
 
 class OutputDest_STDERR extends OutputDest
 {
-    OutputLine (str)
-    {
-        console.error (str); 
-    }
+    ANSISupported = true;
 
-    OutputBinary (data)
+    __DoOutputLine (str)
     {
-        process.stderr.write (data);
+        OUT_TXT_STDERR (str, true);
+    }
+    __DoOutputChars (str)
+    {
+        OUT_TXT_STDERR (str, false);        
+    }
+    __DoOutputData (data)
+    {
+        OUT_STDERR (data);        
     }   
 
 }
@@ -208,11 +291,13 @@ class OutputDest_STDERR extends OutputDest
 
 class OutputDest_File extends OutputDest
 {
-    FilePath     = null;
-    Mode         = null;
-    Encoding     = null;
+    ANSISupported = false;
 
-    OutputStream = null;
+    FilePath      = null;
+    Mode          = null;
+    Encoding      = null;
+
+    OutputStream  = null;
 
 
     constructor (file_path, mode = "wx", encoding = "utf-8")
@@ -241,16 +326,8 @@ class OutputDest_File extends OutputDest
                 }
             );            
     }
-
-    OutputLine (str)
-    {
-        if (! this.IsFileOpened () )
-            this.Start ();
-
-        this.OutputStream.write (str);
-    }
-
-    OutputBinary (data)
+    
+    __DoOutputData (data)
     {
         if (! this.IsFileOpened () )
             this.Start ();
@@ -258,7 +335,18 @@ class OutputDest_File extends OutputDest
         this.OutputStream.write (data);        
     }   
 
-    OutputANSI (ansi) { }
+    __DoOutputLine (str)
+    {
+        this.__DoOutputData (str);        
+    }   
+
+    __DoOutputChars (str)
+    {
+        this.__DoOutputData (str);        
+    }   
+
+
+    __DoOutputANSI (ansi) { }
 
     Done ()
     {
@@ -284,8 +372,37 @@ const OUTPUTDESTS_STDERR = [ OUTPUTDESTS.STDERR ];
 
 
 
+/** Direct output that will not check for loglevel. */
+function OUT_STDOUT (data)
+{
+    process.stdout.write (data);
+}
 
 
+/** Direct output that will not check for loglevel. */
+function OUT_STDERR (data)
+{    
+    process.stdout.write (data);
+}
+
+
+/** Direct output that will not check for loglevel. */
+function OUT_TXT_STDOUT (str, lf = true)
+{
+    if (lf)
+        console.log (str);
+    else
+        OUT_STDOUT (str)
+}
+
+/** Direct output that will not check for loglevel. */
+function OUT_TXT_STDERR (str, lf = true)
+{
+    if (lf)
+        console.error (str);
+    else
+        OUT_STDERR (str)
+}
 
 
 
@@ -340,10 +457,60 @@ function OUT_NEWLINE ()
 {
     for (const d of Main.GetOutputDests () )
     {
-        d?.OutputBinary ("\n");        
+        d?.OutputBinary (CHR_NEWLINE);        
     }        
 }
 
+function OUT_NEWLINE_STDOUT ()
+{
+    OUT_STDOUT (CHR_NEWLINE);    
+}
+
+function OUT_NEWLINE_STDERR ()
+{
+    OUT_STDERR (CHR_NEWLINE);    
+}
+
+function OUT_TXT_JSOBJ (js_object, params = {} )
+{
+    params = {...{src: null, output_func: INFO, indent: 0, spacer: 2, depth: CONSTANTS.OBJPRINT_DEPTH_DEFAULT}, ...params };
+
+
+    if (js_object == null)
+        return ERR_PROGRAM ("No 'js_object' given.", "OUT_TXT_JSOBJ");
+
+    else
+    {
+        const entries = Object.entries (js_object);        
+        let maxlen = 0;        
+
+        // Find the maximum length from among the keys
+        for (const e of entries)
+        {
+            if (e[0]?.length > maxlen)
+                maxlen = e[0].length;
+        }
+        const keylen = maxlen + params.spacer;        
+        
+        //{ output_func: output_func, indent: indent + keylen, spacer: spacer, depth: depth - 1 }
+
+        for (const e of entries)
+        {            
+            const key = e[0];
+            const val = e[1];
+            
+            params.output_func (" ".repeat (params.indent) + key?.padEnd (keylen) + val?.toString (), params)                        
+
+            if (val != null && params.depth > 0 && !Util.IsString (val) && (Array.isArray (val) || val?.AsArray != null || typeof val === "object") )
+            {                                          
+                const array = val?.AsArray != null ? val.AsArray () : val;
+                
+                OUT_TXT_JSOBJ (array, {...{params}, ...{depth: params.depth - 1, indent: params.indent + keylen}} );
+            }    
+            
+        }
+    }
+}
 
 /** Fields for 'recursive': 'depth', integer */
 /*
@@ -503,66 +670,101 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
 
 
 // Informative output, ie. for 'help'.
-function INFO (str, src)
+function INFO (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {})
 {       
+    params.output_func = INFO;
+
     if (IsMsg () )
     {
-        const msg = src != null ? src + ": " + str : str;
-        if (IsMsgSTDOUT () ) console.log  (msg);
-        if (IsMsgSTDERR () ) console.warn (msg);
+        if (Util.IsString (str) )
+        {
+            const msg = src != null ? src + ": " + str : str;
+            if (IsMsgSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (msg);
+            if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
+        }
+        else
+            OUT_TXT_JSOBJ (str, params);
     }
 }
 
 
 
 // Detailed informative output - needs to be enabled.
-function VERBOSE (str, src)
+function VERBOSE (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {})
 {        
+    params.output_func = VERBOSE;
+
     if (IsVerbose () )
     {
-        const msg = src != null ? src + ": " + str : str;
-        if (IsMsgSTDOUT () ) console.log  (msg);
-        if (IsMsgSTDERR () ) console.warn (msg);
+        if (Util.IsString (str) )
+        {
+            const msg = src != null ? src + ": " + str : str;
+            if (IsMsgSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (msg);
+            if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
+        }
+        else
+            OUT_TXT_JSOBJ (str, params);
     }
 }
 
 
 
 // Very extensive output - needs to be enabled.
-function DEBUG (str, src)
+function DEBUG (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {})
 {        
+    params.output_func = DEBUG;
+
     if (IsDebug () )
     {
-        const msg = src != null ? src + ": " + str : str;
-        if (IsMsgSTDOUT () ) console.log   (msg);
-        if (IsMsgSTDERR () ) console.error (msg);        
+        if (Util.IsString (str) )
+        {
+            const msg = params.src != null ? params.src + ": " + str : str;
+            if (IsMsgSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (msg);
+            if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
+        }
+        else
+            OUT_TXT_JSOBJ (str, params);
     }
 }
 
 
 
 // Warning. Return true if the warning is suppressed.
-function WARN (str, src, args = {error_id: null} )
+function WARN (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {} )
 {
+    params.output_func = WARN;
+
     if (!IsQuiet () )
     {
-        const msg = src != null ? src + ": " + str : str;
-        if (IsErrSTDOUT () ) console.log   (ANSIWARNING (msg) );
-        if (IsErrSTDERR () ) console.error (ANSIWARNING (msg) );        
-    }
+        if (Util.IsString (str) )
+        {
+            const msg = src != null ? src + ": " + str : str;
+            if (IsErrSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (ANSIWARNING (msg) );
+            if (IsErrSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (ANSIWARNING (msg) );        
+        }
+        else
+            OUT_TXT_JSOBJ (str, params);
+    }    
     return false;    
 }
 
 
 
 // Error message output. Abort on false - return true if error is suppressed.
-function ERR (str, src, args = {error_id: null})
+function ERR (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {} )
 {    
+    params.output_func = ERR;
+
     if (!IsQuiet () )
     {        
-        const msg = src != null ? src?.toString () + ": " + str : str;
-        if (IsErrSTDOUT () ) console.log   (ANSIERROR (msg) );
-        if (IsErrSTDERR () ) console.error (ANSIERROR (msg) );        
+        if (Util.IsString (str) )
+        {
+            const msg = src != null ? src?.toString () + ": " + str : str;
+            if (IsErrSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (ANSIERROR (msg) );
+            if (IsErrSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (ANSIERROR (msg) );        
+        }
+        else
+            OUT_TXT_JSOBJ (str, params);
     }       
     return false;
 }
@@ -581,6 +783,7 @@ function ERR_OVERRIDABLE (str, src)
         return true;
     }
 }
+
 
 
 
@@ -754,6 +957,10 @@ function ON_EXCEPTION (exception, src = "Something", subject = null)
 
 module.exports = 
 {
+    OUT_STDOUT,
+    OUT_STDERR,
+    OUT_TXT_STDOUT,
+    OUT_TXT_STDERR,    
     OUT_TXT,
     OUT_TXT_RAW,
     OUT_BIN,
@@ -798,6 +1005,7 @@ module.exports =
     IsDebug,
     IsMsg,
     IsVerbose,
+    Async,
     ReadFile,
     INPUT_LINE,
     INPUT_GET_CONFIRM,

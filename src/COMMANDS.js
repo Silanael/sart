@@ -22,7 +22,7 @@ const CMD_ReadMe     = require ("./Commands/CMD_ReadMe");
 const CMD_Upload     = require ("./Commands/CMD_Upload");
 
 const CMD_Console    = require ("./Commands/CMD_Console");
-const CMD_Test       = Util.RequireOptional ("./Commands/CMD_Test");
+const CMD_Test       = Util.IsReleaseVersion () ? null : require ("./Commands/CMD_Test");
 const CMD_Sila       = Util.RequireOptional ("./Commands/CMD_Silanael");
 
 

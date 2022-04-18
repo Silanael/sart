@@ -14,7 +14,7 @@ const Settings       = require ("./Config");
 const SARTObject     = require ("./SARTObject");
 const SETTINGS       = require ("./SETTINGS").SETTINGS;
 const OutputParams   = require ("./OutputParams");
-
+const Operation      = require ("./Operation");
 
 
 
@@ -89,8 +89,10 @@ class CommandInstance extends SARTObject
     HasOutputParams      ()            { return this.OutputParams != null;   }
     GetOutputParams      ()            { return this.OutputParams;           }
     AddOutputParams      ()            { this.OutputParams = new OutputParams ().WithCMD (this); return this.OutputParams; }
-    SetOutputObject      (sobj)        { this.OutputObject = sobj; }
-    GetOutputObject      ()            { return this.OutputObject; }
+    SetOutputObject      (sobj)        { this.OutputObject = sobj;    }
+    GetOutputObject      ()            { return this.OutputObject;    }
+    GetActiveOperation   ()            { return this.ActiveOperation; }
+    GetProgressIndicator ()            { return this.GetActiveOperation ()?.GetProgressIndicator (); }
 
     GetEffectiveListMode ()            { return this.CDef.GetEffectiveListMode (this); }
     GetEffectiveFields   ()            { return this.CDef.GetEffectiveFields   (this); }
@@ -185,13 +187,17 @@ class CommandInstance extends SARTObject
         return this.Success;
     }
 
-    StartOperation (operation)
+    async ExecuteOperation ( {caption = null, type = null} = {}, promise)
     {
         if (this.IsOperationActive () )
-            return Sys.ERR_PROGRAM ("An operation was already active while trying to start '" + operation?.toString() + "'");
+            return Sys.ERR_PROGRAM ("An operation was already active while trying to execute '" + caption?.toString () + "'");
 
-        this.ActiveOperation = operation;
-        return true;
+        this.ActiveOperation = new Operation ();
+        
+        const result = await this.ActiveOperation.Execute ( {caption: caption, type:type}, promise);
+        
+        this.ActiveOperation = null;
+        return result;
     }
 
 }

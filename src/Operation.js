@@ -19,6 +19,10 @@ class Operation
     Promises          = null;
     ProgressIndicator = null;
 
+    
+    GetProgressIndicator () { return this.ProgressIndicator };
+
+    
     async Execute ( {caption = null, type = null} = {}, promise)
     {
         this.Caption = caption;
@@ -26,27 +30,17 @@ class Operation
 
         const cmd = Sys.GetMain ().GetActiveCommand ();
 
-        if (cmd == null)
-            return Sys.ERR_PROGRAM ("Tried to start an operation outside a command: '" + this.toString() + "'");
-
-        else if (cmd.StartOperation (this) )
-            return false;            
-
+        if (Sys.IsProgressIndicatorEnabled () )
+        {
+            this.ProgressIndicator = new ProgressIndicator ();
+            this.Promises = [ promise, this.ProgressIndicator.Start ( {caption: caption} ) ];            
+        }
         else
         {
-            if (Sys.IsProgressIndicatorEnabled () )
-            {
-                this.ProgressIndicator = new ProgressIndicator ();
-                this.Promises = [ promise, this.ProgressIndicator.Start ( {caption: caption} ) ];
-            }
-            else
-            {
-                this.ProgressIndicator = null;
-                this.Promises = [ promise ];
-            }
-            
+            this.ProgressIndicator = null;
+            this.Promises = [ promise ];
         }
-
+            
         Sys.DEBUG ("Operation '" + this.Caption + "' started.");
         
         const result = await Promise.race (this.Promises);
@@ -61,6 +55,8 @@ class Operation
     { 
         return "Operation '" + this.Caption + "' of Type:" + this.Type + " with " + Util.GetAmountStr (this.Promises?.length, "promise", "promises") ;
     }
+
+     
 }
 
 
