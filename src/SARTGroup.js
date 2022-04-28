@@ -23,9 +23,9 @@ class SARTGroup extends SARTBase
     NameValuePairs = {};
 
 
-    constructor (...entries)
+    constructor ( {name = null, entries = [] } = {} )
     {
-        super ();
+        super ( {name: name} );
         for (const e of entries)
         {            
             this.Add (e);
@@ -77,7 +77,7 @@ class SARTGroup extends SARTBase
     Contains (entry)
     {
         if (entry != null)
-        {
+        {            
             const id   = entry.GetID   ();
             const name = entry.GetName ();
 
@@ -191,6 +191,123 @@ class SARTGroup extends SARTBase
     }
 
     GetNamesAsStr (opts = CONSTANTS.UTIL_ARRAYTOSTR_DEFAULTS) { return Util.ArrayToStr (this.GetNamesAsArray (), opts); }    
+
+
+    GetEffectiveItems (names = [], {groups = new SARTGroup (), use_all_if_no_names = true} = {} )
+    { 
+
+        const all_entries_arr = this.AsArray ();
+        const all_names_arr   = this.GetNamesAsArray ();
+        const names_initial   = names;
+
+        if (names?.length <= 0)
+            names = use_all_if_no_names ? all_names_arr : null;
+
+        // A special case where only positives and/or negatives are given.
+        else if (use_all_if_no_names && names.find (e => !e.startsWith ("-") && !e.startsWith ("+") ) == null)        
+            names = all_names_arr?.concat (names);
+        
+
+        if (names == null && use_all_if_no_names)
+        {            
+            Sys.DEBUG ("GetEffectiveItems: 'names' null, including all items.");
+            names = all_names_arr;            
+        }
+
+        if (names == null)
+        {
+            this.OnError ("GetEffectiveItems: No names given", this);
+            return null;
+        }
+
+
+        if (groups?.GetAmount () > 0)
+        {
+            // Process groups    
+            const groups_included = [];
+            for (const iname of names)
+            {            
+                const group = groups.GetByName (iname);
+
+                if (group != null)
+                {                
+                    const group_content = groups.GetNamesAsArray ();
+
+                    if (group_content == null)
+                        Sys.DEBUG ("No valid items in group '" + group + "'.");
+
+                    else
+                    {
+                        Sys.DEBUG ("Adding names from group " + group + "...");
+                        groups_included.push (...group_content);                    
+                    }                
+                }        
+                else            
+                    groups_included.push (iname);         
+            }     
+            names = groups_included;
+        }
+
+        // Get negates
+        const negates = [];
+        const no_negates = [];
+        for (const iname of names)
+        {
+            if (iname != null)
+            {
+                if (iname.startsWith ("-") )            
+                    negates.push (iname.slice (1) );            
+
+                else
+                    no_negates.push (iname.startsWith ("+") ? iname.slice (1) : iname);                
+            }
+        }
+
+
+        // Process names
+        const final_group = new SARTGroup ();
+
+        for (const iname of no_negates)
+        {
+            const item = this.GetByName (iname);
+
+            if (item == null)
+                this.OnError ("Item '" + iname + "' does not exist.");
+
+            else
+            {
+                let negated = false;
+                for (const neg of negates)
+                {
+                    const nitem = this.GetByName (neg);
+
+                    if (nitem == null)
+                        this.OnError ("Negated item '" + neg + "' does not exist.");
+
+                    else if (item == nitem)           
+                    {
+                        negated = true;
+                        break;
+                    }
+
+                }
+                if (!negated)
+                {
+                    Sys.DEBUG ("Adding item '" + item +  "' to the final group.");
+                    final_group.Add (item);
+                }
+                else
+                    Sys.DEBUG ("Item '" + item + "' negated - not adding to the final group.");
+            }
+        }     
+
+        if (Sys.IsDebug () )
+            Sys.DEBUG ("GetEffectiveItems: The initial name list '" + names_initial + "' resulted in the following items: " + final_group.GetNamesAsStr () );
+
+        return final_group;    
+    }  
+
+
 
     Print (debug = false)
     {

@@ -50,6 +50,7 @@ function IsTTY           ()                      { return process.stdout.isTTY; 
 function IsOutputPiped   ()                      { return !this.IsTTY (); }
 function IsFlagSet       (flags, mask)           { return (flags & mask) != 0; }
 function Or              (obj1, obj2)            { return obj1 != null ? obj1 : obj2; }
+function Or3             (obj1, obj2, obj3)      { return obj1 != null ? obj1 : obj2 != null ? obj2 : obj3; }
 function IsSetStrOr      (str1, str2)            { return IsSet (str1) ? str1 : str2; }
 function Append          (base, str, sep = " ")  { return base != null ? base + sep + str : str; }
 function AppendToArray   (array = [], val)       { if (array == null) array = []; if (val != null) array.push (val); return array; }
@@ -520,10 +521,11 @@ function GetKeyFromJSObj (js_obj, key, case_sensitive = false)
 
 
 
+
 module.exports = {  
                    IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen, AppendToArrayNoDupes,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, GetAmountStr, AmountStr:GetAmountStr,
-                   IsString, RequireOptional, IsSetStrOr, IsReleaseVersion,
+                   IsString, RequireOptional, IsSetStrOr, IsReleaseVersion, Or3,
                    GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj, SetPropertyIfValueNotNull };

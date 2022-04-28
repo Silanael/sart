@@ -107,18 +107,20 @@ class CMD_Testing extends CommandDef
         const tx1 = new Transaction ("DuVcUb5_80yWXP5mM2zojfsuBR7JqFkiw0spXkpFrv0");
         const tx2 = new Transaction ("DuVcUb5_80yWXP5mFFFFFFFuBR7JqFkiw0spXkpFrv0");
 
+        /*
         const tsk = 
         {
             Test: "Foo",
             Bar:  new TXGroup ().With (tx1, tx2)
         }
         Sys.DEBUG (tsk, {src:"bar", depth:2});
-
-        /*
-        const grp = new TXGroup ().With (tx1, tx2);
-        grp.Print (true);
-        Sys.INFO (await grp.FetchStatusOfAll () );
         */
+
+        
+        const grp = new TXGroup ().With (tx1, tx2);
+        grp.Output ();
+        //Sys.INFO (await grp.FetchStatusOfAll () );
+        
 
         //await TTY.AsyncWithProcessIndicator ({ caption: "Waiting for transactions to be mined and confirmed..." }, tx.WaitForConfirmation (100) );
         //await cmd_instance.ExecuteOperation ( {caption:"Waiting for confirmation"}, tx.WaitForConfirmation (2000) );

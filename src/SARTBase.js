@@ -26,7 +26,7 @@ class SARTBase
     Warnings           = null;
 
 
-    constructor (name = null)
+    constructor ({ name = null } = {} )
     {
         this.Name = name;
     }

@@ -7,82 +7,46 @@
 // A generic object with the basic functionality
 //
 
-const CONSTANTS  = require ("./CONSTANTS");
-const Sys        = require ("./System.js");
-const Util       = require ("./Util.js");
-const FData      = require ("./FieldData").FieldData;
-const FieldDataG = require ("./FieldData").FieldDataGroup;
-const FieldDef   = require ("./FieldDef");
-const SARTBase   = require ("./SARTBase");
-const SARTGroup  = require ("./SARTGroup");
-const OutputArgs = require ("./OutputParams");
-const FieldGroup = require ("./FieldGroup");
-const FieldList  = require ("./FieldList");
+const CONSTANTS     = require ("./CONSTANTS");
+const Sys           = require ("./System.js");
+const Util          = require ("./Util.js");
+const FData         = require ("./FieldData").FieldData;
+const FieldDataG    = require ("./FieldData").FieldDataGroup;
+const FieldDef      = require ("./FieldDef");
+const SARTBase      = require ("./SARTBase");
+const SARTGroup     = require ("./SARTGroup");
+const OutputArgs    = require ("./OutputParams");
+const FieldGroup    = require ("./FieldGroup");
+const FieldList     = require ("./FieldList");
+const SARTObjectDef = require ("./SARTObjectDef");
 
 
 class SARTObject extends SARTBase
 {
-    ObjectType         = "SARTObject";
+    static CLASSOBJECTDEF  = null;
+
+    ObjectDef              = null;
     
-    Valid              = true;
-    DataLoaded         = false;
+    Valid                  = true;
+    DataLoaded             = false;
 
-    Value              = null;
-
-    FieldData          = new SARTGroup ();
-
-    // ***
-
-    static FIELDS              = new SARTGroup ();
-    static FIELDGROUPS         = new SARTGroup ().With (FieldGroup.Default, FieldGroup.All, FieldGroup.NotNull, FieldGroup.Null, 
-                                                        FieldGroup.None, FieldGroup.Separate, FieldGroup.Table);
-    static FIELDS_DEFAULTS     = SARTObject._FIELDS_CREATEOBJ (null, null);
-    static FIELDS_SETTINGKEYS  = SARTObject._FIELDS_CREATEOBJ (null, null);
-    
-    // The entries should be ordered from most to least preferrable.
-    static FETCHDEFS           = new SARTGroup ();
-
-
-    static _FIELDS_CREATEOBJ (separate, table) { return { [CONSTANTS.LISTMODE_TABLE]: table, [CONSTANTS.LISTMODE_SEPARATE]: separate}; }
-
-    static GET_ALL_FIELD_DEFS           ()         { return this.FIELDS; }
-    static GET_ALL_FIELD_GROUPS         ()         { return this.FIELDGROUPS; }
-    static GET_ALL_FIELDNAMES           ()         { return this.FIELDS?.GetNamesAsArray (); }
-    static GET_ALL_FIELDNAMES_STR       ()         { return this.FIELDS?.GetNamesAsStr   (); }
-    static GET_SETTING_FIELDNAMES       (listmode) { return this.FIELDS_SETTINGKEYS[listmode] != null ? Sys.GetMain().GetSetting (this.FIELDS_SETTINGKEYS[listmode]) : null; }    
-    static GET_DEFAULT_FIELDNAMES       (listmode) { return this.FIELDS_DEFAULTS[listmode]; }
-    static GET_EFFECTIVE_FIELDNAMES     (listmode)
-    { 
-        const s = this.GET_SETTING_FIELDNAMES (listmode);
-        if (s != null)
-            return s;
-        else
-        {
-            const d = this.GET_DEFAULT_FIELDNAMES (listmode);
-            return d != null ? d : this.GET_ALL_FIELDNAMES ();
-        }
-    }
-    static GET_ALL_AVAILABLE_FETCHES     () { return this.FETCHDEFS; }
-    static GET_ALL_AVAILABLE_FETCHES_STR () { return this.GET_ALL_AVAILABLE_FETCHES ()?.GetNamesAsStr (); }
-    static GET_FIELD_DEF   (field_name, case_sensitive = false) { return this.GET_ALL_FIELD_DEFS   ()?.GetByName (field_name, case_sensitive); }
-    static GET_FIELD_GROUP (field_name, case_sensitive = false) { return this.GET_ALL_FIELD_GROUPS ()?.GetByName (field_name, case_sensitive); }
+    Value                  = null;
+    FieldValues            = null;
 
 
 
-
-
-    constructor (name = null, value = null)
+    constructor ( {objectdef = new SARTObjectDef (), name = null, value = null} = {} )
     {
-        super (name);
-
-        this.Name        = name;
-        this.Value       = value;
+        super (name != null ? name : objectdef?.GetTypeName () );
         
-        for (const fdef of this.GetAllFieldDefs ()?.AsArray () )
-        {
-            this.FieldData.Add (new FData (this, fdef) );
-        }
+        this.ObjectDef = objectdef;
+        this.Value     = value;        
+        this.FieldData = this.ObjectDef.CreateFieldDataEntries (this);
+
     }
+
+    static SET_CLASSOBJECTDEF (objdef)                         { this.CLASSOBJECTDEF = objdef; }
+    static GET_CLASSOBJECTDEF ()                               { return this.CLASSOBJECTDEF;   }
 
 
     WithValue          (value)                                 { this.SetValue (value);              return this;                                             }     
@@ -93,6 +57,7 @@ class SARTObject extends SARTBase
     SetValue           (value)                                 { this.Value = value;                                                                          }    
     toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
 
+    GetObjectDef       ()                                      { return this.ObjectDef != null ? this.objectdef : this.constructor.GET_CLASSOBJECTDEF ();     }
 
     GetFlagInt ()
     {
@@ -105,134 +70,10 @@ class SARTObject extends SARTBase
     }
 
 
-    GetEffectiveFieldNames (listmode) { return this.constructor.GET_EFFECTIVE_FIELDNAMES (listmode); }    
-    GetEffectiveFieldDefs  (listmode)
-    {         
-        const field_names = this.GetDefaultFieldNames (listmode);
-        return Util.IsSet (field_names) ? this.GetFieldDefs (field_names) : null; 
-    }
-
-    GetAllFieldDefs   ()                              { return this.constructor.GET_ALL_FIELD_DEFS ();                         }
-    GetAllFieldNames  ()                              { return this.constructor.GET_ALL_FIELDNAMES ();                         }
-    GetAllFetches     ()                              { return this.constructor.GET_ALL_AVAILABLE_FETCHES ();                  }
-    GetMinimumFetches (fielddefs = new SARTGroup () ) { return this.constructor.GET_MINIMUM_FETCHES_FOR_FIELDDEFS (fielddefs); }
-
-
-    GetFieldDefs (field_names = [], listmode = CONSTANTS.LISTMODE_SEPARATE) 
-    { 
- 
-        if (field_names == null || field_names.length <= 0)
-            field_names = this.GetEffectiveFieldNames (listmode);
-
-        // A special case where only positives and/or negatives are given.
-        else if (field_names.find (e => !e.startsWith ("-") && !e.startsWith ("+") ) == null)        
-            field_names = this.GetEffectiveFieldNames (listmode)?.concat (field_names);
-        
-
-        if (field_names == null)
-        {
-            Sys.DEBUG ("'field_names' null, using all fields.");
-            field_names = this.GetAllFieldNames ();
-        }
-
-        if (field_names == null)
-        {
-            this.OnProgramError ("No fields present in the object!", "GetFieldDefs");
-            return null;
-        }
-
-        
-
-        // Process groups    
-        const groups_included = [];
-        for (const fname of field_names)
-        {            
-            const group = this.GetFieldGroup (fname);
-            if (group != null)
-            {                
-                const fnames = group.GetFieldNames (this, listmode);
-
-                if (fnames == null)
-                    Sys.DEBUG ("No valid fields from fieldgroup '" + group + "'.");
-
-                else
-                {
-                    Sys.DEBUG ("Adding fields from FieldGroup " + group + "...");
-                    groups_included.push (...fnames);                    
-                }                
-            }        
-            else            
-                groups_included.push (fname);                   
-        }     
-
-
-        // Get negates
-        const negates = [];
-        const no_negates = [];
-        for (const fname of groups_included)
-        {
-            if (fname != null)
-            {
-                if (fname.startsWith ("-") )            
-                    negates.push (fname.slice (1) );            
-
-                else
-                    no_negates.push (fname.startsWith ("+") ? fname.slice (1) : fname);                
-            }
-        }
-        
-
-        // Process names
-        const field_defs = new SARTGroup ();
-        for (const fname of no_negates)
-        {
-            const def = this.GetFieldDef (fname);
-
-            if (def == null)
-                this.OnError ("Field '" + fname + "' does not exist.");
-
-            else
-            {
-                let negated = false;
-                for (const neg of negates)
-                {
-                    const ndef = this.GetFieldDef (neg);
-
-                    if (ndef == null)
-                        this.OnError ("Negated field '" + neg + "' does not exist.");
-
-                    else if (def == ndef)                    
-                    {
-                        negated = true;
-                        break;
-                    }
-                        
-                }
-                if (!negated)
-                {
-                    Sys.DEBUG ("Adding field def " + def);
-                    field_defs.Add (def);
-                }
-                else
-                    Sys.DEBUG ("Adding field def " + def + " negated - not adding.");
-            }
-        }     
-
-        return field_defs;                
-    }
-
-    GetFieldDef   (field_name, case_sensitive = false) { return this.constructor.GET_FIELD_DEF   (field_name, case_sensitive); }
-    GetFieldGroup (group_name, case_sensitive = false) { return this.constructor.GET_FIELD_GROUP (group_name, case_sensitive); }
-    
-    GetFieldValue (field, case_sensitive = false)
-    {
-        return this.GetFieldDef (field, case_sensitive)?.GetFieldValue (this);
-    }
-    
     /** Field can be either string or FieldDef. */
     GetFieldData (field)
     {        
-        return this.FieldData.GetByName (field instanceof FieldDef ? field.GetFieldName (): field);        
+        return this.FieldValues.GetByName (field instanceof FieldDef ? field.GetFieldName (): field);        
     }
     
 
