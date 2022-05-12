@@ -69,7 +69,7 @@ class Fetch extends SARTObject
 
         if (this.IsFinished ())
         {
-            Sys.ERR_PROGRAM ("Fetch already finished.", this);
+            Sys.ERR_PROGRAM ("Fetch already finished.", {src: this});
             return false;
         }
 

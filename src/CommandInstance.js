@@ -15,7 +15,7 @@ const SARTObject     = require ("./SARTObject");
 const SETTINGS       = require ("./SETTINGS").SETTINGS;
 const OutputParams   = require ("./OutputParams");
 const Operation      = require ("./Operation");
-
+const ObjDef         = require ("./SARTObjectDef");
 
 
 
@@ -23,9 +23,10 @@ const Operation      = require ("./Operation");
 
 class CommandInstance extends SARTObject
 {
-    CDef            = null;
-    
-    CommandName     = null;    
+    static OBJDEF = new ObjDef ( {name: "CommandInstance"} );
+
+    CMDDef          = null;
+        
     Arguments       = null;
     ParamValues     = {};
 
@@ -94,8 +95,8 @@ class CommandInstance extends SARTObject
     GetActiveOperation   ()            { return this.ActiveOperation; }
     GetProgressIndicator ()            { return this.GetActiveOperation ()?.GetProgressIndicator (); }
 
-    GetEffectiveListMode ()            { return this.CDef.GetEffectiveListMode (this); }
-    GetEffectiveFields   ()            { return this.CDef.GetEffectiveFields   (this); }
+    GetEffectiveListMode ()            { return this.CMDDef.GetEffectiveListMode (this); }
+    GetEffectiveFields   ()            { return this.CMDDef.GetEffectiveFields   (this); }
 
     __OnFetchExecuted    (fetch)       { ++this.Fetches; }
     
@@ -116,7 +117,7 @@ class CommandInstance extends SARTObject
     async Execute (args)
     {
         if (args == null)
-            return Sys.ERR_PROGRAM ("Execute: 'args' null!", this);
+            return Sys.ERR_PROGRAM ("Execute: 'args' null!", {src: this});
 
         this.Arguments = args;
         this.Success   = false;
@@ -124,20 +125,11 @@ class CommandInstance extends SARTObject
 
             
 
-        const command_setup = args.ProcessArgs ();
-        if (command_setup != null)
-        {
-            this.Config      = command_setup.Config;
-            this.CDef        = command_setup.Command;
-            this.ParamValues = command_setup.ParamValues;
-            this.ExtraParams = command_setup.UnprocessedParams;                     
-        }
-        else
-            return Sys.ERR ("Failed to process arguments - aborting command execution.");
+        if (! args.ProcessArgs (this) )
+            return Sys.VERBOSE ("Errors while processing arguments - aborting command execution.");
         
-    
 
-        this.OutputDests = [ ]
+        this.OutputDests = []
 
   
         // Open output-file if need be
@@ -153,9 +145,9 @@ class CommandInstance extends SARTObject
 
 
         
-        Sys.VERBOSE ("Executing command '" + this.CDef + "'...");         
+        Sys.VERBOSE ("Executing command '" + this.CMDDef + "'...");         
                     
-        if (!this.CDef.RunAsActiveCommand () )
+        if (!this.CMDDef.RunAsActiveCommand () )
             State.ActiveCommandInst = null;
 
 
@@ -167,12 +159,12 @@ class CommandInstance extends SARTObject
 
         // Execute
         this.StartTime = Util.GetUNIXTimeMS ();        
-        this.Success   = await this.CDef.OnExecute (this);  
+        this.Success   = await this.CMDDef.OnExecute (this);  
         this.EndTime   = Util.GetUNIXTimeMS ();       
 
 
         // Output
-        this.CDef.OnOutput (this);
+        this.CMDDef.OnOutput (this);
         
 
         // Close file if one was opened.

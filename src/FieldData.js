@@ -29,7 +29,7 @@ class FieldData extends SARTBase
         this.Def = def;
 
         if (this.Obj == null)
-            Sys.ERR_PROGRAM_ONCE ("'obj' not given to the constructor!", "FieldData");
+            Sys.ERR_PROGRAM_ONCE ("'obj' not given to the constructor!", {src: this} );
 
         if (name != null)
             this.WithName (name);
@@ -44,9 +44,6 @@ class FieldData extends SARTBase
     GetFieldDef        () { return this.Def                                                          }
     GetTopStrWidth     () { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
 
-    toString           () { "FieldData '" + this.FieldName + "'"; }
-
-    
 }
 
 

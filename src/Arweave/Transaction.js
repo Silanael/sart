@@ -23,6 +23,9 @@ const Concurrent   = require ("../Concurrent");
 const Field        = require ("../FieldDef");
 const FetchDef     = require ("../FetchDef");
 const FieldList    = require ("../FieldList");
+const ObjDef       = require ("../SARTObjectDef");
+
+
 
 
 const FETCH_GQL    = new FetchDef ("GraphQL", async function (t) { await t.FetchViaGQL  (); } );
@@ -30,169 +33,170 @@ const FETCH_GET    = new FetchDef ("GET",     async function (t) { await t.Fetch
 const FETCH_STATUS = new FetchDef ("Status",  async function (t) { await t.FetchStatus  (); } );    
 
 
-const FETCHDEFS = new SARTGroup ().With
-(
-    FETCH_GQL,    
-    FETCH_GET,
-    FETCH_STATUS,        
-);
+const OBJDEF = new ObjDef ()
 
-
-
-
-const FIELDS = new FieldList ().With 
-(
-
-    new Field ("ObjectType")      
+    .WithName ("Transaction")    
+    .WithFetches (FETCH_GQL, FETCH_GET, FETCH_STATUS)
+    .WithFields 
+    (
+        new Field ().WithName ("ObjectType")      
         .WithAliases ("ObjType","OType"),
 
-    new Field ("Network")         
+        new Field ().WithName ("Network")         
         .WithAliases ("NET"),
 
-    new Field ("TXID")            
+        new Field ().WithName ("TXID")            
         .WithAliases ("ID", "TransactionID", "Transaction_ID"),
 
-    new Field ("Owner")           
+        new Field ().WithName ("Owner")           
         .WithAliases ("Address", "Arweave-address", "Wallet")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),         
 
-    new Field ("OwnerShort")      
+        new Field ().WithName ("OwnerShort")      
         .WithAliases ("OwnerS", "AddressShort", "AddrShort", "AddressS", "AddrS", "WalletShort", "WalletS")
         .WithFunction (function (t) { return Util.GetShortArweaveHash (t?.GetOwner () ) } )
         .WithInheritFetch ("Owner"),
 
-    new Field ("Flags")           
+        new Field ().WithName ("Flags")           
         .WithFunction  (function (t) { return t.GetFlagStr (); } )
         .WithFetch (FETCH_GQL),    
 
-    new Field ("FlagsInt")        
+        new Field ().WithName ("FlagsInt")        
         .WithFunction  (function (t) { return t.GetFlagInt (); } )
         .WithInheritFetch ("Flags"),
 
-    new Field ("Target")          
+        new Field ().WithName ("Target")          
         .WithAliases   ("Recipient", "Destination", "Dest", "Recv")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("TargetShort")     
+        new Field ().WithName ("TargetShort")     
         .WithAliases   ("RecipientShort", "DestinationShort", "DestShort", "RecvShort", "RecvS", "DestS")
         .WithFunction  (function (t) { return Util.GetShortArweaveHash (t?.GetRecipient () ) })
         .WithInheritFetch ("Target"),        
 
-    new Field ("Fee_AR")          
+        new Field ().WithName ("Fee_AR")          
         .WithAliases   ("Fee_AR")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("Fee_Winston")     
+        new Field ().WithName ("Fee_Winston")     
         .WithAliases ("Fee", "Fee_W")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),  
 
-    new Field ("Quantity_AR")     
+        new Field ().WithName ("Quantity_AR")     
         .WithAliases   ("QTY_AR", "TransferAmount_AR")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("Quantity_Winston")
+        new Field ().WithName ("Quantity_Winston")
         .WithAliases ("QTY", "QTY_W", "TransferAmount", "TransferAmount_Winston", "TransferAmount_W")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL), 
 
-    new Field ("DataSize_Bytes")  
+        new Field ().WithName ("DataSize_Bytes")  
         .WithAliases   ("DataSize", "DataBytes", "Bytes", "Size", "SizeB", "Size_B")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("Total_AR")        
+        new Field ().WithName ("Total_AR")        
         .WithFunction  (function (t) { return t?.GetTotalAR (); } )
         .WithAliases ("Total_AR, TotalAR, TotalCost_AR, TotalCostAR", "AR_Total", "ARTotal")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("Total_Winston")   
+        new Field ().WithName ("Total_Winston")   
         .WithFunction  (function (t) { return t?.GetTotalWinston (); } )
         .WithAliases ("Total", "Total_W", "TotalW", "TotalCost", "TotalCost_W", "TotalCostW", "WinstonTotal")
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("TagsTotalSizeB")  
+        new Field ().WithName ("TagsTotalSizeB")  
         .WithFunction  (function (t) { return t?.Tags?.GetTotalBytes (); } )
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("DataRoot")        
+        new Field ().WithName ("DataRoot")        
         .WithAliases ("DRoot")
         .WithFetch   (FETCH_GET),
 
-    new Field ("DataLocation")    
+        new Field ().WithName ("DataLocation")    
         .WithAliases ("DataLoc", "DLoc")
         .WithFetch   (FETCH_GET),
 
-    new Field ("BlockID")         
+        new Field ().WithName ("BlockID")         
         .WithAliases ("Block")
         .WithFetch   (FETCH_GQL),
 
-    new Field ("BlockTime")       
+        new Field ().WithName ("BlockTime")       
         .WithAliases ("Time", "Date", "BDate", "BTime", "BlockT", "BlockD")
         .WithFetch   (FETCH_GQL),
 
-    new Field ("BlockHeight")     
+        new Field ().WithName ("BlockHeight")     
         .WithAliases ("Height",   "BHeight", "BlockH")
         .WithFetch   (FETCH_GQL),
 
-    new Field ("BlockUNIXTime")   
+        new Field ().WithName ("BlockUNIXTime")   
         .WithAliases ("UNIXTime", "UTime")
         .WithFetch   (FETCH_GQL),
 
-    new Field ("TXAnchor")        
+        new Field ().WithName ("TXAnchor")        
         .WithAliases ("LastTX", "Last_TX", "TX_Last")
         .WithFetch   (FETCH_GQL),
 
-    new Field ("Tags")            
+        new Field ().WithName ("Tags")            
         .WithFunction  (function (t) { return t?.Tags?.AsArray (); } )
         .WithFetch_AnyOf (FETCH_GET, FETCH_GQL),
 
-    new Field ("ContentType")     
+        new Field ().WithName ("ContentType")     
         .WithFunction     (function (t) { return t?.GetTags()?.GetByName ("Content-Type")?.GetValue (); } )
         .WithAliases      ("Content-Type","CType","MIMEtype", "MIME")
         .WithInheritFetch ("Tags"),
 
-    new Field ("IsInBundle")      
+        new Field ().WithName ("IsInBundle")      
         .WithAliases   ("Bundled", "IsBundled").WithFunction ( function (t) { return t.IsInBundle (); } )
         .WithFetch   (FETCH_GQL),
 
-    new Field ("BundleTXID")      
+        new Field ().WithName ("BundleTXID")      
         .WithAliases   ("Bundle", "InBundle")
         .WithInheritFetch ("IsInBundle"),
 
-    new Field ("Condition")         
+        new Field ().WithName ("Condition")         
         .WithFunction  (function (t) { return t?.GetConditionStr   (); } )
         .WithFetch (FETCH_STATUS),
     
-    new Field ("Status")         
+        new Field ().WithName ("Status")         
         .WithFunction  (function (t) { return t?.GetStatusStr      (); } )
         .WithFetch (FETCH_STATUS),        
 
-    new Field ("StatusCode")      
+        new Field ().WithName ("StatusCode")      
         .WithFunction  (function (t) { return t?.GetStatusCode     (); } )
         .WithInheritFetch ("StatusText"),
 
-    new Field ("Confirmations")   
+        new Field ().WithName ("Confirmations")   
         .WithFunction  (function (t) { return t?.GetConfirmations  (); } )
         .WithInheritFetch ("StatusText"),
 
-    new Field ("StatusText")         
+        new Field ().WithName ("StatusText")         
         .WithFunction  (function (t) { return t?.GetStatusText     (); } )
         .WithFetch (FETCH_STATUS),
             
         
-    new Field ("Warnings")       
+        new Field ().WithName ("Warnings")       
         .WithAliases ("WARN")
         .WithNullDisplayValue ("NONE"),
 
-    new Field ("Errors")        
+        new Field ().WithName ("Errors")        
         .WithAliases ("ERR")
         .WithNullDisplayValue ("NONE"),                  
-      
-)
+
+    )
+    .WithDefaultFields ("time","txid","flags","ctype","DestShort","qty_ar","fee_ar")
+    .WithSettingKey_SEP (SETTINGS.Fields_Transaction_Separate)
+    .WithSettingKey_TBL (SETTINGS.Fields_Transaction_Table)
+    ;
+
+
 
 
 
 
 class Transaction extends SARTObject
 {
+    static OBJDEF = OBJDEF;
+
     ObjectType          = "Transaction";
     Network             = "Arweave";
 
@@ -228,10 +232,7 @@ class Transaction extends SARTObject
     MinedAtBlock        = null;
     ConditionStr        = null;
 
-    static FIELDS                  = FIELDS;
-    static FIELDS_DEFAULTS         = SARTObject._FIELDS_CREATEOBJ (null, ["time","txid","flags","ctype","DestShort","qty_ar","fee_ar"]);
-    static FIELDS_SETTINGKEYS      = SARTObject._FIELDS_CREATEOBJ ("Fields_Transaction_Table", "Fields_Transaction_Entries");
-    static FETCHDEFS               = FETCHDEFS;
+   
     
     /** Overridable. This implementation does nothing. */
     __OnTXFetched () {};               
@@ -255,6 +256,7 @@ class Transaction extends SARTObject
     static       EXISTING        (txid)       { return new Transaction (txid);                                                        }    
     static       FROM_GQL_EDGE   (edge)       { return edge != null ?       new Transaction ().SetGQLEdge   (edge)       : null;      }
     static async FROM_ARWEAVE_TX (arweave_tx) { return edge != null ? await new Transaction ().SetNativeTXObj (arweave_tx) : null;      }
+
 
     /** Will give an error if value is null.  */
     WithTag (name, value) 
@@ -467,7 +469,11 @@ class Transaction extends SARTObject
             this.OnError ("TXID mismatch on setting from QGL-edge: Was " + current_txid + ", tried to set as " + txid, "Transaction");
             
         else
+        {
             this.TXID = txid;
+            if (! Util.IsArweaveHash (this.TXID) )
+                this.OnError ("Invalid TXID '" + this.TXID + "'");
+        }
 
         this.Valid = this.TXID != null && Util.IsArweaveHash (this.TXID);
 
@@ -812,6 +818,4 @@ class Transaction extends SARTObject
 }
 
 
-   
-FIELDS.WithSetClassToAll (Transaction);
 module.exports = Transaction;

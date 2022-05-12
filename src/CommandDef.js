@@ -30,8 +30,8 @@ class CommandDef extends SARTDef
 
 
     /* Overridable, these implementations do nothing. */
-    async OnExecute           (cmd_instance)  { if (this.ExecFunc != null) return await this.ExecFunc (cmd_instance); else return true; }
-    async OnOutput            (cmd_instance)  { if (this.OutFunc  != null) return await this.OutFunc  (cmd_instance); else return true; }    
+    async OnExecute           (cmd_instance)  { if (this.ExecFunc != null) return await this.ExecFunc (cmd_instance);                      return true; }
+    async OnOutput            (cmd_instance)  { if (this.OutFunc  != null) return await this.OutFunc  (cmd_instance); this.DisplayHelp (); return true; }    
           GetCustomSubCommand (next_arg_peek) { return null; }
      
 

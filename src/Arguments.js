@@ -1,3 +1,4 @@
+const OPTIONS           = require ("./OPTIONS").OPTIONS;
 const Sys               = require ("./System");
 const Util              = require ("./Util");
 const Config            = require ("./Config").Config;
@@ -46,68 +47,65 @@ class Arguments
     static GetArgDef (argdefs, argname) { return argdefs.GetByName (argname, false); }
     
     
-    ProcessArgs () 
+    ProcessArgs (cmd_instance) 
     {
 
-        if (this._Argv == null) 
-        {
-            Sys.ERR_PROGRAM ("Arguments: _Argv null!", this);                             
-            return null;
-        }
+        if (cmd_instance == null)
+            return Sys.ERR_PROGRAM ("ProcessArgs: cmd_instance null", {src: this} );
 
-        const commandsetup =
-        {
-            Command           : null,
-            Config            : new Config (),
-            ParamValues       : {},
-            UnprocessedParams : null
-        };
+        if (this._Argv == null) 
+            return Sys.ERR_PROGRAM ("ProcessArgs: _Argv null!", {src: this});                             
+            
 
         Sys.DEBUG ("Starting to process " + this.GetRemainingAmount () + " arguments..");
         
         
         // Process options if any
-        if (! this.__ProcessArgGroup (Sys.GetMain ().GetOptions (), 
+        /*
+        if (! this.ProcessArgGroup (Sys.GetMain ().GetOptions (), 
               (def, param) => commandsetup.Config.SetSetting (def.Key, param != null ? param : def.Value) )  )
         {
+        */
+        if (! OPTIONS.ProcessArgs (this, cmd_instance.Config) )
+        {
             Sys.ERR ("Processing options returned false. Aborting the command execution sequence.");
-            return null;
+            return false;
         }
 
-        // The next unprocessed agrument should be the command
-        commandsetup.CommandName = this.GetNextLC ();
-        commandsetup.Command     = this.__GetCommandDef (commandsetup.CommandName);
+        // The next unprocessed agrument should be the command        
+        const cmd_def       = this.__GetCommandDef (this.GetNextLC () );
+        cmd_instance.CMDDef = cmd_def;
 
-        if (commandsetup.Command == null)
+        if (cmd_def == null)
         {
-            if (commandsetup.CommandName == null)
+            if (cmd_def == null)
                 Sys.ERR ("Command not provided.");
 
-            return null;
+            return false;
         }
         
 
         // Remaining are command-specific arguments
-        if (! this.__ProcessArgGroup (commandsetup.Command.GetValidArgs (), null, commandsetup.ParamValues) )              
+        if (! this.ProcessArgGroup (cmd_def.GetValidArgs (), null, cmd_instance.ParamValues) )              
         {
             Sys.ERR ("Processing options returned false. Aborting the command execution sequence.");
-            return null;
+            return false;
         }
 
 
         // Save rest as unprocessed
-        commandsetup.UnprocessedParams = [...this._Unprocessed];
+        cmd_instance.ExtraParams = [...this._Unprocessed];
 
 
         // Done.
-        return commandsetup;
+        return true;
     }
 
 
 
 
 
-    __ProcessArgGroup (argdefs, func = null, data_obj = null)
+    ProcessArgGroup (argdefs, func = null, data_obj = null)
     {
         const processed = {};
         const not_processed = [];
@@ -139,7 +137,7 @@ class Arguments
             }
 
             else if (arg_name.startsWith ("--") ) 
-                return Sys.ERR ("Unrecognized option '"+ arg_name + "'. Aborting argument-processing process.", "ProcessArgs");
+                return Sys.ERR ("Unrecognized option '"+ arg_name + "'. Aborting argument-processing process.", {src: this});
                                     
             else            
                 not_processed.push (arg_name);        

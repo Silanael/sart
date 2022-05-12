@@ -17,7 +17,8 @@
     "version": "node ./src/Main.js --version",
     "verbose": "node ./src/Main.js --verbose",
     "debug":   "node ./src/Main.js --debug",
-    "quiet":   "node ./src/Main.js --quiet"
+    "quiet":   "node ./src/Main.js --quiet",
+    "inspect": "node inspect ./src/Main.js"
   },
   "dependencies": {
     "arweave": "1.10.23"

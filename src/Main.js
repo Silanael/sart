@@ -38,11 +38,11 @@ const { OPTIONS }   = require("./OPTIONS");
 
 
 
-
-// Constants
+// ArgV-indices
 const PRG_ARG           = 0;
 const FILENAME_PATH_ARG = 1;
 const FIRST_ARG         = 2;
+
 
 
 class Main

@@ -46,7 +46,7 @@ class FieldGroup_Null extends FieldGroup
 
 class FieldGroup_Default extends FieldGroup
 {
-    constructor   ()               { super (); this.WithName ("DEFAULT").WithAliases ("DEFAULT"); }
+    constructor   ()               { super (); this.WithName ("DEFAULT"); }
     GetFieldNames (sart_obj, mode) { return sart_obj?.GetEffectiveFieldNames (mode); }
 }
 

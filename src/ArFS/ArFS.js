@@ -118,7 +118,7 @@ class ArFSEntityQuery extends TXQuery
                 return entity;
             }                        
             else
-                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID '" + arfs_id + "'.", "ArFSEntityQuery.Execute");            
+                Sys.ERR ("Failed to interpret ArFS-" + entity_type + "-entity with ID '" + arfs_id + "'.");            
         }
         else
             Sys.ERR ("Did not find an ArFS-" + entity_type + "-entity for ArFS-ID '" + arfs_id + "'.");                 
@@ -314,7 +314,7 @@ class ArFSURL
 
     #Err (error)
     {
-        Sys.ERR (error, __TAG);
+        Sys.ERR (error, {src: __TAG} );
         this.Valid = false;
         return false;       
     }
@@ -383,11 +383,11 @@ class ArFSEntity_Old
                 return new ArFSDrive (arfs_id, master, gql_entry);
 
             case null:
-                Sys.ERR ("Entity type not set!", "ArFSEntity.CREATE");
+                Sys.ERR ("Entity type not set!", {src: "ArFSEntity.CREATE"} );
                 return null;
 
             default:
-                Sys.ERR ("Unknown entity type " + entity_type, "ArFSEntity.CREATE", {ID: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN } );
+                Sys.ERR ("Unknown entity type " + entity_type, {src: "ArFSEntity.CREATE", ID: Constants.ERROR_ID_ARFS_ENTITY_TYPE_UNKNOWN } );
                 return null;
         }            
     }
@@ -595,7 +595,7 @@ class ArFSEntity_Old
         const id_tag = this.GetIDTag ();
         
         if (id_tag == null)
-            return Sys.ERR ("Could not get transaction tag for entity type '" + this.ArFSEntityType + "'", "_UpdateMetaData");
+            return Sys.ERR ("Could not get transaction tag for entity type '" + this.ArFSEntityType + "'", {src: "_UpdateMetaData"} );
         
 
 
@@ -774,7 +774,7 @@ class ArFSEntity_Old
 
         else
         {
-            Sys.ERR (err_on_fail, ArFSDrive.name);
+            Sys.ERR (err_on_fail, {src: ArFSDrive.name });
             this.Valid = false;
             return false;
         }

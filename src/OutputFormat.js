@@ -39,7 +39,7 @@ class OutputFormat
     static GET_FIELD_DEFS (objects, params)
     {
         const first_obj  = objects.GetByIndex != null ? objects.GetByIndex (0) : objects;
-        return first_obj != null ? first_obj.GetFieldDefs (params.GetFields (), params.GetListMode () ) : null;
+        return first_obj != null ? first_obj.GetEffectiveFieldDefs (params.GetFields (), params.GetListMode () ) : null;
     }
 
     /** Overridable. Logic of actually writing the output goes here. This implementation does nothing. */    

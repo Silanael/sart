@@ -25,7 +25,7 @@ const SARTObject      = require ('../SARTObject');
 const OutputParams    = require ("../OutputParams");
 const SARTGroup       = require ("../SARTGroup");
 const Field           = require ("../FieldDef");
-
+const SARTObjectDef   = require ("../SARTObjectDef");
 
 
 class CMD_Info extends CommandDef
@@ -170,7 +170,8 @@ class SubCMD_ARFS extends FieldCMD
 class OutputObj_Author extends SARTObject
 {
   
-    static FIELDS = new SARTGroup ().With 
+    static OBJDEF = new SARTObjectDef ({name: "OutputObj_Author"} )
+    .WithFields
     (    
         new Field ("Name")            .WithDefaultValue ("Silanael"),
         new Field ("Description")     .WithDefaultValue ("A weary, darkened, shattered soul using its fractured shards to engrave"

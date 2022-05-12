@@ -23,7 +23,7 @@ const COMMAND_DEFAULT_ARGS      = [];
 
 const LISTMODE_SEPARATE         = 1;
 const LISTMODE_TABLE            = 2;
-
+const LISTMODE_ANY              = 0;
 const LISTMODE_DEFAULT          = LISTMODE_SEPARATE;
 
 const TXSTATUS_OK               = 200;
@@ -173,8 +173,9 @@ module.exports =
     FLAGS,
     TXTAGS,
     UTIL_ARRAYTOSTR_DEFAULTS,
+    LISTMODE_ANY,
     LISTMODE_TABLE,
-    LISTMODE_SEPARATE,
+    LISTMODE_SEPARATE,    
     LISTMODE_DEFAULT,
     TXSTATUSES_POST_OK,
     OBJPRINT_DEPTH_DEFAULT

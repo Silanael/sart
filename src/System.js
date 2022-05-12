@@ -160,6 +160,7 @@ function ErrorHandler (error, msgs = {prefix: null, suffix: null} )
         // The Error is an exception
         if (error.code == null)
         {
+            console.error (error);
             ERR ("A possible bug in the code - recommend contacting me (sila@silanael.com).");
             ERR ("To troubleshoot, run SART with the --debug and send the output to me.");            
             ERR_FATAL ("ERROR: " + (error.name != null ? error.name : "UNKNOWN SYSTEM ERROR") );
@@ -672,13 +673,16 @@ function OUT_OBJ (obj, opts = { indent: 0, txt_obj: null, recursive_fields: [], 
 // Informative output, ie. for 'help'.
 function INFO (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {})
 {       
+    if (Util.IsString (params))
+        params = {src: params, depth : CONSTANTS.OBJPRINT_DEPTH_DEFAULT};
+
     params.output_func = INFO;
 
     if (IsMsg () )
     {
         if (Util.IsString (str) )
         {
-            const msg = src != null ? src + ": " + str : str;
+            const msg = params.src != null ? params.src + ": " + str : str;
             if (IsMsgSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (msg);
             if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
         }
@@ -691,14 +695,17 @@ function INFO (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAU
 
 // Detailed informative output - needs to be enabled.
 function VERBOSE (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {})
-{        
+{            
+    if (Util.IsString (params))
+        params = {src: params, depth : CONSTANTS.OBJPRINT_DEPTH_DEFAULT};
+
     params.output_func = VERBOSE;
 
     if (IsVerbose () )
     {
         if (Util.IsString (str) )
         {
-            const msg = src != null ? src + ": " + str : str;
+            const msg = params.src != null ? params.src + ": " + str : str;
             if (IsMsgSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (msg);
             if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
         }
@@ -711,7 +718,10 @@ function VERBOSE (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DE
 
 // Very extensive output - needs to be enabled.
 function DEBUG (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {})
-{        
+{       
+    if (Util.IsString (params))
+        params = {src: params, depth : CONSTANTS.OBJPRINT_DEPTH_DEFAULT};
+
     params.output_func = DEBUG;
 
     if (IsDebug () )
@@ -732,13 +742,16 @@ function DEBUG (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFA
 // Warning. Return true if the warning is suppressed.
 function WARN (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {} )
 {
+    if (Util.IsString (params))
+        params = {src: params, depth: CONSTANTS.OBJPRINT_DEPTH_DEFAULT};
+
     params.output_func = WARN;
 
     if (!IsQuiet () )
     {
         if (Util.IsString (str) )
         {
-            const msg = src != null ? src + ": " + str : str;
+            const msg = params.src != null ? params.src + ": " + str : str;
             if (IsErrSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (ANSIWARNING (msg) );
             if (IsErrSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (ANSIWARNING (msg) );        
         }
@@ -753,13 +766,16 @@ function WARN (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAU
 // Error message output. Abort on false - return true if error is suppressed.
 function ERR (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT} = {} )
 {    
+    if (Util.IsString (params))
+        params = {src: params, depth: CONSTANTS.OBJPRINT_DEPTH_DEFAULT};
+
     params.output_func = ERR;
 
     if (!IsQuiet () )
     {        
         if (Util.IsString (str) )
         {
-            const msg = src != null ? src?.toString () + ": " + str : str;
+            const msg = "ERROR: " + (params.src != null ? params.src + ": " + str : str);
             if (IsErrSTDOUT () ) OUTPUTDESTS.STDOUT.OutputLine (ANSIERROR (msg) );
             if (IsErrSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (ANSIERROR (msg) );        
         }
@@ -793,33 +809,43 @@ function ERR_CONFLICT (msg, src)
 }
 
 
-function ERR_PROGRAM (msg, src, opts = {once: false} )
+function ERR_PROGRAM (msg, opts = {src = null, once = false} = {} )
 {
+    if (Util.IsString (opts))
+        opts = {src: opts, once: false};
+
     if (opts.once)
-        ERR_ONCE ("PROGRAM ERROR: " + msg, src);
+        ERR_ONCE ("PROGRAM ERROR: " + msg, opts);
     else
-        ERR ("PROGRAM ERROR: " + msg, src);
+        ERR ("PROGRAM ERROR: " + msg, opts);
 }
 
-function ERR_PROGRAM_ONCE (msg, src) { return ERR_PROGRAM (msg, src, {once: true} ); }
+function ERR_PROGRAM_ONCE (msg, opts = {src = null} = {} )
+{ 
+    opts.once = true;
+    return ERR_PROGRAM (msg, opts); 
+}
 
 
 // Display the same error only once.
 // I'd like to use a hash for the lookup here, but there doesn't
 // seem to be a fast built-in method for doing that.
 const DISPLAYED_ERRORS = {};
-function ERR_ONCE (str, src, args = {error_id: null})
+function ERR_ONCE (str, args = {src = null, error_id = null} = {} )
 {    
+    if (Util.IsString (args))
+        args = {src: args, depth: CONSTANTS.OBJPRINT_DEPTH_DEFAULT};
+
     if (!IsQuiet () && DISPLAYED_ERRORS[str] == null )
     {
         DISPLAYED_ERRORS [str] = true;
-        return ERR (str, src, args);
+        return ERR (str, args);
     }
 
     return false;
 }
 
-function WARN_ONCE (str, src, args = {error_id: null})
+function WARN_ONCE (str, args = {src = null, error_id = null} = {} )
 {    
     if (!IsQuiet () && DISPLAYED_ERRORS[str] == null )
     {
@@ -832,9 +858,9 @@ function WARN_ONCE (str, src, args = {error_id: null})
 
 
 // Error message output + exit or return false.
-function ERR_ABORT (str, src, args = {error_id: null})
+function ERR_ABORT (str, args = {src = null, error_id = null} = {} )
 {
-    ERR (str, src);
+    ERR (str, args);
 
     if (!State.IsConsoleActive () )    
         EXIT (-1);
@@ -845,9 +871,9 @@ function ERR_ABORT (str, src, args = {error_id: null})
 
 
 // Error message output + exit.
-function ERR_FATAL (str, src)
+function ERR_FATAL (str, args = {src = null} = {})
 {
-    ERR (str, src);
+    ERR (str, args);
     EXIT (-1);
 }
 

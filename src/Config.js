@@ -12,6 +12,8 @@ const Sys                    = require ("./System.js");
 const Util                   = require ("./Util");
 const State                  = require ("./ProgramState.js");
 const SARTObject             = require ("./SARTObject");
+const SARTObjectDef          = require ("./SARTObjectDef");
+const FieldDef               = require ("./FieldDef");
 const { SETTINGS, Setting }  = require ("./SETTINGS");
 const LogLevels              = Constants.LOGLEVELS;
 const OutputDests            = Constants.OUTPUTDESTS;
@@ -24,6 +26,16 @@ let FUP = 0;
 
 class Config extends SARTObject
 {
+
+    static OBJDEF = new SARTObjectDef ( {name: "Config"} )
+                .WithFields
+                (
+                    new FieldDef ("Name"),
+                    new FieldDef ("Values"),
+                    new FieldDef ("KeyNamesPresent"),
+                );
+
+    // ***                
 
     Name            = "Default";
     Values          = {};
@@ -81,7 +93,7 @@ class Config extends SARTObject
             }
 
             this.Values[key] = value;
-            Sys.VERBOSE ("Setting value to '" + value + "' as-is.", key);
+            Sys.VERBOSE ("Setting value to '" + value + "'.", key);
                                     
             return true;
         }
@@ -201,7 +213,7 @@ function LoadConfig (filename)
     if (filename == null)
     {
         const error = "Config-filename not provided."                    
-        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, "LoadConfig");
+        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, {src: "LoadConfig"} );
     }
 
     try
@@ -242,7 +254,7 @@ function LoadConfig (filename)
     { 
         Sys.ON_EXCEPTION (exception, "LoadConfig: " + filename); 
         const error = "Failed to load config-file '" + filename + "'.";
-        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, "LoadConfig");
+        return in_console ? Sys.ERR (error, "LoadConfig") : Sys.ERR_FATAL (error, {src: "LoadConfig"});
     }
 
     return false;

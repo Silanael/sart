@@ -23,41 +23,51 @@ const SARTObjectDef = require ("./SARTObjectDef");
 
 class SARTObject extends SARTBase
 {
-    static CLASSOBJECTDEF  = null;
+    static OBJDEF  = null;
 
-    ObjectDef              = null;
+    ObjectDef      = null;
     
-    Valid                  = true;
-    DataLoaded             = false;
+    Valid          = true;
+    DataLoaded     = false;
 
-    Value                  = null;
-    FieldValues            = null;
+    Value          = null;
+    FieldValues    = null;
 
 
 
-    constructor ( {objectdef = new SARTObjectDef (), name = null, value = null} = {} )
+    constructor ( {objectdef = null, name = null, value = null} = {} )
     {
-        super (name != null ? name : objectdef?.GetTypeName () );
+        super ({name});
         
-        this.ObjectDef = objectdef;
-        this.Value     = value;        
-        this.FieldData = this.ObjectDef.CreateFieldDataEntries (this);
+        this.ObjectDef = objectdef != null ? objectdef : this.constructor.OBJDEF;
 
+        if (this.ObjectDef == null)
+        {
+            this.ObjectDef = new SARTObjectDef ();
+            this.OnProgramError ("SARTObjectDef not supplied, using a blank one.", this);
+            debugger;
+        }
+
+        this.Value       = value;        
+        this.FieldValues = this.ObjectDef.CreateFieldDataEntries (this);
     }
 
-    static SET_CLASSOBJECTDEF (objdef)                         { this.CLASSOBJECTDEF = objdef; }
-    static GET_CLASSOBJECTDEF ()                               { return this.CLASSOBJECTDEF;   }
+    static SET_CLASSOBJECTDEF (objdef)                         { this.OBJDEF = objdef; }
+    static GET_CLASSOBJECTDEF ()                               { return this.OBJDEF;   }
 
 
-    WithValue          (value)                                 { this.SetValue (value);              return this;                                             }     
-    GetRecursiveFields ()                                      { return this.RecursiveFields;                                                                 }
-    IsValid            ()                                      { return this.Valid == true;                                                                   }
-    SetInvalid         ()                                      { this.Valid = false; return this;                                                             }
-    GetValue           ()                                      { return this.Value;                                                                           }
-    SetValue           (value)                                 { this.Value = value;                                                                          }    
-    toString           ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
+    WithValue              (value)                                 { this.SetValue (value);              return this;                                             }     
+    GetRecursiveFields     ()                                      { return this.RecursiveFields;                                                                 }
+    IsValid                ()                                      { return this.Valid == true;                                                                   }
+    SetInvalid             ()                                      { this.Valid = false; return this;                                                             }
+    GetValue               ()                                      { return this.Value;                                                                           }
+    SetValue               (value)                                 { this.Value = value;                                                                          }    
+    toString               ()                                      { return this.Name != null ? this.Name : "SARTObject"; }
+    
+    GetObjectDef           ()                                      { return this.ObjectDef != null ? this.ObjectDef : this.constructor.GET_CLASSOBJECTDEF ();     }
 
-    GetObjectDef       ()                                      { return this.ObjectDef != null ? this.objectdef : this.constructor.GET_CLASSOBJECTDEF ();     }
+    GetFieldDef            (fieldname)                             { return this.GetObjectDef()?.GetFieldDef (fieldname);                                         }              
+    GetEffectiveFieldDefs  (fieldnames = [], listmode = null)      { return this.GetObjectDef()?.GetEffectiveFieldDefs ({fieldnames: fieldnames, listmode: listmode})}
 
     GetFlagInt ()
     {
@@ -112,6 +122,8 @@ class SARTObject extends SARTBase
 
             else
                 Sys.ERR ("Unrecognized field: '" + f + "'.");
+                
+            debugger;
         }
 
         return field_data;

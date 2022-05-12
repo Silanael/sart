@@ -14,10 +14,11 @@ const Sys  = require ("./System");
 
 
 class SARTBase
-{
+{    
     Name               = null;
     Aliases            = []; 
     ObjectType         = null;
+    Category           = null;
 
     Main               = null;
     NameCaseSensitive  = false;
@@ -31,23 +32,27 @@ class SARTBase
         this.Name = name;
     }
 
+    static GET_CLASSNAME () { return this.CLASSNAME; }
+
 
     WithName           (name)                                  { this.Name       = name;                                        return this; }
     WithAlias          (alias)                                 { this.Aliases    = this.Aliases.push   (alias);                 return this; }
     WithAliases        (...aliases)                            { this.Aliases    = this.Aliases.concat (aliases);               return this; }
-    WithObjType        (objtype)                               { this.ObjectType = objtype;                                                  }
+    WithObjType        (objtype)                               { this.ObjectType = objtype;                                     return this; }
+    WithCategory       (category)                              { this.Category   = category;                                    return this; }
     WithMain           (main)                                  { this.Main       = main;                                        return this; }    
+    GetClassName       ()                                      { return this.constructor.name;                                               }
     GetID              ()                                      { return this.GetName ();                                                     }
     GetName            ()                                      { return this.Name;                                                           }
     GetMain            ()                                      { return this.Main;                                                           }    
-    toString           ()                                      { return this.Name != null ? this.Name : "SARTBase"; }
+    toString           ()                                      { const n = this.GetName (); return this.GetClassName () + (n != null ? " " + n : ""); }
     WithCaseSensitive  ()                                      { this.NameCaseSensitive = true;  return this; }
 
-    OnWarning          (warning, src, opts)                    { return this.__OnError ("Warnings", Sys.WARN,             warning, src, opts)                 }  
-    OnError            (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,              error,   src, opts)                 }  
-    OnOverridableError (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src, opts)                 }  
-    OnErrorOnce        (error,   src, opts)                    { return this.__OnError ("Errors",   Sys.ERR,              error,   src, opts)                 }  
-    OnProgramError     (error,   src, opts = { once: false })  { return this.__OnError ("Errors",   Sys.ERR,              error,   src, opts)                 }
+    OnWarning          (warning, src = null)                   { return this.__OnError ("Warnings", Sys.WARN,             warning, src)      }  
+    OnError            (error,   src = null)                   { return this.__OnError ("Errors",   Sys.ERR,              error,   src)      }  
+    OnOverridableError (error,   src = null)                   { return this.__OnError ("Errors",   Sys.ERR_OVERRIDABLE,  error,   src)      }  
+    OnErrorOnce        (error,   src = null)                   { return this.__OnError ("Errors",   Sys.ERR_ONCE,         error,   src)      }  
+    OnProgramError     (error,   src = null)                   { return this.__OnError ("Errors",   Sys.ERR_PROGRAM,      error,   src)      }
     HasWarnings        ()                                      { return this.Warnings?.length > 0;                                                            }
     HasErrors          ()                                      { return this.Errors  ?.length > 0;                                                            }       
 
@@ -87,9 +92,9 @@ class SARTBase
         return false;
     }
 
-    __OnError (field, errfunc, error, src, opts)
+    __OnError (field, errfunc, error, src)
     {
-        if (!errfunc (error, src, opts) )
+        if (!errfunc (error, {src: src} ) )
         {
             this[field] = Util.AppendToArray (this[field], error, " "); 
             return false;

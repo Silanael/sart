@@ -55,7 +55,7 @@ const SETTINGS =
     ConfigVersion           : new Setting ("ConfigVersion")            .DV (Constants.CONFIG_VERSION).RO (),
     AppVersion              : new Setting ("AppVersion")               .DV (Package.version).RO (),
     AppVersionCode          : new Setting ("AppVersionCode")           .DV (Package.versioncode).RO (),
-    LogLevel                : new Setting ("LogLevel")                 .DV (Constants.IS_TTY ? LOGLEVELS.DEBUG : LOGLEVELS.NOMSG),
+    LogLevel                : new Setting ("LogLevel")                 .DV (Constants.IS_TTY ? LOGLEVELS.MSG : LOGLEVELS.NOMSG),
     MsgOut                  : new Setting ("MsgOut")                   .DV (OUTPUTDESTS.STDOUT),
     ErrOut                  : new Setting ("ErrOut")                   .DV (OUTPUTDESTS.STDERR),
     ArweaveHost             : new Setting ("ArweaveHost")              .DV ("arweave.net"),
@@ -103,8 +103,9 @@ const SETTINGS =
     LessFiltersMode         : new Setting ("LessFiltersMode")          .DV (false),
     ContainerMode           : new Setting ("ContainerMode")            .DV (false),
 
-    Fields_Transaction_Table  : new Setting ("Fields_Transaction_Table")   .DV (null),
-    Fields_Transaction_Entries: new Setting ("Fields_Transaction_Entries") .DV (null),
+    Fields_Transaction_Separate: new Setting ("Fields_Transaction_Separate") .DV (null),
+    Fields_Transaction_Table   : new Setting ("Fields_Transaction_Table")    .DV (null),
+    
 
 }
 Object.freeze (SETTINGS);

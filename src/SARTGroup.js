@@ -21,7 +21,7 @@ class SARTGroup extends SARTBase
     ByID           = {};
     ByName         = {};
     NameValuePairs = {};
-
+    ByCategory     = {};
 
     constructor ( {name = null, entries = [] } = {} )
     {
@@ -32,16 +32,16 @@ class SARTGroup extends SARTBase
         }
     }
 
-    With            (...objects) { this.AddAll (...objects);                                         return this; }
-    WithObj         (obj)        { this.Add (obj);                                                   return this; }
+    With             (...objects) { this.AddAll (...objects);                                         return this; }
+    WithObj          (obj)        { this.Add (obj);                                                   return this; }
 
-    GetAmount       ()           { return this.Entries.length;                                                    }        
-    GetByID         (id)         { return this.ByID[id];                                                          }    
-    ContainsID      (id)         { return this.GetByID (id) != null;                                              }
-    GetByIndex      (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }    
-    AsArray         ()           { return this.Entries;                                                           }
-    AddAllFromGroup (group)      { return this.AddAll (group.AsArray () ); }
-    toString        ()           { return "SARTGroup" + (this.Name != null ? " '" + this.Name + "'" : "");        }
+    GetAmount        ()           { return this.Entries.length;                                                    }    
+    GetByIndex       (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }        
+    GetByID          (id)         { return this.ByID[id];                                                          }        
+    GetCategoryGroup (cat)        { return this.ByCategory[cat];                                                   }
+    ContainsID       (id)         { return this.GetByID (id) != null;                                              }    
+    AsArray          ()           { return this.Entries;                                                           }    
+    AddAllFromGroup  (group)      { return this.AddAll (group.AsArray () );                                        }
 
 
     GetByName (name, case_sensitive = false)
@@ -90,26 +90,44 @@ class SARTGroup extends SARTBase
         }
     }
     
-    Add (entry, {allow_duplicates = false} = {} ) 
+    Add (entry, {allow_duplicates = false, add_group_members = true, add_category = true} = {} ) 
     {
         
         if (entry == null)
             return Sys.ERR_PROGRAM ("'entry' null.", "Transactions.Add");
         
+        if (entry == this)
+            return Sys.ERR_PROGRAM ("Tried to add self to the group.");
+
+        if (add_group_members && entry instanceof SARTGroup)
+        {
+            Sys.DEBUG ("Entry is a group (" + entry + "), adding content to " + this + ".");
+            for (const e of entry.AsArray () )
+            {
+                this.Add (e, {allow_duplicates: allow_duplicates, add_group_members: true} );
+            }
+        }
 
         if (!allow_duplicates && this.Contains (entry) )
             return Sys.ERR_PROGRAM ("'" + entry.toString () + "' already contained in group '" + this.toString () + "' or duplicate name and/or ID present.");
 
         else 
-        {
-            Sys.DEBUG ("Adding entry " + entry, this.toString () )
+        {            
+            Sys.DEBUG ("Adding entry '" + entry + "'", {src: this} )
             
             const name = entry.GetName ();
             const id   = entry.GetID   ();
             
-            if (id != null)          { this.ByID  [id]   = entry; }
-            if (Util.IsSet (name) )  { this.ByName[name] = entry; this.NameValuePairs[name] = entry.Value; }            
+            if (id != null             )  { this.ByID  [id]   = entry; }
+            if (Util.IsSet (name)      )  { this.ByName[name] = entry; this.NameValuePairs[name] = entry.Value; }            
+            if (entry.Category != null && add_category)
+            {
+                if (this.ByCategory[entry.Category] == null)
+                    this.ByCategory[entry.Category] = new SARTGroup ().WithName ("Category " + entry.Category);
 
+                this.ByCategory[entry.Category].Add (entry, {add_category: false, add_group_members: false} );
+            }
+            
             if (entry.Aliases?.length > 0)
             {
                 for (const a of entry.Aliases)

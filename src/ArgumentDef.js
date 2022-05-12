@@ -57,7 +57,7 @@ class ArgumentDef extends SARTDef
     { 
         const val = value_override != null ? value_override : this.Value;
         return this.HasParameter ? this.IsValueValid (val) ? val : null 
-                                 : true;
+                                 : null;
     }
 
     GetNoInvokeReasonStr ()
@@ -72,7 +72,7 @@ class ArgumentDef extends SARTDef
     {
 
         if (func != null && data_obj != null)
-            return Sys.ERR_PROGRAM ("InvokeArg: Both 'func' and 'data_obj' are defined!", this);
+            return Sys.ERR_PROGRAM ("InvokeArg: Both 'func' and 'data_obj' are defined!", {src: this} );
 
         if (this.CanBeInvoked () )
         {
@@ -105,7 +105,7 @@ class ArgumentDef extends SARTDef
             if (this.Invokes.length > 0)
             {
                 if (argdefs == null)
-                    return Sys.ERR_PROGRAM ("Unable to invoke the additional arguments - 'argdefs' null!", this);
+                    return Sys.ERR_PROGRAM ("Unable to invoke the additional arguments - 'argdefs' null!", {src: this});
 
                 else for (const i of this.Invokes)
                 {
