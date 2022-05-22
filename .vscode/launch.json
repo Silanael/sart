@@ -5,7 +5,8 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "command": "node src/Main.js test testing --debug",
+            "command": "node src/Main.js",
+            //"command": "node src/Main.js test testing --debug",
             "name": "npm start test testing",
             "request": "launch",
             "type": "node-terminal"

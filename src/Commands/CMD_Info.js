@@ -173,25 +173,25 @@ class OutputObj_Author extends SARTObject
     static OBJDEF = new SARTObjectDef ({name: "OutputObj_Author"} )
     .WithFields
     (    
-        new Field ("Name")            .WithDefaultValue ("Silanael"),
-        new Field ("Description")     .WithDefaultValue ("A weary, darkened, shattered soul using its fractured shards to engrave"
+        new Field ("Name")            .WithStaticValue ("Silanael"),
+        new Field ("Description")     .WithStaticValue ("A weary, darkened, shattered soul using its fractured shards to engrave"
                                                          + "\n                 what remains of it into this world. "
                                                          + "\n                 A creator and a destroyer. A powerful ally and an enemy to be reckoned with. "
                                                          + "\n                 A pragmatic idealist. A dark ambassador. A ghost imprisoned in the past.. "
                                                          + "\n                 A fighter longing for a moment of rest.."),
-        new Field ("Properties")      .WithDefaultValue ("MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, stalker, ex-drifter"),
+        new Field ("Properties")      .WithStaticValue ("MtF, sub, dev, preservationist, artistic_spirit, ex-RPer, stalker, ex-drifter"),
         new Field ("Age")             .WithFunction     (Util.GetAge),
-        new Field ("Website")         .WithDefaultValue ("www.silanael.com (silanael.x in the future)"), 
-        new Field ("E-mail")          .WithDefaultValue ("sila@silanael.com"), 
-        new Field ("PGP-fingerprint") .WithDefaultValue ("FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE"),
-        new Field ("Arweave")         .WithDefaultValue ("zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4"),
-        new Field ("ArFS")            .WithDefaultValue ("a44482fd-592e-45fa-a08a-e526c31b87f1"),
-        new Field ("GitHub")          .WithDefaultValue ("https://github.com/Silanael"),
-        new Field ("DockerHub")       .WithDefaultValue ("https://hub.docker.com/u/silanael"),
-        new Field ("DeviantArt")      .WithDefaultValue ("https://www.deviantart.com/silanael"),
-        new Field ("KOII")            .WithDefaultValue ("https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE"),
-        new Field ("Twitter")         .WithDefaultValue ("https://www.twitter.com/silanael"),
-        new Field ("The Question")    .WithDefaultValue ("If you could have anything in the world, what would it be?")
+        new Field ("Website")         .WithStaticValue ("www.silanael.com (silanael.x in the future)"), 
+        new Field ("E-mail")          .WithStaticValue ("sila@silanael.com"), 
+        new Field ("PGP-fingerprint") .WithStaticValue ("FAEF 3FF5 7551 9DD9 8F8C 6150 F3E9 A1F8 5B37 D0FE"),
+        new Field ("Arweave")         .WithStaticValue ("zPZe0p1Or5Kc0d7YhpT5kBC-JUPcDzUPJeMz2FdFiy4"),
+        new Field ("ArFS")            .WithStaticValue ("a44482fd-592e-45fa-a08a-e526c31b87f1"),
+        new Field ("GitHub")          .WithStaticValue ("https://github.com/Silanael"),
+        new Field ("DockerHub")       .WithStaticValue ("https://hub.docker.com/u/silanael"),
+        new Field ("DeviantArt")      .WithStaticValue ("https://www.deviantart.com/silanael"),
+        new Field ("KOII")            .WithStaticValue ("https://koi.rocks/artist/S1m1xFNauSZqxs3lG0mWqa4EYsO7jL29qNHljTADcFE"),
+        new Field ("Twitter")         .WithStaticValue ("https://www.twitter.com/silanael"),
+        new Field ("The Question")    .WithStaticValue ("If you could have anything in the world, what would it be?")
     
     );
 }

@@ -238,7 +238,7 @@ async function GetConnectionStatus ()
 
 function IsConfirmationAmountSafe (confirmations)
 {
-    return confirmations != null && Number (confirmations) >= State.GetSetting (SETTINGS.SafeConfirmationsMin);
+    return confirmations != null && Number (confirmations) >= State.GetSettingValue (SETTINGS.SafeConfirmationsMin);
 }
 
 

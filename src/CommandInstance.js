@@ -13,7 +13,6 @@ const State          = require ("./ProgramState");
 const Settings       = require ("./Config");
 const SARTObject     = require ("./SARTObject");
 const SETTINGS       = require ("./SETTINGS").SETTINGS;
-const OutputParams   = require ("./OutputParams");
 const Operation      = require ("./Operation");
 const ObjDef         = require ("./SARTObjectDef");
 
@@ -36,9 +35,6 @@ class CommandInstance extends SARTObject
     Config          = new Settings.Config ();
     FileOutputDest  = null;
     OutputDests     = [];
-
-    WantedFields    = null;
-    WantedListMode  = null;
 
     ActiveOperation = null;
 
@@ -67,9 +63,8 @@ class CommandInstance extends SARTObject
   
     GetCommandName       ()            { return this.CommandName;                       }
     HasSetting           (key)         { return this.Config.HasSetting (key);           }
-    GetSetting           (key)         { return this.Config.GetSetting (key);           }
-    GetEffectiveSetting  (key)         { return Sys.GetMain ()?.GetSetting   (key);     }
-    GetEffectiveSettingOr(key, val)    { return Sys.GetMain ()?.GetSettingOr (key, val);}
+    GetSetting           (key)         { return this.Config.GetSettingValue (key);           }
+    GetEffectiveSetting  (key, notfound = null) { return Sys.GetMain ()?.GetSetting (key, notfound);     }    
     GetConfig            ()            { return this.Config;                            }
     GetArguments         ()            { return this.Arguments;                         }
     GetArgumentsAmount   ()            { return this.Arguments != null ? this.Arguments.GetTotalAmount () : 0; }
@@ -82,25 +77,22 @@ class CommandInstance extends SARTObject
     GetParamValues       ()            { return this.ParamValues;           }    
     RequireAmount        (amount, msg) { return this.Arguments != null ? this.Arguments.RequireAmount (amount, msg) : false; }
     GetOutputDests       ()            { return this.FileOutputDest != null ? this.FileOutputDest : Sys.OUTPUTDEST_STDOUT; }
-    GetFileOutputDest    ()            { return this.FileOutputDest;         }
-    HasWantedFields      ()            { return this.WantedFields != null;   }
-    GetWantedFields      ()            { return this.WantedFields;           }    
-    HasListMode          ()            { return this.WantedListMode != null; }
-    GetListMode          ()            { return this.WantedListMode;         }
     HasOutputParams      ()            { return this.OutputParams != null;   }
     GetOutputParams      ()            { return this.OutputParams;           }
-    AddOutputParams      ()            { this.OutputParams = new OutputParams ().WithCMD (this); return this.OutputParams; }
+    AddOutputParams      ()            { this.OutputParams = new OutputParams ().WithCMDInst (this); return this.OutputParams; }
     SetOutputObject      (sobj)        { this.OutputObject = sobj;    }
     GetOutputObject      ()            { return this.OutputObject;    }
     GetActiveOperation   ()            { return this.ActiveOperation; }
     GetProgressIndicator ()            { return this.GetActiveOperation ()?.GetProgressIndicator (); }
 
-    GetEffectiveListMode ()            { return this.CMDDef.GetEffectiveListMode (this); }
-    GetEffectiveFields   ()            { return this.CMDDef.GetEffectiveFields   (this); }
+    GetRequestedListMode    ()         { return this.GetEffectiveSetting (SETTINGS.OutputListMode, this.CMDDef.GetDefaultListMode () ); }
+    GetRequestedFieldsArray ()         { return this.GetEffectiveSetting (SETTINGS.OutputFields,   this.CMDDef.GetDefaultFields   () ); }
 
     __OnFetchExecuted    (fetch)       { ++this.Fetches; }
     
     
+  
+
     AppendConfigToGlobal ()            
     { 
         if (! Sys.GetMain ()?.GetGlobalConfig ()?.AppendSettings (this.GetConfig () ) )
@@ -137,7 +129,7 @@ class CommandInstance extends SARTObject
         if (filename_out != null)
         {
             this.FileOutputDest = new Sys.OutputDest_File (filename_out);
-            this.GetConfig ().SetSetting (SETTINGS.OutputFileDest, this.FileOutputDest);
+            this.GetConfig ().SetSettingValue (SETTINGS.OutputFileDest, this.FileOutputDest);
             this.OutputDests = [ this.FileOutputDest ];
         }
         else

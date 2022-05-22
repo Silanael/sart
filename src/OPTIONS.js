@@ -64,8 +64,7 @@ class Option extends ArgDef
         else
             Sys.DEBUG ("Setting to value '" + value + "'.", {src: this});
 
-        debugger;
-        config.SetSetting (this.GetSettingKey (), value); 
+        config.SetSettingValue (this.GetSettingKey (), value); 
     }
  
 }
@@ -124,8 +123,6 @@ class Options extends SARTGroup
     /** Args needs to be an instance of Arguments */
     ProcessArgs (args, dest_config)
     {
-
-        debugger;
 
         if (args == null || args.ProcessArgGroup == null)
             return Sys.ERR_PROGRAM_ONCE ("PROCESS_ARGS: 'args' not supplied or not an instance of Arguments.", {src: this} );

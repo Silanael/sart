@@ -92,9 +92,12 @@ class Arguments
             return false;
         }
 
+        const unprocessed_amount = this._Unprocessed?.length;
+        if (unprocessed_amount > 0)
+            return Sys.ERR_FATAL ("Unknown argument" + (unprocessed_amount > 1 ? "s: " : ": ") + this._Unprocessed.join () );
 
         // Save rest as unprocessed
-        cmd_instance.ExtraParams = [...this._Unprocessed];
+        //cmd_instance.ExtraParams = [...this._Unprocessed];
 
 
         // Done.
@@ -109,7 +112,6 @@ class Arguments
     {
         const processed = {};
         const not_processed = [];
-
 
         while (this._Unprocessed?.length > 0)
         {            

@@ -10,11 +10,12 @@ const Package                = require ("../package.json");
 const Constants              = require ("./CONSTANTS.js");
 const Sys                    = require ("./System.js");
 const Util                   = require ("./Util");
-const State                  = require ("./ProgramState.js");
+const State                  = require ("./ProgramState");
 const SARTObject             = require ("./SARTObject");
+const SARTGroup              = require ("./SARTGroup");
 const SARTObjectDef          = require ("./SARTObjectDef");
 const FieldDef               = require ("./FieldDef");
-const { SETTINGS, Setting }  = require ("./SETTINGS");
+const { SETTINGS, SettingDef } = require ("./SETTINGS");
 const LogLevels              = Constants.LOGLEVELS;
 const OutputDests            = Constants.OUTPUTDESTS;
 const OutputFormats          = Constants.OUTPUTFORMATS;
@@ -23,8 +24,23 @@ const OutputFormats          = Constants.OUTPUTFORMATS;
 let FUP = 0;
 
 
+class ConfigEntry extends SARTObject
+{
+    ConfigDef = null;
 
-class Config extends SARTObject
+    constructor (configdef)
+    {
+        super ({name: configdef.GetName () } );
+        this.ConfigDef = configdef;
+    }
+
+    GetValue    () { return super.GetValue (); }
+    GetRawValue () { return super.GetValue (); } // TODO
+
+}
+
+
+class Config extends SARTGroup
 {
 
     static OBJDEF = new SARTObjectDef ( {name: "Config"} )
@@ -37,25 +53,37 @@ class Config extends SARTObject
 
     // ***                
 
-    Name            = "Default";
-    Values          = {};
-    KeyNamesPresent = {};
+    ByDef = {};
 
 
-    HasSetting (key) { return this.KeyNamesPresent[key instanceof Setting ? key.GetKey () : key] != null;                         }
+    static __GET_SETTING_DEF (keystr_or_setting)
+    { 
+        return keystr_or_setting instanceof SettingDef ? keystr_or_setting : SETTINGS[keystr_or_setting]; 
+    }
+
+
+    __OnItemAdded (item)
+    {
+        const defname = item.ConfigDef?.GetName ();
+
+        if (this.ByDef[defname] != null)
+            return Sys.ERR_PROGRAM ("ConfigEntry with ConfigDef '" + defname + "' already added.", {fatal: true} );
+        else
+            this.ByDef[defname] = item;
+    }
+
+    HasSetting (key) { return key instanceof SettingDef ? this.Contains (key) : this.HasName (key); }
     
 
-    SetSetting (key, value)
+    SetSettingValue (key, value)
     {
-        if (key instanceof Setting)
-            key = key.GetKey ();
-
-
-        if (SETTINGS[key] == null)
+        const setting_def = Config.__GET_SETTING_DEF (key);
+        
+        if (setting_def == null)
             return Sys.ERR ("Unrecognized setting key '" + key + "'.");
 
 
-        else if (! SETTINGS[key].CanBeModified () )
+        else if (! setting_def.CanBeModified () )
         {
             Sys.ERR (FUP++ < 1 ? "Nope, won't change these." : FUP == 2 ? `What part of "Nope, won't change these" did you not understand?`:"..." );
             return false;
@@ -63,7 +91,15 @@ class Config extends SARTObject
 
         else
         {       
-            this.KeyNamesPresent [key] = true;
+            const defname = setting_def.GetName ();
+
+            let entry = this.ByDef[defname];
+            if (entry == null)
+            {
+                entry = new ConfigEntry (setting_def);
+                if (! this.Add (entry) )
+                    return Sys.ERR_FATAL ("Error while adding config entry '" + defname +"' - try running with --debug for more information.");
+            }
 
             if (Util.IsString (value) )
             {                       
@@ -72,27 +108,27 @@ class Config extends SARTObject
     
                 if (lc === "null")            
                 {
-                    this.Values[key] = null;
+                    entry.SetValue (null);
                     Sys.VERBOSE ("Value '" + value + "' set to null.", key);            
                     return true;
                 }
     
                 else if (num != null && !isNaN (num) )
                 {            
-                    this.Values[key] = num;
+                    entry.SetValue (num);
                     Sys.VERBOSE ("Value '" + value + "' determined to be a number.", key);
                     return true;
                 }
     
                 else if (lc == "true" || lc == "false")
                 {            
-                    this.Values[key] = lc == "true";
+                    entry.SetValue (lc == "true");
                     Sys.VERBOSE ("Value '" + value + "' determined to be a boolean.", key);
                     return true;
                 }                
             }
 
-            this.Values[key] = value;
+            entry.SetValue (value);
             Sys.VERBOSE ("Setting value to '" + value + "'.", key);
                                     
             return true;
@@ -100,22 +136,27 @@ class Config extends SARTObject
     }
 
 
-    GetSetting (key)
+    GetSettingValue (key, {raw_value = false} = {} )
     {    
-        if (key instanceof Setting)
-            key = key.GetKey ();
+        const settings_def = Config.__GET_SETTING_DEF (key);
 
-        if (SETTINGS[key] == null)
+        if (settings_def == null)
         {
             Sys.ERR_PROGRAM ("Unrecognized setting '" + key + "!", "Settings", {once: true} );
             return null;
         }
 
-        else if (this.HasSetting (key) )            
-            return this.Values[key];
-
         else
-            return null;
+        {
+            const entry = this.ByDef [settings_def.GetName ()];
+
+            if (entry == null)
+                return null;
+            else
+                return raw_value ? entry.GetRawValue () : entry.GetValue ();
+        }
+
+        
     }
 
     AppendSettings (config_src)
@@ -129,7 +170,7 @@ class Config extends SARTObject
             const value = c[1];
 
             if (SETTINGS[key]?.CanBeCopied () )
-                this.SetSetting (key, value);
+                this.SetSettingValue (key, value);
         }
 
         return true;
@@ -143,7 +184,7 @@ class Config extends SARTObject
         for (const s of Object.values (SETTINGS) )
         {
             if (s.IsValid () )
-                this.SetSetting (s.GetKey (), s.GetDefaultValue () );
+                this.SetSettingValue (s.GetKey (), s.GetDefaultValue () );
         }        
     }
 
@@ -170,10 +211,10 @@ class Config extends SARTObject
             {
                 const s2 = s[1].split (':');
                 SetPort (s2[1]);
-                this.SetSetting (SETTINGS.ArweaveHost, s2[0]);
+                this.SetSettingValue (SETTINGS.ArweaveHost, s2[0]);
             }
             else
-                this.SetSetting (SETTINGS.ArweaveHost, s[1]);
+                this.SetSettingValue (SETTINGS.ArweaveHost, s[1]);
             
         }
     
@@ -182,12 +223,12 @@ class Config extends SARTObject
         {
             const s = host.split (':');
             this.SetPort (s[1]);
-            this.SetSetting (SETTINGS.ArweaveHost, s[0]);            
+            this.SetSettingValue (SETTINGS.ArweaveHost, s[0]);            
         }
     
         // Just a hostname
         else
-            this.SetSetting (SETTINGS.ArweaveHost, host);
+            this.SetSettingValue (SETTINGS.ArweaveHost, host);
         
     }
     
@@ -281,40 +322,40 @@ function AppendConfig (config_json)
 
 
 
-function GetSetting (key) { return State.GetSetting (key); }
+function GetSettingValue (key) { return Sys.GetMain()?.GetSettingValue (key); }
 
 
 
-function GetHostString      (path = null) { return GetSetting (SETTINGS.ArweaveProto) + "://" 
-                                                 + GetSetting (SETTINGS.ArweaveHost)  + ":" 
-                                                 + GetSetting (SETTINGS.ArweavePort)
+function GetHostString      (path = null) { return GetSettingValue (SETTINGS.ArweaveProto) + "://" 
+                                                 + GetSettingValue (SETTINGS.ArweaveHost)  + ":" 
+                                                 + GetSettingValue (SETTINGS.ArweavePort)
                                                  + ( path != null ? path : "");                  }
 function GetGQLHostString   ()            { return GetHostString () + "/graphql";                }
 
 
     
-function IsQuiet                   ()            { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
-function IsMSGOutputAllowed        ()            { return GetSetting (SETTINGS.LogLevel) >  LogLevels.QUIET;                                        }
-function IsNoMsg                   ()            { return GetSetting (SETTINGS.LogLevel) <= LogLevels.NOMSG   || GetSetting (SETTINGS.MsgOut) <= 0; }
-function IsMsg                     ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsVerbose                 ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsDebug                   ()            { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsMsgSTDOUT               ()            { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                }
-function IsMsgSTDERR               ()            { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                }
-function IsErrSTDOUT               ()            { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                }
-function IsErrSTDERR               ()            { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
-function IsForceful                ()            { return GetSetting (SETTINGS.Force);                                                              }
-function IsConcurrentAllowed       ()            { return GetSetting (SETTINGS.MaxConcurrentFetches) >= 2;                                          } 
-function IsHTMLOut                 ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.HTML;                                 }
-function IsCSVOut                  ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.CSV;                                  }
-function IsTXTOut                  ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.TXT;                                  }
-function IsANSIAllowed             ()            { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                               }
-function IsJSONOut                 ()            { return GetSetting (SETTINGS.OutputFormat) == OutputFormats.JSON;                                 }
+function IsQuiet                   ()            { return GetSettingValue (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
+function IsMSGOutputAllowed        ()            { return GetSettingValue (SETTINGS.LogLevel) >  LogLevels.QUIET;                                        }
+function IsNoMsg                   ()            { return GetSettingValue (SETTINGS.LogLevel) <= LogLevels.NOMSG   || GetSettingValue (SETTINGS.MsgOut) <= 0; }
+function IsMsg                     ()            { return GetSettingValue (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSettingValue (SETTINGS.MsgOut)  > 0; }
+function IsVerbose                 ()            { return GetSettingValue (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSettingValue (SETTINGS.MsgOut)  > 0; }
+function IsDebug                   ()            { return GetSettingValue (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSettingValue (SETTINGS.MsgOut)  > 0; }
+function IsMsgSTDOUT               ()            { return ( GetSettingValue (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                }
+function IsMsgSTDERR               ()            { return ( GetSettingValue (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                }
+function IsErrSTDOUT               ()            { return ( GetSettingValue (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                }
+function IsErrSTDERR               ()            { return ( GetSettingValue (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
+function IsForceful                ()            { return GetSettingValue (SETTINGS.Force);                                                              }
+function IsConcurrentAllowed       ()            { return GetSettingValue (SETTINGS.MaxConcurrentFetches) >= 2;                                          } 
+function IsHTMLOut                 ()            { return GetSettingValue (SETTINGS.OutputFormat) == OutputFormats.HTML;                                 }
+function IsCSVOut                  ()            { return GetSettingValue (SETTINGS.OutputFormat) == OutputFormats.CSV;                                  }
+function IsTXTOut                  ()            { return GetSettingValue (SETTINGS.OutputFormat) == OutputFormats.TXT;                                  }
+function IsANSIAllowed             ()            { return GetSettingValue (SETTINGS.ANSIAllowed ) == true;                                               }
+function IsJSONOut                 ()            { return GetSettingValue (SETTINGS.OutputFormat) == OutputFormats.JSON;                                 }
 function CanAlterConf              (key)         { return SETTINGS[key]?.CanBeModified ();                                                          }
-function GetOutputFormat           ()            { return GetSetting (SETTINGS.OutputFormat);                                                       }
-function GetMaxConcurrentFetches   ()            { return GetSetting (SETTINGS.MaxConcurrentFetches);                                               }
-function IncludeInvalidTX          ()            { return GetSetting (SETTINGS.IncludeInvalidTX) == true;                                           }
-function AreFieldsCaseSensitive    ()            { return GetSetting (SETTINGS.OutputFieldsCaseSens);                                               }
+function GetOutputFormat           ()            { return GetSettingValue (SETTINGS.OutputFormat);                                                       }
+function GetMaxConcurrentFetches   ()            { return GetSettingValue (SETTINGS.MaxConcurrentFetches);                                               }
+function IncludeInvalidTX          ()            { return GetSettingValue (SETTINGS.IncludeInvalidTX) == true;                                           }
+function AreFieldsCaseSensitive    ()            { return GetSettingValue (SETTINGS.OutputFieldsCaseSens);                                               }
     
     
 
@@ -329,8 +370,8 @@ module.exports =
     Config,    
     LoadConfig,
     AppendConfig,
-    GetSetting,
-    
+    GetSetting: GetSettingValue,
+    GetSettingValue,
     GetHostString,
     GetGQLHostString,
     IsQuiet                 ,

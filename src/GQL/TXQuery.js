@@ -52,8 +52,8 @@ class TXQuery extends Query
 
 
         let block_str = "";
-        const minblock = State.GetSetting (SETTINGS.QueryMinBlockHeight);
-        const maxblock = State.GetSetting (SETTINGS.QueryMaxBlockHeight);
+        const minblock = State.GetSettingValue (SETTINGS.QueryMinBlockHeight);
+        const maxblock = State.GetSettingValue (SETTINGS.QueryMaxBlockHeight);
 
         if (minblock != null || maxblock != null)
         {            

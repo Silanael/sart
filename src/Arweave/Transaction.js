@@ -173,6 +173,10 @@ const OBJDEF = new ObjDef ()
         .WithFunction  (function (t) { return t?.GetStatusText     (); } )
         .WithFetch (FETCH_STATUS),
             
+        new Field ().WithName ("NativeObject")
+                    .WithAliases ("NativeObj", "NOBJ", "RawObject", "RawObj")
+                    .WithPropertyName ("NativeTXObj")
+                    ,
         
         new Field ().WithName ("Warnings")       
         .WithAliases ("WARN")
@@ -183,9 +187,7 @@ const OBJDEF = new ObjDef ()
         .WithNullDisplayValue ("NONE"),                  
 
     )
-    .WithDefaultFields ("time","txid","flags","ctype","DestShort","qty_ar","fee_ar")
-    .WithSettingKey_SEP (SETTINGS.Fields_Transaction_Separate)
-    .WithSettingKey_TBL (SETTINGS.Fields_Transaction_Table)
+    .WithDefaultFieldNamesStr ("time","txid","flags","ctype","DestShort","qty_ar","fee_ar")
     ;
 
 
@@ -195,7 +197,7 @@ const OBJDEF = new ObjDef ()
 
 class Transaction extends SARTObject
 {
-    static OBJDEF = OBJDEF;
+    static OBJDEF       = OBJDEF;
 
     ObjectType          = "Transaction";
     Network             = "Arweave";

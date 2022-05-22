@@ -11,6 +11,7 @@ const Sys        = require ("./System");
 const Util       = require ("./Util");
 const SARTBase   = require ("./SARTBase");
 const SARTGroup  = require ("./SARTGroup");
+const FieldDef   = require ("./FieldDef");
 
 
 
@@ -38,17 +39,44 @@ class FieldData extends SARTBase
             this.WithName (def.GetFieldName () );
     }
     
-    GetFieldName       () { return this.GetName ();                                                  }
-    GetFieldValue      () { return this.Def?.GetFieldValue (this.Obj);                               }
-    GetFieldTextValue  () { return Util.IsSetStrOr (this.GetFieldValue ()?.toString (), "-");        }
-    GetFieldDef        () { return this.Def                                                          }
-    GetTopStrWidth     () { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
+    GetFieldName       ()     { return this.Def?.GetFieldName ();                                        }
+    GetFieldValue      ()     { return this.Def?.GetFieldValue (this.Obj);                               }
+    GetFieldTextValue  ()     { return Util.IsSetStrOr (this.GetFieldValue ()?.toString (), "-");        }
+    GetFieldDef        ()     { return this.Def                                                          }
+    GetTopStrWidth     ()     { return Util.GetTopStrLen (this.GetFieldName (), this.GetFieldValue () ); }
 
 }
 
 
 class FieldDataGroup extends SARTGroup
 {  
+
+    constructor (sartobj)
+    {
+        super ();
+
+        const field_defs = sartobj?.GetFieldDefsArray?.();
+
+        if (field_defs == null)
+            return this.OnProgramError ("Unable to get field defs from 'sartobj' - is either null or not a SART-object.", this);
+
+        for (const fdef of field_defs)
+        {
+            this.Add (new FieldData (sartobj, fdef) );
+        }
+
+    }
+
+    GetField (name_or_def)
+    {        
+        return this.GetByName (name_or_def instanceof FieldDef ? name_or_def.GetFieldName (): name_or_def); 
+    }
+
+    HasField (name_or_def)
+    {        
+        return this.GetField (name_or_def) != null;
+    }
+
     GetDefsWithValueState (get_if_value_is_not_null = false)
     {
         const defs = new SARTGroup ();
@@ -80,6 +108,30 @@ class FieldDataGroup extends SARTGroup
         }
         return names;
     }
+
+    GetFieldValuesJSObj (fields = [])
+    {
+        const result_jsobj = {};
+        const field_array  = this.AsArray ();
+
+        // All fields
+        if (fields == null || fields.length <= 0)
+        {
+            for (const fdata of field_array)
+            {                
+                result_jsobj [fdata.GetFieldName ()] = fdata.GetFieldValue ();
+            }
+        }
+        else for (const fdata of field_array)
+        {
+            const fname = fdata.GetFieldName ();
+            if (fields.HasName (fdata) )
+                result_jsobj [fname] = fdata.GetFieldValue ();
+        }
+
+        return result_jsobj;
+    }
+
 }
 
 

@@ -43,7 +43,7 @@ class TXTagGroup extends SARTGroup
         }
         this.TotalBytes = total_bytes;
         
-        const txmaxbytes = State.GetSetting (SETTINGS.TXTagsMaxTotalBytes);
+        const txmaxbytes = State.GetSettingValue (SETTINGS.TXTagsMaxTotalBytes);
 
         if (txmaxbytes == null)
             Sys.WARN_ONCE ("Config.TXTagsMaxTotalBytes is not set. Hope you know what you're doing.");

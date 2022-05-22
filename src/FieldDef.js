@@ -19,6 +19,7 @@ const Sys        = require("./System");
 class FieldDef extends SARTBase
 {        
     PropertyName        = null; // Actual property name of the object. If null, use FieldName.
+    StaticValue         = null;
 
     FromObjectName      = null;
     GetterFunction      = null;  // This should be a function that takes the SARTObject as its first parameter.
@@ -32,7 +33,6 @@ class FieldDef extends SARTBase
     FetchInheritFrom    = null;  // Field name
     Class               = null;
 
-    DefaultValue        = null;
 
     constructor (name, sartobj_class)
     {
@@ -40,8 +40,8 @@ class FieldDef extends SARTBase
         this.Class = sartobj_class;
     }
     
-    
-    WithDefaultValue     (val)            { this.DefaultValue        = val;                                                                return this; }
+    WithStaticValue      (value)          { this.StaticValue         = value;                                                              return this; }
+    WithPropertyName     (propertyname)   { this.PropertyName        = propertyname;                                                       return this; }    
     WithFunction         (func)           { this.GetterFunction      = func;                                                               return this; }    
     WithNullDisplayValue (str)            { this.NullDisplayValue    = str;                                                                return this; }
     WithFetch            (fetchdef)       { if (! this.FetchRequired_AnyOf.includes (fetchdef) ) this.FetchRequired_AnyOf.push (fetchdef); return this; }
@@ -73,15 +73,10 @@ class FieldDef extends SARTBase
         const property_name    = this.GetPropertyName ();
         const src_object       = this.FromObjectName != null ? sart_obj[this.FromObjectName] : sart_obj;
 
-        const value = this.GetterFunction != null ? this.GetterFunction (sart_obj)
-                                                  : src_object [property_name];                                                                                
+        return this.StaticValue != null ? this.StaticValue
+                                        : this.GetterFunction != null ? this.GetterFunction (sart_obj)
+                                                                      : src_object [property_name];
 
-        if (value != null)
-            return this.Recursive ? value.GetInfo != null ? value.GetInfo () : value 
-                                  : value.toString (); 
-                        
-        else
-            return this.DefaultValue;
     }
 
     /** Returns the value if not null, NullDisplayValue otherwise. */

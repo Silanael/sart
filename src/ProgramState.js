@@ -38,7 +38,7 @@ class ProgramState
     GetCacheMisses    ()   { return this.CacheMisses ;           }
     GetHost           ()   { return this.CurrentHost;            }
     GetActiveCommand  ()   { return this.ActiveTask;             }
-    GetSetting       (key) { return this.Main?.GetSetting (key)  }
+    GetSettingValue   (key) { return this.Main?.GetSettingValue (key)  }
     
 
     GetArFSEntity (args = { entity_type: null, arfs_id: null} )

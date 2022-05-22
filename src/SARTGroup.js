@@ -11,7 +11,6 @@ const CONSTANTS    = require ("./CONSTANTS");
 const Sys          = require ("./System");
 const Util         = require ("./Util");
 const SARTBase     = require ("./SARTBase");
-const OutputParams = require ("./OutputParams");
 
 
 class SARTGroup extends SARTBase
@@ -32,12 +31,17 @@ class SARTGroup extends SARTBase
         }
     }
 
+    // Overridable by subclasses
+    __OnItemAdded    (item)       {};
+
+
     With             (...objects) { this.AddAll (...objects);                                         return this; }
     WithObj          (obj)        { this.Add (obj);                                                   return this; }
 
     GetAmount        ()           { return this.Entries.length;                                                    }    
     GetByIndex       (index)      { return index >= 0 && index < this.Entries.length ? this.Entries[index] : null; }        
     GetByID          (id)         { return this.ByID[id];                                                          }        
+    GetCategoryArray (cat)        { return this.ByCategory[cat]?.AsArray ();                                       }
     GetCategoryGroup (cat)        { return this.ByCategory[cat];                                                   }
     ContainsID       (id)         { return this.GetByID (id) != null;                                              }    
     AsArray          ()           { return this.Entries;                                                           }    
@@ -140,6 +144,8 @@ class SARTGroup extends SARTBase
             }
             
             this.Entries.push (entry);
+            this.__OnItemAdded (entry);
+            
             return true;
         }
 
@@ -159,11 +165,6 @@ class SARTGroup extends SARTBase
         return true;
     }
 
-
-    Output (opts = new OutputParams () )
-    {
-        Sys.GetMain ()?.OutputObjects (this, opts);
-    }
 
 
     GetFieldMaxLen (field)
@@ -211,7 +212,7 @@ class SARTGroup extends SARTBase
     GetNamesAsStr (opts = CONSTANTS.UTIL_ARRAYTOSTR_DEFAULTS) { return Util.ArrayToStr (this.GetNamesAsArray (), opts); }    
 
 
-    GetEffectiveItems (names = [], {groups = new SARTGroup (), use_all_if_no_names = true} = {} )
+    GetEffectiveItems (names = [], {groupdefgrp = new SARTGroup (), use_all_if_no_names = true} = {} )
     { 
 
         const all_entries_arr = this.AsArray ();
@@ -239,17 +240,17 @@ class SARTGroup extends SARTBase
         }
 
 
-        if (groups?.GetAmount () > 0)
+        if (groupdefgrp?.GetAmount () > 0)
         {
             // Process groups    
             const groups_included = [];
             for (const iname of names)
             {            
-                const group = groups.GetByName (iname);
+                const group = groupdefgrp.GetByName (iname);
 
                 if (group != null)
                 {                
-                    const group_content = groups.GetNamesAsArray ();
+                    const group_content = group.GetNamesAsArray ();
 
                     if (group_content == null)
                         Sys.DEBUG ("No valid items in group '" + group + "'.");

@@ -105,7 +105,8 @@ class CMD_Testing extends CommandDef
         //TestFunc  ("override1", {name: "NameOverride"});
         //TestFunc2 ("override1", {name: "NameOverride"});
         const tx1 = new Transaction ("DuVcUb5_80yWXP5mM2zojfsuBR7JqFkiw0spXkpFrv0");
-        const tx2 = new Transaction ("sfsdf");
+        const tx2 = new Transaction ("AUq1JuFAdcnyOrjNGnAV1NDi_QCMKDUcHwbbjyBkcIM");
+        await tx2.FetchViaGet ();
 
         /*
         const tsk = 
@@ -117,9 +118,14 @@ class CMD_Testing extends CommandDef
         */
         
         
-        const grp = new TXGroup ().With (tx1);
+        const grp = new TXGroup ().With (tx2);
         debugger;
-        grp.Output ();
+        //grp.Output ();
+
+        tx2.Output ( {cmdinst: cmd_instance} );
+
+        //Sys.OUT_TXT_OBJ (tx2, {fields: ["TXID", "Owner", "Target"], depth: 1, nullvalue: "-"} );
+
         //Sys.INFO (await grp.FetchStatusOfAll () );
         
 

@@ -18,7 +18,8 @@ class CommandDef extends SARTDef
     Subcommands       = {};
     
     OutputObjectClass = null;
-    DefaultListMode   = CONSTANTS.LISTMODE_SEPARATE;    
+    DefaultListMode   = CONSTANTS.LISTMODE_SEPARATE;
+    DefaultFields     = null;
     
     MatchFunc         = null; // Should be a function (param_str).
     ExecFunc          = null;
@@ -48,26 +49,24 @@ class CommandDef extends SARTDef
                                           this.OutFunc               = out;               return this; }
     WithHelpLines         (helplines)   { this.Helplines             = helplines;         return this; }
     WithSubcommands       (subcommands) { this.Subcommands           = subcommands;       return this; }
-    WithAsListByDefault   ()            { this.AsListByDefault       = true;              return this; }
-    WithAsEntriesByDefault()            { this.AsListByDefault       = false;             return this; }
+    WithDefaultListMode   (listmode)    { this.DefaultListMode       = listmode;          return this; }
+    WithDefaultFields     (fields = []) { this.DefaultFields         = fields;            return this; }    
     WithOutputObjectClass (sart_obj_cl) { this.OutputObjectClass     = sart_obj_cl;       return this; }    
 
-    GetMinArgsAmount      ()            { return this.MinArgsAmount; }
-    GetSubcommands        ()            { return this.Subcommands;   }
-    HasSubcommands        ()            { return this.Subcommands != null ? Object.keys (this.Subcommands)?.length > 0 : false; }
-    GetValidArgs          ()            { return this.ValidArgs;  }
-    GetOutputObjectClass  ()            { return this.OutputObjectClass; }
+    GetMinArgsAmount      ()            { return this.MinArgsAmount;             }
+    GetSubcommands        ()            { return this.Subcommands;               }
+    HasSubcommands        ()            { return this.Subcommands != null && Object.keys (this.Subcommands)?.length > 0; }
+    GetValidArgs          ()            { return this.ValidArgs;                 }
+    GetOutputObjectClass  ()            { return this.OutputObjectClass;         }
     HasOutputObjectClass  ()            { return this.OutputObjectClass != null; }
-    RunAsActiveCommand    ()            { return this.AsActiveCommand == true; }
+    RunAsActiveCommand    ()            { return this.AsActiveCommand   == true; }
     toString              ()            { return this.GetName (); }
     
-    GetEffectiveListMode  (cmd)         { return cmd.HasListMode ()     ? cmd.GetListMode     () : this.DefaultListMode; }
-    GetEffectiveFields    (cmd)         { return cmd.HasWantedFields () ? cmd.GetWantedFields () : this.GetDefaultFields (this.GetEffectiveListMode (cmd) ); }
-  
-    GetDefaultFields      (listmode)    { return this.HasOutputObjectClass () ? this.GetOutputObjectClass ().GET_DEFAULT_FIELDNAMES (listmode) : [FieldGroup.All.Name]; }
-    GetAvailableFetches   ()            { return this.HasOutputObjectClass () != null && this.GetOutputObjectClass ().GET_ALL_AVAILABLE_FETCHES != null ? 
+    GetDefaultListMode    ()            { return this.DefaultListMode; }
+    GetDefaultFields      (listmode)    { return Util.Or (this.DefaultFields, this.GetOutputObjectClass ()?.GET_DEFAULT_FIELDNAMES (listmode) ); }
+    GetAvailableFetches   ()            { return this.HasOutputObjectClass () != null && this.GetOutputObjectClass ().GET_ALL_AVAILABLE_FETCHES != null ?  // TODO fix
                                                  this.GetOutputObjectClass ().GET_ALL_AVAILABLE_FETCHES () : null; }
-    GetAvailableFetchesStr()            { return this.GetAvailableFetches ()?.GetNamesAsStr (); }
+    GetAvailableFetchesStr()            { return this.GetAvailableFetches  ()?.GetNamesAsStr (); }
 
 
     Matches (name)
@@ -197,9 +196,7 @@ class FieldCMD extends CommandDef
         {
             const outputparams = cmd.HasOutputParams () ? cmd.GetOutputParams () : new OutputParams ();
             
-            outputparams.WithCMD      (cmd                           );
-            outputparams.WithFields   (this.GetEffectiveFields (cmd) );
-            outputparams.WithListMode (cmd .GetListMode        ()    );
+            outputparams.WithCMD (cmd);
 
             output_obj.Output (outputparams);
         }
@@ -213,7 +210,7 @@ class FieldCMD extends CommandDef
 class OutputCMD extends CommandDef
 {
 
-    Function;
+    Function = null;
 
     constructor (name, output_func)
     {

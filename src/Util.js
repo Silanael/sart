@@ -35,7 +35,8 @@ function PopArg (args)
 //function IsFlag (arg)               { return arg.startsWith ('-'); }
 function IsFlag          (arg, flags)            { return flags[arg] != null; }
 function IsFlagWithArg   (arg, flags)            { return flags[arg]?.A; }
-function IsString        (value)                 { return value instanceof String || typeof value === "string";}
+function IsString        (val)                   { return val instanceof String || typeof val === "string";}
+function IsContainer     (val)                   { return !IsString (val) && (Array.isArray (val) || val?.AsArray != null || typeof val === "object") }
 function IsSet           (value)                 { return value != null && value != "" && value.length > 0; }
 function IsArweaveHash   (str)                   { return str != null && str.length == 43 && /[a-zA-Z0-9\-]+/.test(str); }
 function IsArFSID        (str)                   { return str != null && str.length == 36 && /^........\-....\-....\-....\-............$/.test(str); }
@@ -512,6 +513,22 @@ function GetKeyFromJSObj (js_obj, key, case_sensitive = false)
     return null;
 }
 
+function GetLongestStrOfArray (str_array = [])
+{
+    let str_max_len = 0;
+    for (const str of str_array)
+    {
+        if (str?.length > str_max_len)
+            str_max_len = str;
+    }
+    return str_max_len;         
+}
+
+function GetJSObjLongestKeyLen (js_obj, keys_to_include = [] )
+{    
+    if (keys_to_include?.length > 0)
+        return GetLongestStrOfArray (keys_to_include?.length > 0 ? keys_to_include : Array.keys (js_obj) );
+}
 
 
 
@@ -521,11 +538,11 @@ function GetKeyFromJSObj (js_obj, key, case_sensitive = false)
 
 
 
-
+// Could be done in a more reasonable manner.
 module.exports = {  
                    IsFlag, IsFlagWithArg, GetCmdArgs, IsArweaveHash, IsArFSID, TXStatusCodeToStr, StripExtension, GetTopStrLen, AppendToArrayNoDupes,
                    GetDate, GetUNIXTimeMS, GetVersion, GetVersionStr, PopArg, IsTTY, IsOutputPiped, StrToFlags, IsFlagSet, Delay, ContainsString,
                    StrCmp, StrCmp_Regex, StrCmp_Wildcard, GetSizeStr, IsSet, ObjToJSON, ObjToStr, KeysToStr, GetAge, GetDummyDate, GetShortArweaveHash,
                    Or, Append, AssignIfNotNull, CopyKeysToObj, AppendIfNotNull, AppendToArray, ArrayToStr, GetAmountStr, AmountStr:GetAmountStr,
-                   IsString, RequireOptional, IsSetStrOr, IsReleaseVersion, Or3,
+                   IsString, RequireOptional, IsSetStrOr, IsReleaseVersion, Or3, IsContainer, GetJSObjLongestKeyLen, GetLongestStrOfArray,
                    GetRandomUUIDv4, JSONToObj, SetMissingMembers, IsMIMEType, GetShortString, GetKeyFromJSObj, SetPropertyIfValueNotNull };

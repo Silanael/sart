@@ -37,7 +37,6 @@ const { OPTIONS }   = require("./OPTIONS");
 
 
 
-
 // ArgV-indices
 const PRG_ARG           = 0;
 const FILENAME_PATH_ARG = 1;
@@ -83,19 +82,21 @@ class Main
     //GetOutputDests        ()           { return Util.Or (ProgramState.ActiveCommandInst?.GetOutputDests (), Sys.OUTPUTDESTS_STDOUT ); }
     GetOutputDests        ()                 { return Sys.OUTPUTDESTS_STDOUT; }
     GetOutputFormat       (fmt_name)         { return this.OutputFormats[fmt_name?.toUpperCase () ]; }
-    GetActiveOutputFormat ()                 { return this.GetOutputFormat (this.GetSetting (SETTINGS.OutputFormat) ); }
-    GetSizeStr            (bytes, hr)        { return Util.GetSizeStr (bytes, hr, hr ? this.GetSetting (SETTINGS.SizeDigits) : null); }
+    GetActiveOutputFormat ()                 { return this.GetOutputFormat (this.GetSettingValue (SETTINGS.OutputFormat) ); }
+    GetSizeStr            (bytes, hr)        { return Util.GetSizeStr (bytes, hr, hr ? this.GetSettingValue (SETTINGS.SizeDigits) : null); }
     GetActiveCommand      ()                 { return this.State.ActiveCommandInst; }
 
-    GetSetting (key, value_if_null = null)
+    GetSettingDefs        ()                 { return SETTINGS; }
+
+    GetSettingValue (key, value_if_null = null)
     {                
         let val = null;
 
         if (this.State.ActiveCommandInst != null && this.State.ActiveCommandInst.HasSetting (key) )
-            val = this.State.ActiveCommandInst.GetSetting (key);
+            val = this.State.ActiveCommandInst.GetSettingValue (key);
           
         else if (this.State.GlobalConfig != null)
-            val = this.State.GlobalConfig.GetSetting (key); 
+            val = this.State.GlobalConfig.GetSettingValue (key); 
           
         else
             return value_if_null;

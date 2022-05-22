@@ -20,7 +20,7 @@ const Sys          = require ("../System");
 class OutputFormat_TXT extends OutputFormat
 {
 
-    __DoOutputObjects (objects, params = new OutputParams (), field_defs)
+    __DoOutputObjects (objects, params = new OutputParams (), fieldnames)
     {             
 
         const color = params.GetColor ();
@@ -43,7 +43,7 @@ class OutputFormat_TXT extends OutputFormat
             
 
             // Caption            
-            for (const f of field_defs.AsArray () )
+            for (const f of fieldnames.AsArray () )
             {
                 fname             = f.GetName ();
                 flen              = objects.GetFieldMaxLen (fname) + 3;
@@ -61,7 +61,7 @@ class OutputFormat_TXT extends OutputFormat
             // Object lines            
             for (const obj of objects.AsArray () )
             {            
-                field_data = obj.GetDataForFields (field_defs);
+                field_data = obj.GetDataForFields (fieldnames);
                 str_line   = "| ";
 
                 for (const f of field_data.AsArray () )
@@ -79,7 +79,7 @@ class OutputFormat_TXT extends OutputFormat
 
         // Separate entries
         else
-            this.__OutputObjects (objects, 0, field_defs, params);
+            this.__OutputObjects (objects, 0, fieldnames, params);
   
 
         if (color != null)
@@ -87,9 +87,10 @@ class OutputFormat_TXT extends OutputFormat
 
     }
 
-    __OutputObj (obj, indent = 0, field_defs = null, params, longest_field_name = null)
+    __OutputObj (obj, indent = 0, fieldnames = null, params)
     {
-
+        Sys.OUT_TXT_OBJ (obj, {...params, fields: fieldnames});
+        /*
         // Get field defs from the first object
         if (field_defs == null)
             field_defs = OutputFormat.GET_FIELD_DEFS (obj, params);
@@ -105,7 +106,7 @@ class OutputFormat_TXT extends OutputFormat
         const field_data         = obj.GetDataForFields (field_defs);  
         const value_start_offset = indent + longest_field_name + 2;
 
-
+        
         for (const f of field_data.AsArray () )
         {        
             if (f != null)
@@ -127,30 +128,20 @@ class OutputFormat_TXT extends OutputFormat
                     );
                 }                
             }
-        }                            
+        }   
+        */                         
     }
 
-    __OutputObjects (objects, indent = 0, field_defs = null, params)
-    {        
-        // Get field defs from the first object
-        if (field_defs == null)
-            field_defs = OutputFormat.GET_FIELD_DEFS (objects, params);
-
-        // No data for sub-obj
-        if (field_defs == null)
-            return;
-
-        // Find longest length of field name
-        const longest_field_name = field_defs.GetNameMaxLen ();        
-                
+    __OutputObjects (objects, indent = 0, fieldnames = null, params)
+    {                        
         const len = objects.GetAmount ();
         let pos = 0;
         for (const obj of objects.AsArray () )
         {
-            this.__OutputObj (obj, indent, field_defs, params, longest_field_name);
+            this.__OutputObj (obj, indent, fieldnames, params);
             ++pos;
             if (pos < len)
-                this.__Out_Line ("***");
+                this.__Out_Line ("");
         }                
     }
  

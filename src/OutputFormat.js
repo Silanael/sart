@@ -9,6 +9,7 @@
 
 const CONSTANTS    = require ("./CONSTANTS");
 const Sys          = require ("./System");
+const Util         = require ("./Util");
 const SETTINGS     = require ("./SETTINGS").SETTINGS;
 const OutputParams = require ("./OutputParams");
 
@@ -21,27 +22,22 @@ class OutputFormat
 
     OutputObjects (objects = new SARTGroup (), params = new OutputParams () )
     {
-        if (objects == null || objects.length <= 0)
+        if (objects == null || objects.GetAmount () <= 0)
             return ERR_PROGRAM ("OutputFormat.OutputObjects: No objects given.");
 
         if (params == null)
             params = new OutputParams ();
 
-        const field_defs = OutputFormat.GET_FIELD_DEFS (objects, params);
+        const first_obj  = objects.GetByIndex != null ? objects.GetByIndex (0) : objects;
+        const fieldnames = first_obj?.GetEffectiveFieldDefGroup ({outparams: params})?.GetNamesAsArray ();
 
-        if (field_defs != null)
-            this.__DoOutputObjects (objects, params, field_defs);        
+        if (fieldnames != null)
+            this.__DoOutputObjects (objects, params, fieldnames);        
         else
             Sys.INFO ("No data.");
     }
 
-
-    static GET_FIELD_DEFS (objects, params)
-    {
-        const first_obj  = objects.GetByIndex != null ? objects.GetByIndex (0) : objects;
-        return first_obj != null ? first_obj.GetEffectiveFieldDefs (params.GetFields (), params.GetListMode () ) : null;
-    }
-
+    
     /** Overridable. Logic of actually writing the output goes here. This implementation does nothing. */    
     __DoOutputObjects (objects, params = new OutputParams (), field_defs                                          ) {}
 

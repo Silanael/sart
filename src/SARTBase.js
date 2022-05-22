@@ -9,8 +9,9 @@
 // identification-functionality.
 //
 
-const Util = require ("./Util");
-const Sys  = require ("./System");
+const Util        = require ("./Util");
+const Sys         = require ("./System");
+const OutputArgs  = require ("./OutputParams");
 
 
 class SARTBase
@@ -36,7 +37,7 @@ class SARTBase
 
 
     WithName           (name)                                  { this.Name       = name;                                        return this; }
-    WithAlias          (alias)                                 { this.Aliases    = this.Aliases.push   (alias);                 return this; }
+    WithAlias          (alias)                                 {                   this.Aliases.push   (alias);                 return this; }
     WithAliases        (...aliases)                            { this.Aliases    = this.Aliases.concat (aliases);               return this; }
     WithObjType        (objtype)                               { this.ObjectType = objtype;                                     return this; }
     WithCategory       (category)                              { this.Category   = category;                                    return this; }
@@ -92,6 +93,14 @@ class SARTBase
         return false;
     }
 
+    Output ( {oargs = new OutputArgs (), cmdinst = null} )
+    {                        
+        if (cmdinst != null)
+            oargs.WithCMDInst (cmdinst);
+            
+        Sys.GetMain ().OutputObjects (this, oargs);
+    }
+
     __OnError (field, errfunc, error, src)
     {
         if (!errfunc (error, {src: src} ) )
@@ -101,8 +110,8 @@ class SARTBase
         }
         else
             return true;        
-    }    
-
+    }   
+    
 }
 
 

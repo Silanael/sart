@@ -15,7 +15,6 @@ const CONSTANTS     = require ("./CONSTANTS.js");
 const LogLevels     = CONSTANTS.LOGLEVELS;
 const OutputDests   = CONSTANTS.OUTPUTDESTS;
 const OutputFormats = CONSTANTS.OUTPUTFORMATS;
-const { SETTINGS }  = require ("./SETTINGS");
 const State         = require ("./ProgramState.js");
 const Util          = require ("./Util");
 
@@ -52,28 +51,30 @@ const CHOICESTR_DEFAULT_NO  = ["y/N"];
 
 const WARNING_CHR_SEQ_REGEXP = /!!!.+!!!/;
 
-var Main = null;
+var Main     = null;
+var Settings = null;
 
-function SetMain                    (main)           { Main = main; }
+function SetMain                    (main)           { Main = main; Settings = main?.GetSettingDefs (); }
 function GetMain                    ()               { return Main; }
 
-function GetSetting                 (key)            { return Main?.GetSetting (key); }
+function GetSettingVal              (key)            { return Main?.GetSettingValue (key); }
 
-function IsQuiet                    ()               { return GetSetting (SETTINGS.LogLevel) <= LogLevels.QUIET;                                        }
-function IsMsg                      ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.MSG     && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsVerbose                  ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.VERBOSE && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsDebug                    ()               { return GetSetting (SETTINGS.LogLevel) >= LogLevels.DEBUG   && GetSetting (SETTINGS.MsgOut)  > 0; }
-function IsMsgSTDOUT                ()               { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDOUT) != 0;                                }
-function IsMsgSTDERR                ()               { return ( GetSetting (SETTINGS.MsgOut) & OutputDests.STDERR) != 0;                                }
-function IsErrSTDOUT                ()               { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDOUT) != 0;                                }
-function IsErrSTDERR                ()               { return ( GetSetting (SETTINGS.ErrOut) & OutputDests.STDERR) != 0;                                }
-function IsForceful                 ()               { return GetSetting (SETTINGS.Force);                                                              }
-function IsANSIAllowed              ()               { return GetSetting (SETTINGS.ANSIAllowed ) == true;                                               }
+function IsQuiet                    ()               { return GetSettingVal (Settings?.LogLevel) <= LogLevels.QUIET;                                         }
+function IsMsg                      ()               { return GetSettingVal (Settings?.LogLevel) >= LogLevels.MSG     && GetSettingVal (Settings?.MsgOut)  > 0; }
+function IsVerbose                  ()               { return GetSettingVal (Settings?.LogLevel) >= LogLevels.VERBOSE && GetSettingVal (Settings?.MsgOut)  > 0; }
+function IsDebug                    ()               { return GetSettingVal (Settings?.LogLevel) >= LogLevels.DEBUG   && GetSettingVal (Settings?.MsgOut)  > 0; }
+function IsMsgSTDOUT                ()               { return ( GetSettingVal (Settings?.MsgOut) & OutputDests.STDOUT) != 0;                                }
+function IsMsgSTDERR                ()               { return ( GetSettingVal (Settings?.MsgOut) & OutputDests.STDERR) != 0;                                }
+function IsErrSTDOUT                ()               { return ( GetSettingVal (Settings?.ErrOut) & OutputDests.STDOUT) != 0;                                }
+function IsErrSTDERR                ()               { return ( GetSettingVal (Settings?.ErrOut) & OutputDests.STDERR) != 0;                                }
+function IsForceful                 ()               { return GetSettingVal (Settings?.Force);                                                              }
+function IsANSIAllowed              ()               { return GetSettingVal (Settings?.ANSIAllowed ) == true;                                               }
 function IsTTY                      ()               { return CONSTANTS.IS_TTY;                                                                         }
 function IsProgressIndicatorEnabled ()               { return IsTTY (); /* TODO - Make a config-setting */                                              }
 function IsProgressIndicatorActive  ()               { return GetProgressIndicator () != null;                                                          }
 function GetActiveCommand           ()               { return GetMain ()?.GetActiveCommand ();                                                          }
 function GetProgressIndicator       ()               { return GetActiveCommand ()?.GetProgressIndicator ();                                             }
+function IsNoColorEnvVarSet         ()               { return process.env.NO_COLOR != null; }
 
 function ERR_MISSING_ARG    (msg = null, src = null) { return ERR_ABORT ("Missing argument." + (msg != null ? " " + msg : ""), src ); }
 function SET_RECURSIVE_OUT  (obj)                    { PrintObj.SetRecursive (obj);     };
@@ -124,7 +125,7 @@ async function Async (promises = [], {await_all = true} = {} )
         return ERR_PROGRAM ("No Promises given.", "Async");
 
     const amount         = promises.length;
-    const max_concurrent = GetSetting (SETTINGS.MaxAsyncCalls);
+    const max_concurrent = GetSettingVal (Settings?.MaxAsyncCalls);
 
     if (amount <= max_concurrent)
     {
@@ -148,9 +149,18 @@ async function Async (promises = [], {await_all = true} = {} )
     
 }
 
+var ErrorHandlerActive = false;
 
 function ErrorHandler (error, msgs = {prefix: null, suffix: null} )
 {        
+    if (ErrorHandlerActive)
+    {
+        console.error ("ErrorHandler was called recursively. Aborting execution. The last error: ");
+        console.error (error);
+        process.exit (-1);
+    }
+
+    ErrorHandlerActive = true;
     msg = "???";    
     
     if (error != null)
@@ -191,6 +201,7 @@ function ErrorHandler (error, msgs = {prefix: null, suffix: null} )
                     break;              
             }
             ERR ("ERROR: " + (msgs?.prefix != null ? msgs.prefix + ": " : "") + msg + Util.Or (msgs?.suffix, "") );
+            ErrorHandlerActive = false;
             return true;            
         }        
     }
@@ -472,46 +483,68 @@ function OUT_NEWLINE_STDERR ()
     OUT_STDERR (CHR_NEWLINE);    
 }
 
-function OUT_TXT_JSOBJ (js_object, params = {} )
+function OUT_TXT_OBJ (obj, {src = null, output_func = INFO, indent = 0, spacer = 2, 
+                            depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT, fields = null, nullvalue = undefined} = {} )
 {
-    params = {...{src: null, output_func: INFO, indent: 0, spacer: 2, depth: CONSTANTS.OBJPRINT_DEPTH_DEFAULT}, ...params };
+    let params = {src, output_func, indent, spacer, depth, fields, nullvalue};
 
 
-    if (js_object == null)
-        return ERR_PROGRAM ("No 'js_object' given.", "OUT_TXT_JSOBJ");
+    if (obj == null)
+        return ERR_PROGRAM ("No 'obj' given.", "OUT_TXT_OBJ");
 
     else
     {
-        const entries = Object.entries (js_object);        
-        let maxlen = 0;        
+        // Get a Javascript object containing the field-value pairs if dealing with SARTObject, otherwise assume obj is JSobj or an array.
+        const entries = Object.entries (obj.GetFieldValuesJSObj != null ? obj.GetFieldValuesJSObj () : obj);        
+        
+        let key_max_len = 0;        
 
         // Find the maximum length from among the keys
-        for (const e of entries)
+        if (fields?.length > 0) 
         {
-            if (e[0]?.length > maxlen)
-                maxlen = e[0].length;
+            for (const k of fields)
+            {
+                if (k.length > key_max_len)
+                    key_max_len = k.length;
+            }
         }
-        const keylen = maxlen + params.spacer;        
+        else for (const e of entries)
+        {
+            if (e[0]?.length > key_max_len)
+                key_max_len = e[0].length;
+        }       
         
-        //{ output_func: output_func, indent: indent + keylen, spacer: spacer, depth: depth - 1 }
+        const value_start_offset = params.indent + key_max_len + params.spacer;
+                
 
         for (const e of entries)
         {            
             const key = e[0];
             const val = e[1];
             
-            params.output_func (" ".repeat (params.indent) + key?.padEnd (keylen) + val?.toString (), params)                        
-
-            if (val != null && params.depth > 0 && !Util.IsString (val) && (Array.isArray (val) || val?.AsArray != null || typeof val === "object") )
-            {                                          
-                const array = val?.AsArray != null ? val.AsArray () : val;
-                
-                OUT_TXT_JSOBJ (array, {...{params}, ...{depth: params.depth - 1, indent: params.indent + keylen}} );
-            }    
-            
+            // TODO Optimize - move branch out of the loop
+            if (fields == null || fields.includes (key) )
+            {
+                OUT_TXT_ENTRY (key, val, {...params, key_max_len} );
+                                
+                if (val != null && params.depth > 0 && Util.IsContainer (val) )
+                {                                                                          
+                    OUT_TXT_OBJ (val?.AsArray != null ? val.AsArray () : val, 
+                                 {...params, ...{depth: params.depth - 1, indent: value_start_offset} } );
+                }    
+            }
         }
     }
 }
+
+/** Will try to determine what entry is. */
+function OUT_TXT_ENTRY (key, value, 
+    {src = null, output_func = INFO, indent = 0, spacer = 2, key_max_len = 10, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAULT, nullvalue = undefined} = {} )
+{
+    const params = {src, output_func, indent, spacer, key_max_len, depth, nullvalue};
+    output_func (" ".repeat (indent) + key?.padEnd (key_max_len + spacer) + (value == null ? nullvalue : value.toString () ), params);
+}
+
 
 /** Fields for 'recursive': 'depth', integer */
 /*
@@ -687,7 +720,7 @@ function INFO (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAU
             if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
         }
         else
-            OUT_TXT_JSOBJ (str, params);
+            OUT_TXT_OBJ (str, params);
     }
 }
 
@@ -710,7 +743,7 @@ function VERBOSE (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DE
             if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
         }
         else
-            OUT_TXT_JSOBJ (str, params);
+            OUT_TXT_OBJ (str, params);
     }
 }
 
@@ -733,7 +766,7 @@ function DEBUG (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFA
             if (IsMsgSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (msg);
         }
         else
-            OUT_TXT_JSOBJ (str, params);
+            OUT_TXT_OBJ (str, params);
     }
 }
 
@@ -756,7 +789,7 @@ function WARN (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAU
             if (IsErrSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (ANSIWARNING (msg) );        
         }
         else
-            OUT_TXT_JSOBJ (str, params);
+            OUT_TXT_OBJ (str, params);
     }    
     return false;    
 }
@@ -780,7 +813,7 @@ function ERR (str, params = {src = null, depth = CONSTANTS.OBJPRINT_DEPTH_DEFAUL
             if (IsErrSTDERR () ) OUTPUTDESTS.STDERR.OutputLine (ANSIERROR (msg) );        
         }
         else
-            OUT_TXT_JSOBJ (str, params);
+            OUT_TXT_OBJ (str, params);
     }       
     return false;
 }
@@ -809,15 +842,20 @@ function ERR_CONFLICT (msg, src)
 }
 
 
-function ERR_PROGRAM (msg, opts = {src = null, once = false} = {} )
+function ERR_PROGRAM (msg, {src = null, once = false, fatal = false} )
 {
-    if (Util.IsString (opts))
-        opts = {src: opts, once: false};
+    const opts = {src, once, fatal};
 
     if (opts.once)
         ERR_ONCE ("PROGRAM ERROR: " + msg, opts);
     else
         ERR ("PROGRAM ERROR: " + msg, opts);
+
+    if (fatal)
+    {
+        if (!State.IsConsoleActive () )    
+        EXIT (-1);
+    }
 }
 
 function ERR_PROGRAM_ONCE (msg, opts = {src = null} = {} )
@@ -989,6 +1027,7 @@ module.exports =
     OUT_TXT_STDERR,    
     OUT_TXT,
     OUT_TXT_RAW,
+    OUT_TXT_OBJ,
     OUT_BIN,
     OUT_ANSI,
     RESET_ANSI,
